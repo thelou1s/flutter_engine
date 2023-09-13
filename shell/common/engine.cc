@@ -443,15 +443,24 @@ void Engine::ScheduleFrame(bool regenerate_layer_tree) {
 
 void Engine::Render(std::shared_ptr<flutter::LayerTree> layer_tree) {
   if (!layer_tree) {
+    FML_DLOG(ERROR) << "Render layer_tree IS NULL";
     return;
   }
 
+   if (layer_tree->frame_size().isEmpty()){
+      FML_DLOG(INFO) << "engin Render frame_size is empty";
+   }
+
+   if (layer_tree->device_pixel_ratio() <= 0.0f){
+      FML_DLOG(INFO) << "engin Render device_pixel_ratio <= 0";
+   }
+   
   // Ensure frame dimensions are sane.
   if (layer_tree->frame_size().isEmpty() ||
       layer_tree->device_pixel_ratio() <= 0.0f) {
+        FML_DLOG(INFO) << "engin layer_tree isEmpty";
     return;
   }
-
   animator_->Render(std::move(layer_tree));
 }
 

@@ -15,6 +15,7 @@ constexpr LogSeverity LOG_WARNING = 1;
 constexpr LogSeverity LOG_ERROR = 2;
 constexpr LogSeverity LOG_FATAL = 3;
 constexpr LogSeverity LOG_NUM_SEVERITIES = 4;
+constexpr LogSeverity LOG_DEBUG= 4;
 
 // One of the Windows headers defines ERROR to 0. This makes the token
 // concatenation in FML_LOG(ERROR) to resolve to LOG_0. We define this back to

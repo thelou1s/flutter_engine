@@ -75,6 +75,8 @@ sk_sp<DlImage> SnapshotControllerImpeller::DoMakeRasterSnapshot(
 sk_sp<SkImage> SnapshotControllerImpeller::ConvertToRasterImage(
     sk_sp<SkImage> image) {
   FML_UNREACHABLE();
+  sk_sp<SkImage> result;
+  return result;
 }
 
 }  // namespace flutter

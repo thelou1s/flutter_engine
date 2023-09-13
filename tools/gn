@@ -52,6 +52,9 @@ def get_out_dir(args):
   if args.linux_cpu is not None:
     target_dir.append(args.linux_cpu)
 
+#  if args.ohos_cpu is not None:
+#   target_dir.append(args.ohos_cpu)
+
   if args.windows_cpu != 'x64':
     target_dir.append(args.windows_cpu)
 
@@ -102,6 +105,8 @@ def is_host_build(args):
   # target_os='linux' and linux-cpu='arm64'
   if args.target_os == 'linux' and args.linux_cpu == 'arm64':
     return True
+#if args.target_os == 'ohos' and args.ohos_cpu == 'arm64':
+#    return True
   # The Mac and host targets are redundant. Again, necessary to disambiguate
   # during cross-compilation.
   if args.target_os == 'mac':
@@ -128,6 +133,9 @@ def can_use_prebuilt_dart(args):
       prebuilt = 'linux-x64'
   elif args.target_os == 'linux' and args.linux_cpu in ['x64', 'arm64']:
     prebuilt = 'linux-%s' % args.linux_cpu
+  elif args.target_os == 'ohos' and args.ohos_cpu in ['x64', 'arm64']:
+    prebuilt = 'linux-%s' % args.ohos_cpu
+    #prebuilt = 'ohos-%s' % args.ohos_cpu
   elif args.target_os == 'mac' and args.mac_cpu in ['x64', 'arm64']:
     prebuilt = 'macos-%s' % args.mac_cpu
   elif args.target_os == 'win' and args.windows_cpu in ['x64', 'arm64']:
@@ -192,6 +200,8 @@ def get_target_cpu(args):
     return args.mac_cpu
   if args.target_os == 'linux':
     return args.linux_cpu
+  if args.target_os == 'ohos':
+    return args.ohos_cpu
   if args.target_os == 'fuchsia':
     return args.fuchsia_cpu
   if args.target_os == 'wasm':
@@ -213,6 +223,7 @@ def to_gn_args(args):
     if args.target_os != 'ios':
       raise Exception('--simulator is only supported for iOS')
 
+  print('args.target_os:%s' %  args.target_os )
   runtime_mode = args.runtime_mode
 
   gn_args = {}
@@ -269,6 +280,9 @@ def to_gn_args(args):
   if args.enable_unittests:
     gn_args['enable_unittests'] = args.enable_unittests
 
+  gn_args['enable_unittests'] =  False
+  print("enable_unittests:%s" % gn_args['enable_unittests'] );
+
   # Skia GN args.
   gn_args['skia_enable_flutter_defines'
          ] = True  # Enable Flutter API guards in Skia.
@@ -319,6 +333,7 @@ def to_gn_args(args):
 
   # Set OS, CPU arch for host or target build.
   if is_host_build(args):
+    print('is host build ')
     gn_args['host_os'] = get_host_os()
     gn_args['host_cpu'] = get_host_cpu()
     gn_args['target_os'] = gn_args['host_os']
@@ -329,6 +344,7 @@ def to_gn_args(args):
     gn_args['target_cpu'] = get_target_cpu(args)
     gn_args['dart_target_arch'] = gn_args['target_cpu']
 
+  print("ARGS.target_os:%s-%s" % (args.target_os,gn_args['target_os'] ) )
   # We cannot cross-compile for 32 bit arm on a Windows host. We work around
   # this by leaving 'target_cpu' and 'dart_target_arch' set to 'arm' so that
   # Dart tools such as gen_snapshot that are built for the host will correctly
@@ -446,7 +462,7 @@ def to_gn_args(args):
   # Enable Vulkan on all platforms except for iOS. This is just
   # to save on mobile binary size, as there's no reason the Vulkan embedder
   # features can't work on these platforms.
-  if args.target_os not in ['ios']:
+  if args.target_os not in ['ios','mac','ohos']:
     gn_args['skia_use_vulkan'] = True
     gn_args['skia_use_vma'] = False
     gn_args['shell_enable_vulkan'] = True
@@ -461,7 +477,7 @@ def to_gn_args(args):
 
   # Make symbols visible in order to enable symbolization of unit test crash backtraces on Linux
   gn_args['disable_hidden_visibility'
-         ] = args.target_os == 'linux' and args.unoptimized
+         ] = (args.target_os == 'linux' or args.target_os == 'ohos') and args.unoptimized
 
   if args.arm_float_abi:
     gn_args['arm_float_abi'] = args.arm_float_abi
@@ -696,7 +712,7 @@ def parse_args(args):
   parser.add_argument(
       '--target-os',
       type=str,
-      choices=['android', 'ios', 'mac', 'linux', 'fuchsia', 'wasm', 'win']
+      choices=['android', 'ios', 'mac', 'linux', 'fuchsia', 'wasm', 'win','ohos']
   )
   parser.add_argument(
       '--android', dest='target_os', action='store_const', const='android'
@@ -724,6 +740,9 @@ def parse_args(args):
       '--linux', dest='target_os', action='store_const', const='linux'
   )
   parser.add_argument(
+      '--ohos', dest='target_os', action='store_const', const='ohos'
+  )
+  parser.add_argument(
       '--fuchsia', dest='target_os', action='store_const', const='fuchsia'
   )
   parser.add_argument(
@@ -736,6 +755,9 @@ def parse_args(args):
 
   parser.add_argument(
       '--linux-cpu', type=str, choices=['x64', 'x86', 'arm64', 'arm']
+  )
+  parser.add_argument(
+      '--ohos-cpu', type=str, choices=['x64', 'x86', 'arm64', 'arm']
   )
   parser.add_argument(
       '--fuchsia-cpu', type=str, choices=['x64', 'arm64'], default='x64'
@@ -1018,6 +1040,16 @@ def main(argv):
       '--export-compile-commands',
   ]
 
+  print('XX ohos_cpu:%s' % args.ohos_cpu )
+ # print('linux_cpu:'+ args.linux_cpu )
+  print('XX target_os:%s' % args.target_os)
+
+  if  args.target_os == 'ohos':
+     if args.ohos_cpu is not None:
+       args.linux_cpu = args.ohos_cpu
+     elif args.linux_cpu is not None :
+       args.ohos_cpu = args.linux_cpu
+
   if not args.web:
     if args.ide != '':
       command.append('--ide=%s' % args.ide)
@@ -1036,6 +1068,10 @@ def main(argv):
   out_dir = get_out_dir(args)
   command.append(out_dir)
   command.append('--args=%s' % ' '.join(gn_args))
+
+
+
+  print('gn ARGS : %s' % ' '.join(gn_args))
 
   if args.trace_gn:
     command.append('--tracelog=%s/gn_trace.json' % out_dir)

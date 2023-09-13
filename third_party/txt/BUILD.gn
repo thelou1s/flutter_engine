@@ -172,6 +172,8 @@ source_set("txt") {
     deps += [ "//flutter/fml" ]
   } else if (is_android) {
     sources += [ "src/txt/platform_android.cc" ]
+  } else if (is_ohos) {
+    sources += [ "src/txt/platform_ohos.cc" ]
   } else if (is_linux) {
     sources += [ "src/txt/platform_linux.cc" ]
   } else if (is_fuchsia) {

@@ -37,6 +37,7 @@ class VsyncWaiter : public std::enable_shared_from_this<VsyncWaiter> {
   // method.
   friend class VsyncWaiterAndroid;
   friend class VsyncWaiterEmbedder;
+  friend class VsyncWaiterOHOS;
 
   const TaskRunners task_runners_;
 

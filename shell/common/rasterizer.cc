@@ -22,6 +22,8 @@
 #include "third_party/skia/include/core/SkSurfaceCharacterization.h"
 #include "third_party/skia/include/utils/SkBase64.h"
 
+#include "flutter/fml/logging.h"
+
 namespace flutter {
 
 // The rasterizer will tell Skia to purge cached resources that have not been
@@ -158,6 +160,7 @@ flutter::LayerTree* Rasterizer::GetLastLayerTree() {
 void Rasterizer::DrawLastLayerTree(
     std::unique_ptr<FrameTimingsRecorder> frame_timings_recorder) {
   if (!last_layer_tree_ || !surface_) {
+    FML_DLOG(ERROR)<<"DrawLastLayerTree last_layer_tree_ or  surface_ is nullptr " ;
     return;
   }
   RasterStatus raster_status =
@@ -490,7 +493,7 @@ RasterStatus Rasterizer::DrawToSurfaceUnsafe(
     FrameTimingsRecorder& frame_timings_recorder,
     flutter::LayerTree& layer_tree) {
   FML_DCHECK(surface_);
-
+  
   compositor_context_->ui_time().SetLapTime(
       frame_timings_recorder.GetBuildDuration());
 
@@ -603,8 +606,11 @@ RasterStatus Rasterizer::DrawToSurfaceUnsafe(
     }
 
     compositor_context_->raster_cache().EndFrame();
+
     frame_timings_recorder.RecordRasterEnd(
         &compositor_context_->raster_cache());
+
+    
     FireNextFrameCallbackIfPresent();
 
     if (surface_->GetContext()) {

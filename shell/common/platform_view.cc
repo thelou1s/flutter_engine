@@ -14,7 +14,9 @@
 namespace flutter {
 
 PlatformView::PlatformView(Delegate& delegate, const TaskRunners& task_runners)
-    : delegate_(delegate), task_runners_(task_runners), weak_factory_(this) {}
+    : delegate_(delegate), task_runners_(task_runners), weak_factory_(this) {
+      FML_LOG(INFO)<<"PlatformView";
+    }
 
 PlatformView::~PlatformView() = default;
 

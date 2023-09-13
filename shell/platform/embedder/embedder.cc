@@ -68,6 +68,24 @@ extern const intptr_t kPlatformStrongDillSize;
 #include "flutter/shell/platform/embedder/embedder_surface_metal.h"
 #endif
 
+#ifdef FML_OS_OHOS
+extern "C"{
+  typedef enum {
+	/** Debug level to be used by {@link OH_LOG_DEBUG} */
+	HILOG_LOG_DEBUG = 3,
+	/** Informational level to be used by {@link OH_LOG_INFO} */
+	HILOG_LOG_INFO = 4,
+	/** Warning level to be used by {@link OH_LOG_WARN} */
+	HILOG_LOG_WARN = 5,
+	/** Error level to be used by {@link OH_LOG_ERROR} */
+	HILOG_LOG_ERROR = 6,
+	/** Fatal level to be used by {@link OH_LOG_FATAL} */
+	HILOG_LOG_FATAL = 7,
+} HiLog_LogLevel;
+int OH_LOG_Print(int type, HiLog_LogLevel level, unsigned int domain, const char *tag, const char *fmt, ...) ;
+}
+#endif
+
 const int32_t kFlutterSemanticsNodeIdBatchEnd = -1;
 const int32_t kFlutterSemanticsCustomActionIdBatchEnd = -1;
 
@@ -111,6 +129,15 @@ static FlutterEngineResult LogEmbedderError(FlutterEngineResult code,
            "%s (%d): '%s' returned '%s'. %s", file_base, line, function,
            code_name, reason);
   std::cerr << error << std::endl;
+
+
+#if  defined(FML_OS_OHOS)
+#define OHOS_LOG_TYPE_APP 0
+#define HILOG_LOG_DOMAIN 0
+#define HILOG_LOG_TAG "XcomFlutterEmbedder"
+  HiLog_LogLevel fx_severity = HILOG_LOG_ERROR;
+  (void ) OH_LOG_Print(0,fx_severity,HILOG_LOG_DOMAIN, HILOG_LOG_TAG,"%s",error );
+#endif
   return code;
 }
 

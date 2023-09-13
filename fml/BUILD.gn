@@ -97,8 +97,13 @@ source_set("fml") {
     "wakeable.h",
   ]
 
-  if (is_mac || is_linux || is_win || (is_ios && is_debug)) {
-    sources += [ "backtrace.cc" ]
+  if( is_ohos){
+    sources += [ "backtrace_stub.cc" ]
+  }else if ( is_linux){
+    sources += [ "backtrace_stub.cc" ]
+  }else if (is_mac || is_linux || is_win || (is_ios && is_debug)) {
+    #sources += [ "backtrace.cc" ]
+    sources += [ "backtrace_stub.cc" ]
   } else {
     sources += [ "backtrace_stub.cc" ]
   }
@@ -183,7 +188,23 @@ source_set("fml") {
     ]
   }
 
-  if (is_linux) {
+  if (is_ohos) {
+    sources += [
+      "platform/ohos/message_loop_ohos.cc",
+      "platform/ohos/message_loop_ohos.h",
+      "platform/ohos/paths_ohos.cc",
+      "platform/ohos/paths_ohos.h",
+      "platform/ohos/timerfd.cc",
+      "platform/ohos/timerfd.h",
+      #"platform/ohos/message_loop_ohos_test.cc",
+      #"platform/ohos/message_loop_ohos_test.h",
+      "platform/ohos/napi_util.h",
+      "platform/ohos/napi_util.cc",
+    ]
+    libs += [ "hilog_ndk.z" ]
+    libs += [ "ace_napi.z" ]
+    libs += [ "uv" ]
+  }else if (is_linux) {
     sources += [
       "platform/linux/message_loop_linux.cc",
       "platform/linux/message_loop_linux.h",

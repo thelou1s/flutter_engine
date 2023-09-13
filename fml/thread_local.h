@@ -11,7 +11,7 @@
 #include "flutter/fml/macros.h"
 
 #define FML_THREAD_LOCAL_PTHREADS \
-  FML_OS_MACOSX || FML_OS_LINUX || FML_OS_ANDROID
+  FML_OS_MACOSX || FML_OS_LINUX || FML_OS_ANDROID || FML_OS_OHOS 
 
 #if FML_THREAD_LOCAL_PTHREADS
 #include <pthread.h>

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef EGL_DISPLAY_H
+#define EGL_DISPLAY_H
 
 #include <memory>
 #include <optional>
@@ -45,3 +46,5 @@ class Display {
 
 }  // namespace egl
 }  // namespace impeller
+
+#endif

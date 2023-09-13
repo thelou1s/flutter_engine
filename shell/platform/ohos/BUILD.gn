@@ -1,0 +1,266 @@
+# Copyright (c) 2023 Hunan OpenValley Digital Industry Development Co., Ltd.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+assert(is_ohos)
+
+import("//flutter/build/zip_bundle.gni")
+import("//flutter/shell/platform/glfw/config.gni")
+import("//flutter/testing/testing.gni")
+import("//build/config/ohos/pkg_config.gni")
+import("//flutter/shell/gpu/gpu.gni")
+
+group("ohos") {
+  deps = [
+    ":flutter",
+    #":publish_headers_ohos",
+  ]
+}
+shell_gpu_configuration("ohos_gpu_configuration") {
+  enable_software = true
+  enable_gl = true
+  enable_vulkan = false
+  enable_metal = false
+}
+# Temporary workaround for the issue describe in
+# https://github.com/flutter/flutter/issues/14509 and
+# https://github.com/flutter/flutter/issues/14438
+# Remove once the build infrastructure moves to Ubuntu 18.04 or newer, where
+# the underlying issue is fixed.
+config("disable_fatal_link_warnings") {
+  visibility = [ ":*" ]
+  ldflags = [ "-Wl,--no-fatal-warnings" ]
+}
+
+_public_headers = [
+  #"public/flutter_ohos/fl_view.h",
+  #  "napi_common.h",
+  #"platform_view_ohos.h",
+]
+
+config("relative_flutter_ohos_headers") {
+  include_dirs = [ "public",
+                    
+                     ]
+}
+
+source_set("flutter_ohos_sources") {
+  public = _public_headers + [
+             "napi_common.h",
+             "ohos_xcomponent_adapter.h",
+             "./napi/platform_view_ohos_napi.h",
+             "ohos_shell_holder.h",
+             "platform_view_ohos.h",
+             "platform_message_response_ohos.h",
+             "platform_message_handler_ohos.h",
+             "vsync_waiter_ohos.h",
+             "ohos_logger.h" ,
+             "ohos_display.h",
+             "ohos_surface_software.h",
+             "./context/ohos_context.h",
+             "./surface/ohos_native_window.h",
+             "./surface/ohos_surface.h",
+             "ohos_touch_processor.h",
+             "ohos_context_gl_skia.h",
+             "ohos_egl_surface.h",
+             "ohos_environment_gl.h",
+             "ohos_surface_gl_skia.h",
+           ]
+
+  #configs += [ "//flutter/shell/platform/ohos/config:gtk" ]
+
+  sources = [
+      "library_loader.cpp"  ,
+      "ohos_xcomponent_adapter.cpp",
+      "./napi/platform_view_ohos_napi.cpp",
+      "ohos_shell_holder.cpp",
+      "platform_view_ohos.cpp",
+      "ohos_display.cpp",
+      "ohos_surface_software.cpp",
+      "platform_message_handler_ohos.cpp",
+      "platform_message_response_ohos.cpp",
+      "vsync_waiter_ohos.cpp",
+      "./surface/ohos_native_window.cpp",
+      "./surface/ohos_surface.cpp",
+      "./context/ohos_context.cpp",
+      "ohos_asset_provider.cpp",
+      "ohos_touch_processor.cpp",
+      "ohos_main.cpp" ,
+      "ohos_logger.c" ,
+      "ohos_context_gl_impeller.cpp",
+      "ohos_surface_gl_impeller.cpp",
+      # "//flutter/impeller/toolkit/egl/display.cc",
+      "ohos_context_gl_skia.cpp" ,
+      "ohos_egl_surface.cpp" ,
+      "ohos_environment_gl.cpp",
+      "ohos_surface_gl_skia.cpp",
+      "ohos_image_generator.cpp",
+      "ohos_external_texture_gl.cpp",
+      "./surface/ohos_snapshot_surface_producer.cpp",
+  ]
+
+  # Set flag to stop headers being directly included (library users should not do this)
+  defines = [
+    "FLUTTER_LINUX_COMPILATION",
+    "FLUTTER_ENGINE_NO_PROTOTYPES",
+    "OHOS_PLATFORM" ,
+    "__MUSL__",
+  ]
+
+  deps = [
+    "//flutter/shell/platform/common:common_cpp_input",
+    "//flutter/shell/platform/common:common_cpp_switches",
+    "//flutter/shell/platform/embedder:embedder_headers",
+    "//third_party/rapidjson",
+  ]
+
+  public_deps = [
+    ":ohos_gpu_configuration",
+    "//flutter/assets",
+    "//flutter/common",
+    "//flutter/common/graphics",
+    "//flutter/flow",
+    "//flutter/fml",
+    "//flutter/impeller",
+    "//flutter/impeller/toolkit/egl",
+    "//flutter/lib/ui",
+    "//flutter/runtime",
+    "//flutter/runtime:libdart",
+    "//flutter/shell/common",
+    #"//flutter/vulkan",
+    "//third_party/skia",
+    "//flutter/shell/gpu:gpu_surface_gl",
+  
+  
+  ]
+
+}
+
+source_set("flutter_ohos_src") {
+  configs += [
+    #"//flutter/shell/platform/ohos/config:gtk",
+    #"//flutter/shell/platform/ohos/config:epoxy",
+  ]
+
+  defines = [ "FLUTTER_ENGINE_NO_PROTOTYPES" ]
+
+  public_deps = [ ":flutter_ohos_sources"]
+
+  deps = [ "//flutter/shell/platform/embedder:embedder_as_internal_library" ]
+}
+
+test_fixtures("flutter_ohos_fixtures") {
+  fixtures = []
+}
+
+
+executable("flutter_ohos_unittests") {
+  testonly = true
+
+  sources = [
+    #"testing/mock_texture_registrar.cc",
+  ]
+
+  public_configs = [ "//flutter:config" ]
+
+
+  defines = [
+    "FLUTTER_ENGINE_NO_PROTOTYPES",
+
+    # Set flag to allow public headers to be directly included
+    # (library users should not do this)
+    "FLUTTER_LINUX_COMPILATION",
+  ]
+
+  deps = [
+    ":flutter_ohos_fixtures",
+    ":flutter_ohos_sources",
+    "//flutter/runtime:libdart",
+    "//flutter/shell/platform/embedder:embedder_headers",
+    "//flutter/shell/platform/embedder:embedder_test_utils",
+    "//flutter/testing",
+  ]
+}
+
+shared_library("flutter") {
+  deps = [ ":flutter_ohos_src" ]
+
+  ldflags = ["--rtlib=compiler-rt",
+  "-fuse-ld=lld",
+  "-static-libstdc++",
+#  "-Wl", "--build-id=sha1",
+#  "-Wl,","--warn-shared-textrel",
+#  "-Wl,","--fatal-warnings -lunwind",
+#  "-Wl,","--no-undefined -Qunused-arguments",
+#  "-Wl,","-z,noexecstack"
+  ]
+
+  #ldflags = [ "-Wl,-rpath,\$ORIGIN" ]
+  #ldflags += ["-L{$OHOS_NDK_LIB}","-lnative_window"]
+  ldflags += ["-lnative_window"]
+  ldflags += ["-lnative_vsync"]
+  ldflags += ["-lace_napi.z"]
+  ldflags += ["-lace_ndk.z"]
+  ldflags += ["-lhilog_ndk.z"]
+  ldflags += ["-luv"]
+  ldflags += ["-lrawfile.z"]
+  ldflags += ["-lEGL"]
+  ldflags += ["-lGLESv3"]
+
+  ldflags += ["-lc++_shared"]
+  ldflags += ["-lm"]
+  ldflags += ["-lpthread"]
+  ldflags += ["-lpixelmap_ndk.z"]
+
+
+  public_configs = [ "//flutter:config" ]
+}
+
+#copy("publish_headers_ohos") {
+#  sources = _public_headers
+#  outputs = [ "$root_out_dir/flutter_ohos/{{source_file_part}}" ]
+#}
+
+#zip_bundle("flutter_gtk") {
+#  prefix = "$full_target_platform_name/"
+#  if (flutter_runtime_mode != "debug" ||
+#      (flutter_runtime_mode == "debug" && target_cpu != "x64")) {
+#    prefix = "$full_target_platform_name-$flutter_runtime_mode/"
+#  }
+#  output = "${prefix}${full_target_platform_name}-flutter-gtk.zip"
+#  deps = [
+#    ":flutter_ohos_gtk",
+#    ":publish_headers_ohos",
+#    "//third_party/dart/runtime/bin:gen_snapshot",
+#  ]
+#  sources = get_target_outputs(":publish_headers_ohos")
+#  tmp_files = []
+#  foreach(source, sources) {
+#    tmp_files += [
+#      {
+#        source = source
+#        destination = rebase_path(source, "$root_build_dir")
+#      },
+#    ]
+#  }
+#  tmp_files += [
+#    {
+#      source = "$root_build_dir/libflutter_${host_os}_gtk.so"
+#      destination = "libflutter_${host_os}_gtk.so"
+#    },
+#    {
+#      source = "$root_build_dir/gen_snapshot"
+#      destination = "gen_snapshot"
+#    },
+#  ]
+#  files = tmp_files
+#}

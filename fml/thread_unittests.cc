@@ -4,7 +4,7 @@
 
 #include "flutter/fml/thread.h"
 
-#if defined(FML_OS_MACOSX) || defined(FML_OS_LINUX) || defined(FML_OS_ANDROID)
+#if defined(FML_OS_MACOSX) || defined(FML_OS_LINUX) || defined(FML_OS_ANDROID) || defined(FML_OS_OHOS)
 #define FLUTTER_PTHREAD_SUPPORTED 1
 #else
 #define FLUTTER_PTHREAD_SUPPORTED 0
