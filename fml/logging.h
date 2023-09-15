@@ -43,7 +43,8 @@ int GetVlogVerbosity();
 // LOG_FATAL and above is always true.
 bool ShouldCreateLogMessage(LogSeverity severity);
 
-[[noreturn]] void KillProcess();
+//[[noreturn]] void KillProcess();
+ void KillProcess();
 
 }  // namespace fml
 

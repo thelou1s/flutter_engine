@@ -10,6 +10,8 @@ group("platform") {
     deps = [ "darwin" ]
   } else if (is_android) {
     deps = [ "android" ]
+  }else if ( is_ohos){
+    deps = [ "ohos" ]
   } else if (is_linux) {
     deps = []
     if (enable_desktop_embeddings) {

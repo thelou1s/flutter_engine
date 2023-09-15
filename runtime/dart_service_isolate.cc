@@ -180,11 +180,13 @@ bool DartServiceIsolate::Startup(const std::string& server_ip,
   SHUTDOWN_ON_ERROR(result);
   result =
       Dart_SetField(library, Dart_NewStringFromCString("_originCheckDisabled"),
-                    Dart_NewBoolean(disable_origin_check));
+                    Dart_NewBoolean(true));
+                    //Dart_NewBoolean(disable_origin_check));
   SHUTDOWN_ON_ERROR(result);
   result =
       Dart_SetField(library, Dart_NewStringFromCString("_authCodesDisabled"),
-                    Dart_NewBoolean(disable_service_auth_codes));
+                    Dart_NewBoolean(true));
+                    //Dart_NewBoolean(disable_service_auth_codes));
   SHUTDOWN_ON_ERROR(result);
   result = Dart_SetField(
       library, Dart_NewStringFromCString("_enableServicePortFallback"),

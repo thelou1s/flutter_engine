@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <type_traits>
 #define RAPIDJSON_HAS_STDSTRING 1
 #include "flutter/shell/common/shell.h"
 
@@ -76,13 +77,12 @@ std::unique_ptr<Engine> CreateEngine(
 // that cause shell initialization failures will still lead to some of their
 // settings being applied.
 void PerformInitializationTasks(Settings& settings) {
-  {
+/*   {
     fml::LogSettings log_settings;
     log_settings.min_log_level =
         settings.verbose_logging ? fml::LOG_INFO : fml::LOG_ERROR;
     fml::SetLogSettings(log_settings);
-  }
-
+  } */
   static std::once_flag gShellSettingsInitialization = {};
   std::call_once(gShellSettingsInitialization, [&settings] {
     tonic::SetLogHandler(
@@ -98,8 +98,6 @@ void PerformInitializationTasks(Settings& settings) {
 
     if (!settings.skia_deterministic_rendering_on_cpu) {
       SkGraphics::Init();
-    } else {
-      FML_DLOG(INFO) << "Skia deterministic rendering is enabled.";
     }
 
     if (settings.icu_initialization_required) {
@@ -112,7 +110,6 @@ void PerformInitializationTasks(Settings& settings) {
       }
     }
   });
-
   PersistentCache::SetCacheSkSL(settings.cache_sksl);
 }
 
@@ -301,6 +298,7 @@ std::unique_ptr<Shell> Shell::CreateShellOnPlatformThread(
                              shell->volatile_path_tracker_));
       }));
 
+
   if (!shell->Setup(std::move(platform_view),  //
                     engine_future.get(),       //
                     rasterizer_future.get(),   //
@@ -336,7 +334,6 @@ std::unique_ptr<Shell> Shell::CreateWithSnapshot(
   if (!task_runners.IsValid() || !callbacks_valid) {
     return nullptr;
   }
-
   fml::AutoResetWaitableEvent latch;
   std::unique_ptr<Shell> shell;
   auto platform_task_runner = task_runners.GetPlatformTaskRunner();
@@ -521,6 +518,7 @@ std::unique_ptr<Shell> Shell::Spawn(
       fml::SyncSwitch::Handlers()
           .SetIfFalse([&is_gpu_disabled] { is_gpu_disabled = false; })
           .SetIfTrue([&is_gpu_disabled] { is_gpu_disabled = true; }));
+
   std::unique_ptr<Shell> result = CreateWithSnapshot(
       PlatformData{}, task_runners_, rasterizer_->GetRasterThreadMerger(),
       io_manager_, resource_cache_limit_calculator_, GetSettings(), vm_,
@@ -536,6 +534,7 @@ std::unique_ptr<Shell> Shell::Spawn(
           const fml::RefPtr<SkiaUnrefQueue>& unref_queue,
           fml::TaskRunnerAffineWeakPtr<SnapshotDelegate> snapshot_delegate,
           const std::shared_ptr<VolatilePathTracker>& volatile_path_tracker) {
+
         return engine->Spawn(
             /*delegate=*/delegate,
             /*dispatcher_maker=*/dispatcher_maker,
@@ -585,7 +584,9 @@ void Shell::RunEngine(
       return;
     }
     platform_runner->PostTask(
-        [result_callback, run_result]() { result_callback(run_result); });
+        [result_callback, run_result]() { 
+        result_callback(run_result); 
+        });
   };
   FML_DCHECK(is_setup_);
   FML_DCHECK(task_runners_.GetPlatformTaskRunner()->RunsTasksOnCurrentThread());
@@ -746,7 +747,6 @@ DartVM* Shell::GetDartVM() {
 
 // |PlatformView::Delegate|
 void Shell::OnPlatformViewCreated(std::unique_ptr<Surface> surface) {
-  TRACE_EVENT0("flutter", "Shell::OnPlatformViewCreated");
   FML_DCHECK(is_setup_);
   FML_DCHECK(task_runners_.GetPlatformTaskRunner()->RunsTasksOnCurrentThread());
 

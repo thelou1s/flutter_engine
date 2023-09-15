@@ -341,6 +341,8 @@ std::optional<Snapshot> BlendFilterContents::RenderFilter(
                                 foreground_color_, GetAbsorbOpacity());
   }
   FML_UNREACHABLE();
+  std::optional<Snapshot> ret;
+  return ret;
 }
 
 }  // namespace impeller

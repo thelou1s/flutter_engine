@@ -31,7 +31,7 @@ namespace fml {
 class MessageLoopImpl : public Wakeable,
                         public fml::RefCountedThreadSafe<MessageLoopImpl> {
  public:
-  static fml::RefPtr<MessageLoopImpl> Create();
+  static fml::RefPtr<MessageLoopImpl> Create(void* platform_loop);
 
   virtual ~MessageLoopImpl();
 

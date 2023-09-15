@@ -29,6 +29,16 @@
 #if defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
 #define FML_OS_IOS 1
 #endif  // defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE
+
+#elif defined(__OHOS_FAMILY__)
+#define FML_OS_OHOS 1
+// include a system header to pull in features.h for glibc/uclibc macros.
+#include <unistd.h>
+#if defined(__GLIBC__) && !defined(__UCLIBC__)
+// we really are using glibc, not uClibc pretending to be glibc
+#define LIBC_GLIBC 1
+#endif
+
 #elif defined(__linux__)
 #define FML_OS_LINUX 1
 // include a system header to pull in features.h for glibc/uclibc macros.
@@ -37,6 +47,8 @@
 // we really are using glibc, not uClibc pretending to be glibc
 #define LIBC_GLIBC 1
 #endif
+
+
 #elif defined(_WIN32)
 #define FML_OS_WIN 1
 #elif defined(__FreeBSD__)

@@ -13,6 +13,7 @@
 #include "flutter/fml/build_config.h"
 #include "flutter/fml/message_loop.h"
 #include "flutter/fml/synchronization/waitable_event.h"
+#include "flutter/fml/logging.h"
 
 #if defined(FML_OS_WIN)
 #include <windows.h>
@@ -42,8 +43,9 @@ void SetThreadName(const std::string& name) {
   }
 #if defined(FML_OS_MACOSX)
   pthread_setname_np(name.c_str());
-#elif defined(FML_OS_LINUX) || defined(FML_OS_ANDROID)
+#elif defined(FML_OS_LINUX) || defined(FML_OS_ANDROID) || defined(FML_OS_OHOS)
   pthread_setname_np(pthread_self(), name.c_str());
+  FML_DLOG(INFO) << "set the thread name to '" << name;
 #elif defined(FML_OS_WIN)
   THREADNAME_INFO info;
   info.dwType = 0x1000;

@@ -9,6 +9,7 @@
 #include "flutter/fml/native_library.h"
 #include "flutter/fml/paths.h"
 #include "flutter/fml/trace_event.h"
+#include "flutter/fml/logging.h"
 #include "flutter/lib/snapshot/snapshot.h"
 #include "flutter/runtime/dart_vm.h"
 #include "third_party/dart/runtime/include/dart_api.h"
@@ -56,6 +57,7 @@ static std::shared_ptr<const fml::Mapping> SearchMapping(
     const std::vector<std::string>& native_library_path,
     const char* native_library_symbol_name,
     bool is_executable) {
+  FML_LOG(INFO)<<"SearchMapping file:"<<file_path;
   // Ask the embedder. There is no fallback as we expect the embedders (via
   // their embedding APIs) to just specify the mappings directly.
   if (embedder_mapping_callback) {
@@ -102,6 +104,7 @@ static std::shared_ptr<const fml::Mapping> SearchMapping(
 static std::shared_ptr<const fml::Mapping> ResolveVMData(
     const Settings& settings) {
 #if DART_SNAPSHOT_STATIC_LINK
+  FML_LOG(ERROR)<<"ResolveVMData: NonOwnedMapping" ;
   return std::make_unique<fml::NonOwnedMapping>(kDartVmSnapshotData,
                                                 0,        // size
                                                 nullptr,  // release_func
