@@ -90,10 +90,10 @@ used to filter file path.
                     desc="app resource files" />
                 <filteritem type="filepath" name="third_party/ninja/ninja_linux" desc="二进制，构建文件" />
                 <filteritem type="filepath" name="third_party/ninja/ninja_mac" desc="二进制，构建文件" />
-                <filteritem type="filepath" name="attachment/repos/build.bin"
-                    desc="git apply所需patch" />
-                <filteritem type="filepath" name="attachment/repos/libcxx.bin"
-                    desc="git apply所需patch" />
+                <filteritem type="filepath" name="attachment/repos/libcxx.bin" desc="git apply所需patch" />
+                <filteritem type="filepath" name="attachment/repos/build0.bin" desc="git apply所需patch" />
+                <filteritem type="filepath" name="attachment/repos/build1.bin" desc="git apply所需patch" />
+                <filteritem type="filepath" name="attachment/repos/build2.bin" desc="git apply所需patch" />
                 <filteritem type="filepath" name="third_party/gn/gn" desc="二进制，构建文件" />
                 <filteritem type="filepath" name="third_party/gn/gn_linux" desc="二进制，构建文件" />
                 <filteritem type="filepath" name="third_party/gn/gn_mac" desc="二进制，构建文件" />
