@@ -1,0 +1,270 @@
+diff --git a/.gitignore b/.gitignore
+index 3c7338f1ac8..dc54d947c56 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -76,7 +76,7 @@ packages
+ pubspec.lock
+ 
+ # The top level package file (this is auto-generated per checkout).
+-/.dart_tool/package_config.json
++#/.dart_tool/package_config.json
+ 
+ # Local pub storage
+ .pub
+@@ -100,7 +100,7 @@ tools/xcodebuild
+ /outline.dill
+ /generated/
+ /crash_logs/
+-/build/config/gclient_args.gni
++#/build/config/gclient_args.gni
+ /pkg/front_end/testcases/old_dills/
+ logs/logs.json
+ logs/results.json
+diff --git a/pkg/dds/lib/dds.dart b/pkg/dds/lib/dds.dart
+index 177a9265649..c7038c56ad7 100644
+--- a/pkg/dds/lib/dds.dart
++++ b/pkg/dds/lib/dds.dart
+@@ -45,7 +45,7 @@ abstract class DartDevelopmentService {
+   static Future<DartDevelopmentService> startDartDevelopmentService(
+     Uri remoteVmServiceUri, {
+     Uri? serviceUri,
+-    bool enableAuthCodes = true,
++    bool enableAuthCodes = false,
+     bool ipv6 = false,
+     bool enableServicePortFallback = false,
+     List<String> cachedUserTags = const [],
+diff --git a/pkg/dds/lib/devtools_server.dart b/pkg/dds/lib/devtools_server.dart
+index 9d302638dc7..e95c3602cad 100644
+--- a/pkg/dds/lib/devtools_server.dart
++++ b/pkg/dds/lib/devtools_server.dart
+@@ -218,7 +218,8 @@ class DevToolsServer {
+     String? appSizeBase,
+     String? appSizeTest,
+   }) async {
+-    hostname ??= 'localhost';
++    //hostname ??= 'localhost';
++    hostname ??= '0.0.0.0';
+ 
+     // Collect profiling information.
+     if (profileFilename != null && serviceProtocolUri != null) {
+diff --git a/pkg/dds/lib/src/dap/adapters/dart.dart b/pkg/dds/lib/src/dap/adapters/dart.dart
+index 7cc20b487ed..552048e2e24 100644
+--- a/pkg/dds/lib/src/dap/adapters/dart.dart
++++ b/pkg/dds/lib/src/dap/adapters/dart.dart
+@@ -450,7 +450,7 @@ abstract class DartDebugAdapter<TL extends LaunchRequestArguments,
+     ByteStreamServerChannel channel, {
+     this.ipv6 = false,
+     this.enableDds = true,
+-    this.enableAuthCodes = true,
++    this.enableAuthCodes = false,
+     this.logger,
+     Function? onError,
+   }) : super(channel, onError: onError) {
+diff --git a/pkg/dds/lib/src/dap/adapters/dart_cli_adapter.dart b/pkg/dds/lib/src/dap/adapters/dart_cli_adapter.dart
+index e6aea285f29..2a748fcd796 100644
+--- a/pkg/dds/lib/src/dap/adapters/dart_cli_adapter.dart
++++ b/pkg/dds/lib/src/dap/adapters/dart_cli_adapter.dart
+@@ -32,7 +32,7 @@ class DartCliDebugAdapter extends DartDebugAdapter<DartLaunchRequestArguments,
+     ByteStreamServerChannel channel, {
+     bool ipv6 = false,
+     bool enableDds = true,
+-    bool enableAuthCodes = true,
++    bool enableAuthCodes = false,
+     Logger? logger,
+     Function? onError,
+   }) : super(
+diff --git a/pkg/dds/lib/src/dap/server.dart b/pkg/dds/lib/src/dap/server.dart
+index 9b208a67853..a201a8d8ce9 100644
+--- a/pkg/dds/lib/src/dap/server.dart
++++ b/pkg/dds/lib/src/dap/server.dart
+@@ -30,7 +30,7 @@ class DapServer {
+     StreamSink<List<int>> _output, {
+     this.ipv6 = false,
+     this.enableDds = true,
+-    this.enableAuthCodes = true,
++    this.enableAuthCodes = false,
+     this.test = false,
+     this.logger,
+     Function? onError,
+diff --git a/pkg/dds/lib/src/dds_impl.dart b/pkg/dds/lib/src/dds_impl.dart
+index 33be98fc0aa..eda146a0580 100644
+--- a/pkg/dds/lib/src/dds_impl.dart
++++ b/pkg/dds/lib/src/dds_impl.dart
+@@ -67,7 +67,10 @@ class DartDevelopmentServiceImpl implements DartDevelopmentService {
+     _isolateManager = IsolateManager(this);
+     _streamManager = StreamManager(this);
+     _packageUriConverter = PackageUriConverter(this);
+-    _authCode = _authCodesEnabled ? _makeAuthToken() : '';
++    _authCode =  _authCodesEnabled ? _makeAuthToken() : '';
++    //TODO 临时关闭
++    this._authCodesEnabled = false;
++    _authCode = "";//_authCodesEnabled ? _makeAuthToken() : '';
+   }
+ 
+   Future<void> startService() async {
+@@ -395,7 +398,7 @@ class DartDevelopmentServiceImpl implements DartDevelopmentService {
+       clientManager.clients.keyOf(client);
+ 
+   bool get authCodesEnabled => _authCodesEnabled;
+-  final bool _authCodesEnabled;
++  bool _authCodesEnabled;
+   String? get authCode => _authCode;
+   String? _authCode;
+ 
+diff --git a/runtime/BUILD.gn b/runtime/BUILD.gn
+index 13bfd0a724b..65227b4be20 100644
+--- a/runtime/BUILD.gn
++++ b/runtime/BUILD.gn
+@@ -88,6 +88,7 @@ config("dart_precompiler_config") {
+ config("dart_os_config") {
+   defines = []
+ 
++    print("DART  TARGET OS: "+target_os )
+   if (target_os == "android") {
+     defines += [ "DART_TARGET_OS_ANDROID" ]
+   } else if (target_os == "fuchsia") {
+@@ -97,6 +98,10 @@ config("dart_os_config") {
+     defines += [ "DART_TARGET_OS_MACOS_IOS" ]
+   } else if (target_os == "linux") {
+     defines += [ "DART_TARGET_OS_LINUX" ]
++  } else if (target_os == "ohos") {
++    defines += [ "DART_TARGET_OS_LINUX" ]
++    defines += [ "DART_TARGET_OS_OHOS" ]
++    print("DART  TARGET OS OHOS")
+   } else if (target_os == "mac") {
+     defines += [ "DART_TARGET_OS_MACOS" ]
+   } else if (target_os == "win") {
+@@ -110,6 +115,11 @@ config("dart_os_config") {
+     print("Unknown target_os: $target_os")
+     assert(false)
+   }
++
++  if( is_ohos ) {
++      print("DART  TARGET OS OHOS 2.")
++      defines += [ "DART_TARGET_OS_OHOS" ]
++  }
+ }
+ 
+ # We need to build gen_snapshot targeting Fuchsia during a build of the SDK
+diff --git a/runtime/bin/BUILD.gn b/runtime/bin/BUILD.gn
+index f597fa5b0c3..2bb3bd42adc 100644
+--- a/runtime/bin/BUILD.gn
++++ b/runtime/bin/BUILD.gn
+@@ -32,6 +32,11 @@ config("libdart_builtin_config") {
+       "log",
+     ]
+   }
++  if( is_ohos){
++      libs +=[
++        "hilog_ndk.z"
++      ]
++  }
+ }
+ 
+ template("build_libdart_builtin") {
+diff --git a/runtime/bin/builtin_natives.cc b/runtime/bin/builtin_natives.cc
+index 14762ed7e63..74ea2336efc 100644
+--- a/runtime/bin/builtin_natives.cc
++++ b/runtime/bin/builtin_natives.cc
+@@ -18,6 +18,11 @@
+ #include "bin/io_natives.h"
+ #include "bin/platform.h"
+ 
++#ifdef  DART_TARGET_OS_OHOS
++#include <hilog/log.h>
++#include <pthread.h>
++#endif
++
+ namespace dart {
+ namespace bin {
+ 
+@@ -106,6 +111,14 @@ void FUNCTION_NAME(Builtin_PrintString)(Dart_NativeArguments args) {
+                                     sizeof(newline));
+     ASSERT(res == nullptr);
+   }
++
++#ifdef  DART_TARGET_OS_OHOS
++  {
++    //int OH_LOG_Print(LogType type, LogLevel level, unsigned int domain, const char *tag, const char *fmt, ...);
++    pthread_t thread = pthread_self();
++    OH_LOG_Print(LOG_APP,LOG_INFO,LOG_DOMAIN,"XComDartVm","Thread:%{public}lu %{public}s",thread,chars) ;
++  }
++#endif
+ }
+ 
+ }  // namespace bin
+diff --git a/runtime/bin/main_options.h b/runtime/bin/main_options.h
+index 2c9100f2af0..49293cd6306 100644
+--- a/runtime/bin/main_options.h
++++ b/runtime/bin/main_options.h
+@@ -90,9 +90,12 @@ enum VerbosityLevel {
+   kAll,
+ };
+ 
+-static constexpr const char* DEFAULT_VM_SERVICE_SERVER_IP = "localhost";
++//static constexpr const char* DEFAULT_VM_SERVICE_SERVER_IP = "localhost";
++//TODO 临时修改非localhost
++static constexpr const char* DEFAULT_VM_SERVICE_SERVER_IP = "0.0.0.0";
+ static constexpr int DEFAULT_VM_SERVICE_SERVER_PORT = 8181;
+-static constexpr int INVALID_VM_SERVICE_SERVER_PORT = -1;
++//static constexpr int INVALID_VM_SERVICE_SERVER_PORT = -1;
++static constexpr int INVALID_VM_SERVICE_SERVER_PORT = DEFAULT_VM_SERVICE_SERVER_PORT;
+ 
+ class Options {
+  public:
+diff --git a/runtime/bin/vmservice_impl.cc b/runtime/bin/vmservice_impl.cc
+index d7296c98e0f..d1abac994ff 100644
+--- a/runtime/bin/vmservice_impl.cc
++++ b/runtime/bin/vmservice_impl.cc
+@@ -127,6 +127,9 @@ bool VmService::Setup(const char* server_ip,
+ 
+   Dart_Handle result;
+ 
++  //TODO 临时关闭验证
++   auth_codes_disabled=true;
++
+   // Prepare builtin and its dependent libraries for use to resolve URIs.
+   // Set up various closures, e.g: printing, timers etc.
+   // Set up 'package root' for URI resolution.
+diff --git a/sdk/lib/_internal/vm/bin/vmservice_server.dart b/sdk/lib/_internal/vm/bin/vmservice_server.dart
+index b7e5be3eab5..7f318bb176d 100644
+--- a/sdk/lib/_internal/vm/bin/vmservice_server.dart
++++ b/sdk/lib/_internal/vm/bin/vmservice_server.dart
+@@ -175,13 +175,20 @@ class Server {
+   // would have to be written into the hub alongside the port number.
+   Server(
+       this._service,
+-      this._ip,
++      _ip,
+       this._port,
+-      this._originCheckDisabled,
++      _originCheckDisabled,
+       bool authCodesDisabled,
+       this._serviceInfoFilename,
+       this._enableServicePortFallback)
+-      : _authCodesDisabled = (authCodesDisabled || Platform.isFuchsia);
++      : _authCodesDisabled = (authCodesDisabled || Platform.isFuchsia),this._ip="0.0.0.0",this._originCheckDisabled=true;
++      /*
++      // TODO 临时去掉验证
++       this._authCodesDisabled = true;
++       this._ip="0.0.0.0";
++       this._originCheckDisabled = true;
++  }
++  */
+ 
+   bool _isAllowedOrigin(String origin) {
+     Uri uri;
+diff --git a/sdk_args.gni b/sdk_args.gni
+index 4b2a1e4ea63..a864344ee8d 100644
+--- a/sdk_args.gni
++++ b/sdk_args.gni
+@@ -28,7 +28,8 @@ declare_args() {
+ 
+   # Whether to enable the SDK hash check that will prevent loading a kernel
+   # into a VM which was built with a different SDK.
+-  verify_sdk_hash = true
++  #verify_sdk_hash = true
++  verify_sdk_hash = false
+ 
+   # The location in the build output directory of the built Dart SDK.
+   dart_sdk_output = "dart-sdk"

@@ -1,0 +1,44 @@
+diff --git a/gni/angle.gni b/gni/angle.gni
+index b8086660a..7ca7795af 100644
+--- a/gni/angle.gni
++++ b/gni/angle.gni
+@@ -60,8 +60,7 @@ if (angle_has_build) {
+ 
+   declare_args() {
+     angle_use_gbm = ozone_platform_gbm
+-    angle_use_x11 =
+-        ozone_platform_x11 && !is_ggp && (is_linux || is_chromeos) && !is_castos
++    angle_use_x11 = ozone_platform_x11 && !is_ggp && (is_linux || is_chromeos) && !is_castos
+     angle_use_wayland =
+         ozone_platform_wayland && !is_ggp && is_linux && !is_castos
+     angle_use_vulkan_display = (is_linux || is_chromeos) && !is_ggp
+diff --git a/include/EGL/eglplatform.h b/include/EGL/eglplatform.h
+index 9ebaf00a9..fe111d115 100644
+--- a/include/EGL/eglplatform.h
++++ b/include/EGL/eglplatform.h
+@@ -117,13 +117,19 @@ typedef khronos_uintptr_t EGLNativeWindowType;
+ 
+ #elif defined(__unix__) || defined(USE_X11)
+ 
+-/* X11 (tentative)  */
+-#include <X11/Xlib.h>
+-#include <X11/Xutil.h>
++struct NativeWindow;
+ 
+-typedef Display *EGLNativeDisplayType;
+-typedef Pixmap   EGLNativePixmapType;
+-typedef Window   EGLNativeWindowType;
++typedef void*                   EGLNativeDisplayType;
++typedef void*                   EGLNativePixmapType;
++typedef struct NativeWindow*    EGLNativeWindowType;
++
++// /* X11 (tentative)  */
++// #include <X11/Xlib.h>
++// #include <X11/Xutil.h>
++
++// typedef Display *EGLNativeDisplayType;
++// typedef Pixmap   EGLNativePixmapType;
++// typedef Window   EGLNativeWindowType;
+ 
+ #elif defined(__APPLE__)
+ 
