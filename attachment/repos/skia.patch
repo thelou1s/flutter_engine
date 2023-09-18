@@ -1,0 +1,3580 @@
+diff --git a/BUILD.gn b/BUILD.gn
+index ebbd898ec9..898c7a55d6 100644
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -26,7 +26,8 @@ import("gn/ios.gni")
+ 
+ # Skia public API, generally provided by :skia.
+ config("skia_public") {
+-  include_dirs = [ "." ]
++  include_dirs = [ ".", 
++    "//third_part/khronos/", ]
+ 
+   defines = []
+   cflags_objcc = []
+@@ -36,6 +37,9 @@ config("skia_public") {
+   if (is_fuchsia || is_linux) {
+     defines += [ "SK_R32_SHIFT=16" ]
+   }
++  if( is_ohos ) {
++    defines += [ "TARGET_OS_OHOS" ]
++  }
+   if (skia_enable_flutter_defines) {
+     defines += flutter_defines
+   }
+@@ -417,6 +421,44 @@ optional("fontmgr_android_factory") {
+   sources = [ "src/ports/SkFontMgr_android_factory.cpp" ]
+ }
+ 
++optional("fontmgr_ohos") {
++  enabled = skia_enable_fontmgr_ohos
++  deps = [
++    ":typeface_freetype",
++    "//third_party/expat",
++    "//third_party/jsoncpp:jsoncpp",
++  ]
++  public = [
++    "src/ports/skia_ohos/FontConfig_ohos.h",
++    "src/ports/skia_ohos/FontInfo_ohos.h",
++    "src/ports/skia_ohos/SkFontMgr_ohos.h",
++    "src/ports/skia_ohos/SkFontStyleSet_ohos.h",
++    "src/ports/skia_ohos/SkTypeface_ohos.h",
++  ]
++  sources = [
++    "src/ports/skia_ohos/FontConfig_ohos.cpp",
++    "src/ports/skia_ohos/SkFontMgr_ohos.cpp",
++    "src/ports/skia_ohos/SkFontStyleSet_ohos.cpp",
++    "src/ports/skia_ohos/SkTypeface_ohos.cpp",
++    "//third_party/vulkan-deps/spirv-headers/src/tools/buildHeaders/jsoncpp/dist/jsoncpp.cpp",
++  ]
++  include_dirs = [
++    "//third_party/skia/include/private",
++    "//third_party/skia/include/core",
++    "//third_party/skia/src/core",
++    "//third_party/skia/src/ports",
++    "//third_party/skia/src/ports/skia_ohos",
++    "//third_party/vulkan-deps/spirv-headers/src/tools/buildHeaders/jsoncpp/dist/",
++    "//third_party/skia/src/core/SkFontDescriptor.h"
++  ]
++}
++
++optional("fontmgr_ohos_factory") {
++  enabled = skia_enable_fontmgr_ohos
++  deps = [ ":fontmgr_ohos" ]
++  sources = [ "src/ports/skia_ohos/SkFontMgr_ohos_factory.cpp" ]
++}
++
+ optional("fontmgr_custom") {
+   enabled =
+       skia_enable_fontmgr_custom_directory ||
+@@ -1092,8 +1134,16 @@ optional("gpu") {
+       if (target_cpu != "arm64") {
+         libs += [ "OpenGL32.lib" ]
+       }
+-    } else {
+-      sources += [ "src/gpu/ganesh/gl/GrGLMakeNativeInterface_none.cpp" ]
++    } if( is_ohos){
++       libs += [ "EGL" ,"GLESv3"]
++         sources += [
++        "src/gpu/ganesh/gl/egl/GrGLMakeEGLInterface.cpp",
++        "src/gpu/ganesh/gl/egl/GrGLMakeNativeInterface_egl.cpp",
++      ]
++    }else {    
++         sources += [
++        "src/gpu/ganesh/gl/GrGLMakeNativeInterface_none.cpp",
++      ]
+     }
+     sources += skia_gl_gpu_sources
+   }
+@@ -1426,6 +1476,7 @@ skia_component("skia") {
+     ":fontmgr_fuchsia",
+     ":fontmgr_mac_ct",
+     ":fontmgr_win",
++    ":fontmgr_ohos",
+     ":fontmgr_win_gdi",
+     ":gpu",
+     ":graphite",
+diff --git a/gn/skia.gni b/gn/skia.gni
+index b81c0dae54..af04cdacdf 100644
+--- a/gn/skia.gni
++++ b/gn/skia.gni
+@@ -20,6 +20,7 @@ declare_args() {
+   skia_enable_fontmgr_empty = false
+   skia_enable_fontmgr_fuchsia = is_fuchsia
+   skia_enable_fontmgr_win = is_win
++  skia_enable_fontmgr_ohos = is_ohos
+   skia_enable_gpu = true
+   skia_enable_optimize_size = false
+   skia_enable_pdf = !is_wasm
+@@ -119,6 +120,8 @@ declare_args() {
+ }
+ 
+ declare_args() {
++#  skia_enable_fontmgr_ohos = is_ohos
++  skia_use_freetype2 = true
+   skia_enable_fontmgr_android = skia_use_expat && skia_use_freetype
+   skia_enable_fontmgr_custom_directory =
+       skia_use_freetype && !is_fuchsia && !is_wasm
+@@ -143,7 +146,9 @@ declare_args() {
+ 
+ declare_args() {
+   # skia_fontmgr_factory should define SkFontMgr::Factory()
+-  if (skia_enable_fontmgr_empty) {
++  if (is_ohos) {
++    skia_fontmgr_factory = ":fontmgr_ohos_factory"
++  } else if (skia_enable_fontmgr_empty) {
+     skia_fontmgr_factory = ":fontmgr_empty_factory"
+   } else if (is_android && skia_enable_fontmgr_android) {
+     skia_fontmgr_factory = ":fontmgr_android_factory"
+diff --git a/src/core/SkCanvas.cpp b/src/core/SkCanvas.cpp
+index ab23b24edd..c5f714712b 100644
+--- a/src/core/SkCanvas.cpp
++++ b/src/core/SkCanvas.cpp
+@@ -82,6 +82,16 @@ static_assert(std::max(3,4) == 4);
+ 
+ using Slug = sktext::gpu::Slug;
+ 
++#ifdef  TARGET_OS_OHOS
++#include <hilog/log.h>
++#define  SKIA_LOG_INFO     LOG_INFO
++#define  SKIA_TAG  "XComSkia"
++//int OH_LOG_Print(int type, HiLog_LogLevel level, unsigned int domain, const char *tag, const char *fmt, ...) ;
++#define OHOS_LOG_DEBUG(...)   (void) OH_LOG_Print(LOG_APP,SKIA_LOG_INFO,LOG_DOMAIN,SKIA_TAG,__VA_ARGS__)
++#else
++#define OHOS_LOG_DEBUG(...)
++#endif
++
+ ///////////////////////////////////////////////////////////////////////////////////////////////////
+ 
+ /*
+@@ -2044,7 +2054,7 @@ void SkCanvas::onDrawPaint(const SkPaint& paint) {
+ }
+ 
+ void SkCanvas::internalDrawPaint(const SkPaint& paint) {
+-    // drawPaint does not call internalQuickReject() because computing its geometry is not free
++    // drawPaint does not call exitinternalQuickReject() because computing its geometry is not free
+     // (see getLocalClipBounds(), and the two conditions below are sufficient.
+     if (paint.nothingToDraw() || this->isClipEmpty()) {
+         return;
+@@ -2358,16 +2368,22 @@ void SkCanvas::onDrawImageRect2(const SkImage* image, const SkRect& src, const S
+     SkPaint realPaint = clean_paint_for_drawImage(paint);
+     SkSamplingOptions realSampling = clean_sampling_for_constraint(sampling, constraint);
+ 
++    OHOS_LOG_DEBUG("SkCanvas::onDrawImageRect2 ...enter ");
+     if (this->internalQuickReject(dst, realPaint)) {
++        OHOS_LOG_DEBUG("SkCanvas::onDrawImageRect2 ...internalQuickReject  rejected");
+         return;
+     }
+ 
++    OHOS_LOG_DEBUG("SkCanvas::onDrawImageRect2 ...aboutToDraw");
+     auto layer = this->aboutToDraw(this, realPaint, &dst, CheckForOverwrite::kYes,
+                                    image->isOpaque() ? kOpaque_ShaderOverrideOpacity
+                                                      : kNotOpaque_ShaderOverrideOpacity);
++
+     if (layer) {
++        OHOS_LOG_DEBUG("SkCanvas::onDrawImageRect2 ...topDevice->drawImageRect");
+         this->topDevice()->drawImageRect(image, &src, dst, realSampling, layer->paint(), constraint);
+     }
++    OHOS_LOG_DEBUG("SkCanvas::onDrawImageRect2 ...exit");
+ }
+ 
+ void SkCanvas::onDrawImageLattice2(const SkImage* image, const Lattice& lattice, const SkRect& dst,
+diff --git a/src/gpu/ganesh/gl/egl/GrGLMakeEGLInterface.cpp b/src/gpu/ganesh/gl/egl/GrGLMakeEGLInterface.cpp
+index 78225b4610..c2105852b1 100644
+--- a/src/gpu/ganesh/gl/egl/GrGLMakeEGLInterface.cpp
++++ b/src/gpu/ganesh/gl/egl/GrGLMakeEGLInterface.cpp
+@@ -12,7 +12,9 @@
+ #ifndef GL_GLEXT_PROTOTYPES
+ #define GL_GLEXT_PROTOTYPES
+ #endif
+-#include <GLES2/gl2.h>
++// #include <GLES2/gl2.h>
++#include "gl2.h"
++
+ 
+ static GrGLFuncPtr egl_get_gl_proc(void* ctx, const char name[]) {
+     SkASSERT(nullptr == ctx);
+diff --git a/src/gpu/ganesh/gl/egl/gl2.h b/src/gpu/ganesh/gl/egl/gl2.h
+new file mode 100755
+index 0000000000..176023660e
+--- /dev/null
++++ b/src/gpu/ganesh/gl/egl/gl2.h
+@@ -0,0 +1,678 @@
++#ifndef __gles2_gl2_h_
++#define __gles2_gl2_h_ 1
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++/*
++** Copyright (c) 2013-2018 The Khronos Group Inc.
++**
++** Permission is hereby granted, free of charge, to any person obtaining a
++** copy of this software and/or associated documentation files (the
++** "Materials"), to deal in the Materials without restriction, including
++** without limitation the rights to use, copy, modify, merge, publish,
++** distribute, sublicense, and/or sell copies of the Materials, and to
++** permit persons to whom the Materials are furnished to do so, subject to
++** the following conditions:
++**
++** The above copyright notice and this permission notice shall be included
++** in all copies or substantial portions of the Materials.
++**
++** THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
++** EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
++** MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
++** IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
++** CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
++** TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
++** MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
++*/
++/*
++** This header is generated from the Khronos OpenGL / OpenGL ES XML
++** API Registry. The current version of the Registry, generator scripts
++** used to make the header, and the header can be found at
++**   https://github.com/KhronosGroup/OpenGL-Registry
++*/
++
++/* Chromium-specific GLES2 declarations */
++// #include <GLES2/gl2chromium.h>
++
++#include "gl2platform.h"
++
++#ifndef GL_APIENTRYP
++#define GL_APIENTRYP GL_APIENTRY*
++#endif
++
++#ifndef GL_GLES_PROTOTYPES
++#define GL_GLES_PROTOTYPES 1
++#endif
++
++/* Generated on date 20190911 */
++
++/* Generated C header for:
++ * API: gles2
++ * Profile: common
++ * Versions considered: 2\.[0-9]
++ * Versions emitted: .*
++ * Default extensions included: None
++ * Additional extensions included: _nomatch_^
++ * Extensions removed: _nomatch_^
++ */
++
++#ifndef GL_ES_VERSION_2_0
++#define GL_ES_VERSION_2_0 1
++#include <KHR/khrplatform.h>
++typedef khronos_int8_t GLbyte;
++typedef khronos_float_t GLclampf;
++typedef khronos_int32_t GLfixed;
++typedef khronos_int16_t GLshort;
++typedef khronos_uint16_t GLushort;
++typedef void GLvoid;
++typedef struct __GLsync *GLsync;
++typedef khronos_int64_t GLint64;
++typedef khronos_uint64_t GLuint64;
++typedef unsigned int GLenum;
++typedef unsigned int GLuint;
++typedef char GLchar;
++typedef khronos_float_t GLfloat;
++typedef khronos_ssize_t GLsizeiptr;
++typedef khronos_intptr_t GLintptr;
++typedef unsigned int GLbitfield;
++typedef int GLint;
++typedef unsigned char GLboolean;
++typedef int GLsizei;
++typedef khronos_uint8_t GLubyte;
++#define GL_DEPTH_BUFFER_BIT               0x00000100
++#define GL_STENCIL_BUFFER_BIT             0x00000400
++#define GL_COLOR_BUFFER_BIT               0x00004000
++#define GL_FALSE                          0
++#define GL_TRUE                           1
++#define GL_POINTS                         0x0000
++#define GL_LINES                          0x0001
++#define GL_LINE_LOOP                      0x0002
++#define GL_LINE_STRIP                     0x0003
++#define GL_TRIANGLES                      0x0004
++#define GL_TRIANGLE_STRIP                 0x0005
++#define GL_TRIANGLE_FAN                   0x0006
++#define GL_ZERO                           0
++#define GL_ONE                            1
++#define GL_SRC_COLOR                      0x0300
++#define GL_ONE_MINUS_SRC_COLOR            0x0301
++#define GL_SRC_ALPHA                      0x0302
++#define GL_ONE_MINUS_SRC_ALPHA            0x0303
++#define GL_DST_ALPHA                      0x0304
++#define GL_ONE_MINUS_DST_ALPHA            0x0305
++#define GL_DST_COLOR                      0x0306
++#define GL_ONE_MINUS_DST_COLOR            0x0307
++#define GL_SRC_ALPHA_SATURATE             0x0308
++#define GL_FUNC_ADD                       0x8006
++#define GL_BLEND_EQUATION                 0x8009
++#define GL_BLEND_EQUATION_RGB             0x8009
++#define GL_BLEND_EQUATION_ALPHA           0x883D
++#define GL_FUNC_SUBTRACT                  0x800A
++#define GL_FUNC_REVERSE_SUBTRACT          0x800B
++#define GL_BLEND_DST_RGB                  0x80C8
++#define GL_BLEND_SRC_RGB                  0x80C9
++#define GL_BLEND_DST_ALPHA                0x80CA
++#define GL_BLEND_SRC_ALPHA                0x80CB
++#define GL_CONSTANT_COLOR                 0x8001
++#define GL_ONE_MINUS_CONSTANT_COLOR       0x8002
++#define GL_CONSTANT_ALPHA                 0x8003
++#define GL_ONE_MINUS_CONSTANT_ALPHA       0x8004
++#define GL_BLEND_COLOR                    0x8005
++#define GL_ARRAY_BUFFER                   0x8892
++#define GL_ELEMENT_ARRAY_BUFFER           0x8893
++#define GL_ARRAY_BUFFER_BINDING           0x8894
++#define GL_ELEMENT_ARRAY_BUFFER_BINDING   0x8895
++#define GL_STREAM_DRAW                    0x88E0
++#define GL_STATIC_DRAW                    0x88E4
++#define GL_DYNAMIC_DRAW                   0x88E8
++#define GL_BUFFER_SIZE                    0x8764
++#define GL_BUFFER_USAGE                   0x8765
++#define GL_CURRENT_VERTEX_ATTRIB          0x8626
++#define GL_FRONT                          0x0404
++#define GL_BACK                           0x0405
++#define GL_FRONT_AND_BACK                 0x0408
++#define GL_TEXTURE_2D                     0x0DE1
++#define GL_CULL_FACE                      0x0B44
++#define GL_BLEND                          0x0BE2
++#define GL_DITHER                         0x0BD0
++#define GL_STENCIL_TEST                   0x0B90
++#define GL_DEPTH_TEST                     0x0B71
++#define GL_SCISSOR_TEST                   0x0C11
++#define GL_POLYGON_OFFSET_FILL            0x8037
++#define GL_SAMPLE_ALPHA_TO_COVERAGE       0x809E
++#define GL_SAMPLE_COVERAGE                0x80A0
++#define GL_NO_ERROR                       0
++#define GL_INVALID_ENUM                   0x0500
++#define GL_INVALID_VALUE                  0x0501
++#define GL_INVALID_OPERATION              0x0502
++#define GL_OUT_OF_MEMORY                  0x0505
++#define GL_CW                             0x0900
++#define GL_CCW                            0x0901
++#define GL_LINE_WIDTH                     0x0B21
++#define GL_ALIASED_POINT_SIZE_RANGE       0x846D
++#define GL_ALIASED_LINE_WIDTH_RANGE       0x846E
++#define GL_CULL_FACE_MODE                 0x0B45
++#define GL_FRONT_FACE                     0x0B46
++#define GL_DEPTH_RANGE                    0x0B70
++#define GL_DEPTH_WRITEMASK                0x0B72
++#define GL_DEPTH_CLEAR_VALUE              0x0B73
++#define GL_DEPTH_FUNC                     0x0B74
++#define GL_STENCIL_CLEAR_VALUE            0x0B91
++#define GL_STENCIL_FUNC                   0x0B92
++#define GL_STENCIL_FAIL                   0x0B94
++#define GL_STENCIL_PASS_DEPTH_FAIL        0x0B95
++#define GL_STENCIL_PASS_DEPTH_PASS        0x0B96
++#define GL_STENCIL_REF                    0x0B97
++#define GL_STENCIL_VALUE_MASK             0x0B93
++#define GL_STENCIL_WRITEMASK              0x0B98
++#define GL_STENCIL_BACK_FUNC              0x8800
++#define GL_STENCIL_BACK_FAIL              0x8801
++#define GL_STENCIL_BACK_PASS_DEPTH_FAIL   0x8802
++#define GL_STENCIL_BACK_PASS_DEPTH_PASS   0x8803
++#define GL_STENCIL_BACK_REF               0x8CA3
++#define GL_STENCIL_BACK_VALUE_MASK        0x8CA4
++#define GL_STENCIL_BACK_WRITEMASK         0x8CA5
++#define GL_VIEWPORT                       0x0BA2
++#define GL_SCISSOR_BOX                    0x0C10
++#define GL_COLOR_CLEAR_VALUE              0x0C22
++#define GL_COLOR_WRITEMASK                0x0C23
++#define GL_UNPACK_ALIGNMENT               0x0CF5
++#define GL_PACK_ALIGNMENT                 0x0D05
++#define GL_MAX_TEXTURE_SIZE               0x0D33
++#define GL_MAX_VIEWPORT_DIMS              0x0D3A
++#define GL_SUBPIXEL_BITS                  0x0D50
++#define GL_RED_BITS                       0x0D52
++#define GL_GREEN_BITS                     0x0D53
++#define GL_BLUE_BITS                      0x0D54
++#define GL_ALPHA_BITS                     0x0D55
++#define GL_DEPTH_BITS                     0x0D56
++#define GL_STENCIL_BITS                   0x0D57
++#define GL_POLYGON_OFFSET_UNITS           0x2A00
++#define GL_POLYGON_OFFSET_FACTOR          0x8038
++#define GL_TEXTURE_BINDING_2D             0x8069
++#define GL_SAMPLE_BUFFERS                 0x80A8
++#define GL_SAMPLES                        0x80A9
++#define GL_SAMPLE_COVERAGE_VALUE          0x80AA
++#define GL_SAMPLE_COVERAGE_INVERT         0x80AB
++#define GL_NUM_COMPRESSED_TEXTURE_FORMATS 0x86A2
++#define GL_COMPRESSED_TEXTURE_FORMATS     0x86A3
++#define GL_DONT_CARE                      0x1100
++#define GL_FASTEST                        0x1101
++#define GL_NICEST                         0x1102
++#define GL_GENERATE_MIPMAP_HINT           0x8192
++#define GL_BYTE                           0x1400
++#define GL_UNSIGNED_BYTE                  0x1401
++#define GL_SHORT                          0x1402
++#define GL_UNSIGNED_SHORT                 0x1403
++#define GL_INT                            0x1404
++#define GL_UNSIGNED_INT                   0x1405
++#define GL_FLOAT                          0x1406
++#define GL_FIXED                          0x140C
++#define GL_DEPTH_COMPONENT                0x1902
++#define GL_ALPHA                          0x1906
++#define GL_RGB                            0x1907
++#define GL_RGBA                           0x1908
++#define GL_LUMINANCE                      0x1909
++#define GL_LUMINANCE_ALPHA                0x190A
++#define GL_UNSIGNED_SHORT_4_4_4_4         0x8033
++#define GL_UNSIGNED_SHORT_5_5_5_1         0x8034
++#define GL_UNSIGNED_SHORT_5_6_5           0x8363
++#define GL_FRAGMENT_SHADER                0x8B30
++#define GL_VERTEX_SHADER                  0x8B31
++#define GL_MAX_VERTEX_ATTRIBS             0x8869
++#define GL_MAX_VERTEX_UNIFORM_VECTORS     0x8DFB
++#define GL_MAX_VARYING_VECTORS            0x8DFC
++#define GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS 0x8B4D
++#define GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS 0x8B4C
++#define GL_MAX_TEXTURE_IMAGE_UNITS        0x8872
++#define GL_MAX_FRAGMENT_UNIFORM_VECTORS   0x8DFD
++#define GL_SHADER_TYPE                    0x8B4F
++#define GL_DELETE_STATUS                  0x8B80
++#define GL_LINK_STATUS                    0x8B82
++#define GL_VALIDATE_STATUS                0x8B83
++#define GL_ATTACHED_SHADERS               0x8B85
++#define GL_ACTIVE_UNIFORMS                0x8B86
++#define GL_ACTIVE_UNIFORM_MAX_LENGTH      0x8B87
++#define GL_ACTIVE_ATTRIBUTES              0x8B89
++#define GL_ACTIVE_ATTRIBUTE_MAX_LENGTH    0x8B8A
++#define GL_SHADING_LANGUAGE_VERSION       0x8B8C
++#define GL_CURRENT_PROGRAM                0x8B8D
++#define GL_NEVER                          0x0200
++#define GL_LESS                           0x0201
++#define GL_EQUAL                          0x0202
++#define GL_LEQUAL                         0x0203
++#define GL_GREATER                        0x0204
++#define GL_NOTEQUAL                       0x0205
++#define GL_GEQUAL                         0x0206
++#define GL_ALWAYS                         0x0207
++#define GL_KEEP                           0x1E00
++#define GL_REPLACE                        0x1E01
++#define GL_INCR                           0x1E02
++#define GL_DECR                           0x1E03
++#define GL_INVERT                         0x150A
++#define GL_INCR_WRAP                      0x8507
++#define GL_DECR_WRAP                      0x8508
++#define GL_VENDOR                         0x1F00
++#define GL_RENDERER                       0x1F01
++#define GL_VERSION                        0x1F02
++#define GL_EXTENSIONS                     0x1F03
++#define GL_NEAREST                        0x2600
++#define GL_LINEAR                         0x2601
++#define GL_NEAREST_MIPMAP_NEAREST         0x2700
++#define GL_LINEAR_MIPMAP_NEAREST          0x2701
++#define GL_NEAREST_MIPMAP_LINEAR          0x2702
++#define GL_LINEAR_MIPMAP_LINEAR           0x2703
++#define GL_TEXTURE_MAG_FILTER             0x2800
++#define GL_TEXTURE_MIN_FILTER             0x2801
++#define GL_TEXTURE_WRAP_S                 0x2802
++#define GL_TEXTURE_WRAP_T                 0x2803
++#define GL_TEXTURE                        0x1702
++#define GL_TEXTURE_CUBE_MAP               0x8513
++#define GL_TEXTURE_BINDING_CUBE_MAP       0x8514
++#define GL_TEXTURE_CUBE_MAP_POSITIVE_X    0x8515
++#define GL_TEXTURE_CUBE_MAP_NEGATIVE_X    0x8516
++#define GL_TEXTURE_CUBE_MAP_POSITIVE_Y    0x8517
++#define GL_TEXTURE_CUBE_MAP_NEGATIVE_Y    0x8518
++#define GL_TEXTURE_CUBE_MAP_POSITIVE_Z    0x8519
++#define GL_TEXTURE_CUBE_MAP_NEGATIVE_Z    0x851A
++#define GL_MAX_CUBE_MAP_TEXTURE_SIZE      0x851C
++#define GL_TEXTURE0                       0x84C0
++#define GL_TEXTURE1                       0x84C1
++#define GL_TEXTURE2                       0x84C2
++#define GL_TEXTURE3                       0x84C3
++#define GL_TEXTURE4                       0x84C4
++#define GL_TEXTURE5                       0x84C5
++#define GL_TEXTURE6                       0x84C6
++#define GL_TEXTURE7                       0x84C7
++#define GL_TEXTURE8                       0x84C8
++#define GL_TEXTURE9                       0x84C9
++#define GL_TEXTURE10                      0x84CA
++#define GL_TEXTURE11                      0x84CB
++#define GL_TEXTURE12                      0x84CC
++#define GL_TEXTURE13                      0x84CD
++#define GL_TEXTURE14                      0x84CE
++#define GL_TEXTURE15                      0x84CF
++#define GL_TEXTURE16                      0x84D0
++#define GL_TEXTURE17                      0x84D1
++#define GL_TEXTURE18                      0x84D2
++#define GL_TEXTURE19                      0x84D3
++#define GL_TEXTURE20                      0x84D4
++#define GL_TEXTURE21                      0x84D5
++#define GL_TEXTURE22                      0x84D6
++#define GL_TEXTURE23                      0x84D7
++#define GL_TEXTURE24                      0x84D8
++#define GL_TEXTURE25                      0x84D9
++#define GL_TEXTURE26                      0x84DA
++#define GL_TEXTURE27                      0x84DB
++#define GL_TEXTURE28                      0x84DC
++#define GL_TEXTURE29                      0x84DD
++#define GL_TEXTURE30                      0x84DE
++#define GL_TEXTURE31                      0x84DF
++#define GL_ACTIVE_TEXTURE                 0x84E0
++#define GL_REPEAT                         0x2901
++#define GL_CLAMP_TO_EDGE                  0x812F
++#define GL_MIRRORED_REPEAT                0x8370
++#define GL_FLOAT_VEC2                     0x8B50
++#define GL_FLOAT_VEC3                     0x8B51
++#define GL_FLOAT_VEC4                     0x8B52
++#define GL_INT_VEC2                       0x8B53
++#define GL_INT_VEC3                       0x8B54
++#define GL_INT_VEC4                       0x8B55
++#define GL_BOOL                           0x8B56
++#define GL_BOOL_VEC2                      0x8B57
++#define GL_BOOL_VEC3                      0x8B58
++#define GL_BOOL_VEC4                      0x8B59
++#define GL_FLOAT_MAT2                     0x8B5A
++#define GL_FLOAT_MAT3                     0x8B5B
++#define GL_FLOAT_MAT4                     0x8B5C
++#define GL_SAMPLER_2D                     0x8B5E
++#define GL_SAMPLER_CUBE                   0x8B60
++#define GL_VERTEX_ATTRIB_ARRAY_ENABLED    0x8622
++#define GL_VERTEX_ATTRIB_ARRAY_SIZE       0x8623
++#define GL_VERTEX_ATTRIB_ARRAY_STRIDE     0x8624
++#define GL_VERTEX_ATTRIB_ARRAY_TYPE       0x8625
++#define GL_VERTEX_ATTRIB_ARRAY_NORMALIZED 0x886A
++#define GL_VERTEX_ATTRIB_ARRAY_POINTER    0x8645
++#define GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING 0x889F
++#define GL_IMPLEMENTATION_COLOR_READ_TYPE 0x8B9A
++#define GL_IMPLEMENTATION_COLOR_READ_FORMAT 0x8B9B
++#define GL_COMPILE_STATUS                 0x8B81
++#define GL_INFO_LOG_LENGTH                0x8B84
++#define GL_SHADER_SOURCE_LENGTH           0x8B88
++#define GL_SHADER_COMPILER                0x8DFA
++#define GL_SHADER_BINARY_FORMATS          0x8DF8
++#define GL_NUM_SHADER_BINARY_FORMATS      0x8DF9
++#define GL_LOW_FLOAT                      0x8DF0
++#define GL_MEDIUM_FLOAT                   0x8DF1
++#define GL_HIGH_FLOAT                     0x8DF2
++#define GL_LOW_INT                        0x8DF3
++#define GL_MEDIUM_INT                     0x8DF4
++#define GL_HIGH_INT                       0x8DF5
++#define GL_FRAMEBUFFER                    0x8D40
++#define GL_RENDERBUFFER                   0x8D41
++#define GL_RGBA4                          0x8056
++#define GL_RGB5_A1                        0x8057
++#define GL_RGB565                         0x8D62
++#define GL_DEPTH_COMPONENT16              0x81A5
++#define GL_STENCIL_INDEX8                 0x8D48
++#define GL_RENDERBUFFER_WIDTH             0x8D42
++#define GL_RENDERBUFFER_HEIGHT            0x8D43
++#define GL_RENDERBUFFER_INTERNAL_FORMAT   0x8D44
++#define GL_RENDERBUFFER_RED_SIZE          0x8D50
++#define GL_RENDERBUFFER_GREEN_SIZE        0x8D51
++#define GL_RENDERBUFFER_BLUE_SIZE         0x8D52
++#define GL_RENDERBUFFER_ALPHA_SIZE        0x8D53
++#define GL_RENDERBUFFER_DEPTH_SIZE        0x8D54
++#define GL_RENDERBUFFER_STENCIL_SIZE      0x8D55
++#define GL_FRAMEBUFFER_ATTACHMENT_OBJECT_TYPE 0x8CD0
++#define GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME 0x8CD1
++#define GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_LEVEL 0x8CD2
++#define GL_FRAMEBUFFER_ATTACHMENT_TEXTURE_CUBE_MAP_FACE 0x8CD3
++#define GL_COLOR_ATTACHMENT0              0x8CE0
++#define GL_DEPTH_ATTACHMENT               0x8D00
++#define GL_STENCIL_ATTACHMENT             0x8D20
++#define GL_NONE                           0
++#define GL_FRAMEBUFFER_COMPLETE           0x8CD5
++#define GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT 0x8CD6
++#define GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT 0x8CD7
++#define GL_FRAMEBUFFER_INCOMPLETE_DIMENSIONS 0x8CD9
++#define GL_FRAMEBUFFER_UNSUPPORTED        0x8CDD
++#define GL_FRAMEBUFFER_BINDING            0x8CA6
++#define GL_RENDERBUFFER_BINDING           0x8CA7
++#define GL_MAX_RENDERBUFFER_SIZE          0x84E8
++#define GL_INVALID_FRAMEBUFFER_OPERATION  0x0506
++typedef void (GL_APIENTRYP PFNGLACTIVETEXTUREPROC) (GLenum texture);
++typedef void (GL_APIENTRYP PFNGLATTACHSHADERPROC) (GLuint program, GLuint shader);
++typedef void (GL_APIENTRYP PFNGLBINDATTRIBLOCATIONPROC) (GLuint program, GLuint index, const GLchar *name);
++typedef void (GL_APIENTRYP PFNGLBINDBUFFERPROC) (GLenum target, GLuint buffer);
++typedef void (GL_APIENTRYP PFNGLBINDFRAMEBUFFERPROC) (GLenum target, GLuint framebuffer);
++typedef void (GL_APIENTRYP PFNGLBINDRENDERBUFFERPROC) (GLenum target, GLuint renderbuffer);
++typedef void (GL_APIENTRYP PFNGLBINDTEXTUREPROC) (GLenum target, GLuint texture);
++typedef void (GL_APIENTRYP PFNGLBLENDCOLORPROC) (GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
++typedef void (GL_APIENTRYP PFNGLBLENDEQUATIONPROC) (GLenum mode);
++typedef void (GL_APIENTRYP PFNGLBLENDEQUATIONSEPARATEPROC) (GLenum modeRGB, GLenum modeAlpha);
++typedef void (GL_APIENTRYP PFNGLBLENDFUNCPROC) (GLenum sfactor, GLenum dfactor);
++typedef void (GL_APIENTRYP PFNGLBLENDFUNCSEPARATEPROC) (GLenum sfactorRGB, GLenum dfactorRGB, GLenum sfactorAlpha, GLenum dfactorAlpha);
++typedef void (GL_APIENTRYP PFNGLBUFFERDATAPROC) (GLenum target, GLsizeiptr size, const void *data, GLenum usage);
++typedef void (GL_APIENTRYP PFNGLBUFFERSUBDATAPROC) (GLenum target, GLintptr offset, GLsizeiptr size, const void *data);
++typedef GLenum (GL_APIENTRYP PFNGLCHECKFRAMEBUFFERSTATUSPROC) (GLenum target);
++typedef void (GL_APIENTRYP PFNGLCLEARPROC) (GLbitfield mask);
++typedef void (GL_APIENTRYP PFNGLCLEARCOLORPROC) (GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
++typedef void (GL_APIENTRYP PFNGLCLEARDEPTHFPROC) (GLfloat d);
++typedef void (GL_APIENTRYP PFNGLCLEARSTENCILPROC) (GLint s);
++typedef void (GL_APIENTRYP PFNGLCOLORMASKPROC) (GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
++typedef void (GL_APIENTRYP PFNGLCOMPILESHADERPROC) (GLuint shader);
++typedef void (GL_APIENTRYP PFNGLCOMPRESSEDTEXIMAGE2DPROC) (GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const void *data);
++typedef void (GL_APIENTRYP PFNGLCOMPRESSEDTEXSUBIMAGE2DPROC) (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, const void *data);
++typedef void (GL_APIENTRYP PFNGLCOPYTEXIMAGE2DPROC) (GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLsizei height, GLint border);
++typedef void (GL_APIENTRYP PFNGLCOPYTEXSUBIMAGE2DPROC) (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint x, GLint y, GLsizei width, GLsizei height);
++typedef GLuint (GL_APIENTRYP PFNGLCREATEPROGRAMPROC) (void);
++typedef GLuint (GL_APIENTRYP PFNGLCREATESHADERPROC) (GLenum type);
++typedef void (GL_APIENTRYP PFNGLCULLFACEPROC) (GLenum mode);
++typedef void (GL_APIENTRYP PFNGLDELETEBUFFERSPROC) (GLsizei n, const GLuint *buffers);
++typedef void (GL_APIENTRYP PFNGLDELETEFRAMEBUFFERSPROC) (GLsizei n, const GLuint *framebuffers);
++typedef void (GL_APIENTRYP PFNGLDELETEPROGRAMPROC) (GLuint program);
++typedef void (GL_APIENTRYP PFNGLDELETERENDERBUFFERSPROC) (GLsizei n, const GLuint *renderbuffers);
++typedef void (GL_APIENTRYP PFNGLDELETESHADERPROC) (GLuint shader);
++typedef void (GL_APIENTRYP PFNGLDELETETEXTURESPROC) (GLsizei n, const GLuint *textures);
++typedef void (GL_APIENTRYP PFNGLDEPTHFUNCPROC) (GLenum func);
++typedef void (GL_APIENTRYP PFNGLDEPTHMASKPROC) (GLboolean flag);
++typedef void (GL_APIENTRYP PFNGLDEPTHRANGEFPROC) (GLfloat n, GLfloat f);
++typedef void (GL_APIENTRYP PFNGLDETACHSHADERPROC) (GLuint program, GLuint shader);
++typedef void (GL_APIENTRYP PFNGLDISABLEPROC) (GLenum cap);
++typedef void (GL_APIENTRYP PFNGLDISABLEVERTEXATTRIBARRAYPROC) (GLuint index);
++typedef void (GL_APIENTRYP PFNGLDRAWARRAYSPROC) (GLenum mode, GLint first, GLsizei count);
++typedef void (GL_APIENTRYP PFNGLDRAWELEMENTSPROC) (GLenum mode, GLsizei count, GLenum type, const void *indices);
++typedef void (GL_APIENTRYP PFNGLENABLEPROC) (GLenum cap);
++typedef void (GL_APIENTRYP PFNGLENABLEVERTEXATTRIBARRAYPROC) (GLuint index);
++typedef void (GL_APIENTRYP PFNGLFINISHPROC) (void);
++typedef void (GL_APIENTRYP PFNGLFLUSHPROC) (void);
++typedef void (GL_APIENTRYP PFNGLFRAMEBUFFERRENDERBUFFERPROC) (GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer);
++typedef void (GL_APIENTRYP PFNGLFRAMEBUFFERTEXTURE2DPROC) (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
++typedef void (GL_APIENTRYP PFNGLFRONTFACEPROC) (GLenum mode);
++typedef void (GL_APIENTRYP PFNGLGENBUFFERSPROC) (GLsizei n, GLuint *buffers);
++typedef void (GL_APIENTRYP PFNGLGENERATEMIPMAPPROC) (GLenum target);
++typedef void (GL_APIENTRYP PFNGLGENFRAMEBUFFERSPROC) (GLsizei n, GLuint *framebuffers);
++typedef void (GL_APIENTRYP PFNGLGENRENDERBUFFERSPROC) (GLsizei n, GLuint *renderbuffers);
++typedef void (GL_APIENTRYP PFNGLGENTEXTURESPROC) (GLsizei n, GLuint *textures);
++typedef void (GL_APIENTRYP PFNGLGETACTIVEATTRIBPROC) (GLuint program, GLuint index, GLsizei bufSize, GLsizei *length, GLint *size, GLenum *type, GLchar *name);
++typedef void (GL_APIENTRYP PFNGLGETACTIVEUNIFORMPROC) (GLuint program, GLuint index, GLsizei bufSize, GLsizei *length, GLint *size, GLenum *type, GLchar *name);
++typedef void (GL_APIENTRYP PFNGLGETATTACHEDSHADERSPROC) (GLuint program, GLsizei maxCount, GLsizei *count, GLuint *shaders);
++typedef GLint (GL_APIENTRYP PFNGLGETATTRIBLOCATIONPROC) (GLuint program, const GLchar *name);
++typedef void (GL_APIENTRYP PFNGLGETBOOLEANVPROC) (GLenum pname, GLboolean *data);
++typedef void (GL_APIENTRYP PFNGLGETBUFFERPARAMETERIVPROC) (GLenum target, GLenum pname, GLint *params);
++typedef GLenum (GL_APIENTRYP PFNGLGETERRORPROC) (void);
++typedef void (GL_APIENTRYP PFNGLGETFLOATVPROC) (GLenum pname, GLfloat *data);
++typedef void (GL_APIENTRYP PFNGLGETFRAMEBUFFERATTACHMENTPARAMETERIVPROC) (GLenum target, GLenum attachment, GLenum pname, GLint *params);
++typedef void (GL_APIENTRYP PFNGLGETINTEGERVPROC) (GLenum pname, GLint *data);
++typedef void (GL_APIENTRYP PFNGLGETPROGRAMIVPROC) (GLuint program, GLenum pname, GLint *params);
++typedef void (GL_APIENTRYP PFNGLGETPROGRAMINFOLOGPROC) (GLuint program, GLsizei bufSize, GLsizei *length, GLchar *infoLog);
++typedef void (GL_APIENTRYP PFNGLGETRENDERBUFFERPARAMETERIVPROC) (GLenum target, GLenum pname, GLint *params);
++typedef void (GL_APIENTRYP PFNGLGETSHADERIVPROC) (GLuint shader, GLenum pname, GLint *params);
++typedef void (GL_APIENTRYP PFNGLGETSHADERINFOLOGPROC) (GLuint shader, GLsizei bufSize, GLsizei *length, GLchar *infoLog);
++typedef void (GL_APIENTRYP PFNGLGETSHADERPRECISIONFORMATPROC) (GLenum shadertype, GLenum precisiontype, GLint *range, GLint *precision);
++typedef void (GL_APIENTRYP PFNGLGETSHADERSOURCEPROC) (GLuint shader, GLsizei bufSize, GLsizei *length, GLchar *source);
++typedef const GLubyte *(GL_APIENTRYP PFNGLGETSTRINGPROC) (GLenum name);
++typedef void (GL_APIENTRYP PFNGLGETTEXPARAMETERFVPROC) (GLenum target, GLenum pname, GLfloat *params);
++typedef void (GL_APIENTRYP PFNGLGETTEXPARAMETERIVPROC) (GLenum target, GLenum pname, GLint *params);
++typedef void (GL_APIENTRYP PFNGLGETUNIFORMFVPROC) (GLuint program, GLint location, GLfloat *params);
++typedef void (GL_APIENTRYP PFNGLGETUNIFORMIVPROC) (GLuint program, GLint location, GLint *params);
++typedef GLint (GL_APIENTRYP PFNGLGETUNIFORMLOCATIONPROC) (GLuint program, const GLchar *name);
++typedef void (GL_APIENTRYP PFNGLGETVERTEXATTRIBFVPROC) (GLuint index, GLenum pname, GLfloat *params);
++typedef void (GL_APIENTRYP PFNGLGETVERTEXATTRIBIVPROC) (GLuint index, GLenum pname, GLint *params);
++typedef void (GL_APIENTRYP PFNGLGETVERTEXATTRIBPOINTERVPROC) (GLuint index, GLenum pname, void **pointer);
++typedef void (GL_APIENTRYP PFNGLHINTPROC) (GLenum target, GLenum mode);
++typedef GLboolean (GL_APIENTRYP PFNGLISBUFFERPROC) (GLuint buffer);
++typedef GLboolean (GL_APIENTRYP PFNGLISENABLEDPROC) (GLenum cap);
++typedef GLboolean (GL_APIENTRYP PFNGLISFRAMEBUFFERPROC) (GLuint framebuffer);
++typedef GLboolean (GL_APIENTRYP PFNGLISPROGRAMPROC) (GLuint program);
++typedef GLboolean (GL_APIENTRYP PFNGLISRENDERBUFFERPROC) (GLuint renderbuffer);
++typedef GLboolean (GL_APIENTRYP PFNGLISSHADERPROC) (GLuint shader);
++typedef GLboolean (GL_APIENTRYP PFNGLISTEXTUREPROC) (GLuint texture);
++typedef void (GL_APIENTRYP PFNGLLINEWIDTHPROC) (GLfloat width);
++typedef void (GL_APIENTRYP PFNGLLINKPROGRAMPROC) (GLuint program);
++typedef void (GL_APIENTRYP PFNGLPIXELSTOREIPROC) (GLenum pname, GLint param);
++typedef void (GL_APIENTRYP PFNGLPOLYGONOFFSETPROC) (GLfloat factor, GLfloat units);
++typedef void (GL_APIENTRYP PFNGLREADPIXELSPROC) (GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, void *pixels);
++typedef void (GL_APIENTRYP PFNGLRELEASESHADERCOMPILERPROC) (void);
++typedef void (GL_APIENTRYP PFNGLRENDERBUFFERSTORAGEPROC) (GLenum target, GLenum internalformat, GLsizei width, GLsizei height);
++typedef void (GL_APIENTRYP PFNGLSAMPLECOVERAGEPROC) (GLfloat value, GLboolean invert);
++typedef void (GL_APIENTRYP PFNGLSCISSORPROC) (GLint x, GLint y, GLsizei width, GLsizei height);
++typedef void (GL_APIENTRYP PFNGLSHADERBINARYPROC) (GLsizei count, const GLuint *shaders, GLenum binaryformat, const void *binary, GLsizei length);
++typedef void (GL_APIENTRYP PFNGLSHADERSOURCEPROC) (GLuint shader, GLsizei count, const GLchar *const*string, const GLint *length);
++typedef void (GL_APIENTRYP PFNGLSTENCILFUNCPROC) (GLenum func, GLint ref, GLuint mask);
++typedef void (GL_APIENTRYP PFNGLSTENCILFUNCSEPARATEPROC) (GLenum face, GLenum func, GLint ref, GLuint mask);
++typedef void (GL_APIENTRYP PFNGLSTENCILMASKPROC) (GLuint mask);
++typedef void (GL_APIENTRYP PFNGLSTENCILMASKSEPARATEPROC) (GLenum face, GLuint mask);
++typedef void (GL_APIENTRYP PFNGLSTENCILOPPROC) (GLenum fail, GLenum zfail, GLenum zpass);
++typedef void (GL_APIENTRYP PFNGLSTENCILOPSEPARATEPROC) (GLenum face, GLenum sfail, GLenum dpfail, GLenum dppass);
++typedef void (GL_APIENTRYP PFNGLTEXIMAGE2DPROC) (GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const void *pixels);
++typedef void (GL_APIENTRYP PFNGLTEXPARAMETERFPROC) (GLenum target, GLenum pname, GLfloat param);
++typedef void (GL_APIENTRYP PFNGLTEXPARAMETERFVPROC) (GLenum target, GLenum pname, const GLfloat *params);
++typedef void (GL_APIENTRYP PFNGLTEXPARAMETERIPROC) (GLenum target, GLenum pname, GLint param);
++typedef void (GL_APIENTRYP PFNGLTEXPARAMETERIVPROC) (GLenum target, GLenum pname, const GLint *params);
++typedef void (GL_APIENTRYP PFNGLTEXSUBIMAGE2DPROC) (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const void *pixels);
++typedef void (GL_APIENTRYP PFNGLUNIFORM1FPROC) (GLint location, GLfloat v0);
++typedef void (GL_APIENTRYP PFNGLUNIFORM1FVPROC) (GLint location, GLsizei count, const GLfloat *value);
++typedef void (GL_APIENTRYP PFNGLUNIFORM1IPROC) (GLint location, GLint v0);
++typedef void (GL_APIENTRYP PFNGLUNIFORM1IVPROC) (GLint location, GLsizei count, const GLint *value);
++typedef void (GL_APIENTRYP PFNGLUNIFORM2FPROC) (GLint location, GLfloat v0, GLfloat v1);
++typedef void (GL_APIENTRYP PFNGLUNIFORM2FVPROC) (GLint location, GLsizei count, const GLfloat *value);
++typedef void (GL_APIENTRYP PFNGLUNIFORM2IPROC) (GLint location, GLint v0, GLint v1);
++typedef void (GL_APIENTRYP PFNGLUNIFORM2IVPROC) (GLint location, GLsizei count, const GLint *value);
++typedef void (GL_APIENTRYP PFNGLUNIFORM3FPROC) (GLint location, GLfloat v0, GLfloat v1, GLfloat v2);
++typedef void (GL_APIENTRYP PFNGLUNIFORM3FVPROC) (GLint location, GLsizei count, const GLfloat *value);
++typedef void (GL_APIENTRYP PFNGLUNIFORM3IPROC) (GLint location, GLint v0, GLint v1, GLint v2);
++typedef void (GL_APIENTRYP PFNGLUNIFORM3IVPROC) (GLint location, GLsizei count, const GLint *value);
++typedef void (GL_APIENTRYP PFNGLUNIFORM4FPROC) (GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3);
++typedef void (GL_APIENTRYP PFNGLUNIFORM4FVPROC) (GLint location, GLsizei count, const GLfloat *value);
++typedef void (GL_APIENTRYP PFNGLUNIFORM4IPROC) (GLint location, GLint v0, GLint v1, GLint v2, GLint v3);
++typedef void (GL_APIENTRYP PFNGLUNIFORM4IVPROC) (GLint location, GLsizei count, const GLint *value);
++typedef void (GL_APIENTRYP PFNGLUNIFORMMATRIX2FVPROC) (GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
++typedef void (GL_APIENTRYP PFNGLUNIFORMMATRIX3FVPROC) (GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
++typedef void (GL_APIENTRYP PFNGLUNIFORMMATRIX4FVPROC) (GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
++typedef void (GL_APIENTRYP PFNGLUSEPROGRAMPROC) (GLuint program);
++typedef void (GL_APIENTRYP PFNGLVALIDATEPROGRAMPROC) (GLuint program);
++typedef void (GL_APIENTRYP PFNGLVERTEXATTRIB1FPROC) (GLuint index, GLfloat x);
++typedef void (GL_APIENTRYP PFNGLVERTEXATTRIB1FVPROC) (GLuint index, const GLfloat *v);
++typedef void (GL_APIENTRYP PFNGLVERTEXATTRIB2FPROC) (GLuint index, GLfloat x, GLfloat y);
++typedef void (GL_APIENTRYP PFNGLVERTEXATTRIB2FVPROC) (GLuint index, const GLfloat *v);
++typedef void (GL_APIENTRYP PFNGLVERTEXATTRIB3FPROC) (GLuint index, GLfloat x, GLfloat y, GLfloat z);
++typedef void (GL_APIENTRYP PFNGLVERTEXATTRIB3FVPROC) (GLuint index, const GLfloat *v);
++typedef void (GL_APIENTRYP PFNGLVERTEXATTRIB4FPROC) (GLuint index, GLfloat x, GLfloat y, GLfloat z, GLfloat w);
++typedef void (GL_APIENTRYP PFNGLVERTEXATTRIB4FVPROC) (GLuint index, const GLfloat *v);
++typedef void (GL_APIENTRYP PFNGLVERTEXATTRIBPOINTERPROC) (GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void *pointer);
++typedef void (GL_APIENTRYP PFNGLVIEWPORTPROC) (GLint x, GLint y, GLsizei width, GLsizei height);
++#if GL_GLES_PROTOTYPES
++GL_APICALL void GL_APIENTRY glActiveTexture (GLenum texture);
++GL_APICALL void GL_APIENTRY glAttachShader (GLuint program, GLuint shader);
++GL_APICALL void GL_APIENTRY glBindAttribLocation (GLuint program, GLuint index, const GLchar *name);
++GL_APICALL void GL_APIENTRY glBindBuffer (GLenum target, GLuint buffer);
++GL_APICALL void GL_APIENTRY glBindFramebuffer (GLenum target, GLuint framebuffer);
++GL_APICALL void GL_APIENTRY glBindRenderbuffer (GLenum target, GLuint renderbuffer);
++GL_APICALL void GL_APIENTRY glBindTexture (GLenum target, GLuint texture);
++GL_APICALL void GL_APIENTRY glBlendColor (GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
++GL_APICALL void GL_APIENTRY glBlendEquation (GLenum mode);
++GL_APICALL void GL_APIENTRY glBlendEquationSeparate (GLenum modeRGB, GLenum modeAlpha);
++GL_APICALL void GL_APIENTRY glBlendFunc (GLenum sfactor, GLenum dfactor);
++GL_APICALL void GL_APIENTRY glBlendFuncSeparate (GLenum sfactorRGB, GLenum dfactorRGB, GLenum sfactorAlpha, GLenum dfactorAlpha);
++GL_APICALL void GL_APIENTRY glBufferData (GLenum target, GLsizeiptr size, const void *data, GLenum usage);
++GL_APICALL void GL_APIENTRY glBufferSubData (GLenum target, GLintptr offset, GLsizeiptr size, const void *data);
++GL_APICALL GLenum GL_APIENTRY glCheckFramebufferStatus (GLenum target);
++GL_APICALL void GL_APIENTRY glClear (GLbitfield mask);
++GL_APICALL void GL_APIENTRY glClearColor (GLfloat red, GLfloat green, GLfloat blue, GLfloat alpha);
++GL_APICALL void GL_APIENTRY glClearDepthf (GLfloat d);
++GL_APICALL void GL_APIENTRY glClearStencil (GLint s);
++GL_APICALL void GL_APIENTRY glColorMask (GLboolean red, GLboolean green, GLboolean blue, GLboolean alpha);
++GL_APICALL void GL_APIENTRY glCompileShader (GLuint shader);
++GL_APICALL void GL_APIENTRY glCompressedTexImage2D (GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLsizei imageSize, const void *data);
++GL_APICALL void GL_APIENTRY glCompressedTexSubImage2D (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLsizei imageSize, const void *data);
++GL_APICALL void GL_APIENTRY glCopyTexImage2D (GLenum target, GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLsizei height, GLint border);
++GL_APICALL void GL_APIENTRY glCopyTexSubImage2D (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLint x, GLint y, GLsizei width, GLsizei height);
++GL_APICALL GLuint GL_APIENTRY glCreateProgram (void);
++GL_APICALL GLuint GL_APIENTRY glCreateShader (GLenum type);
++GL_APICALL void GL_APIENTRY glCullFace (GLenum mode);
++GL_APICALL void GL_APIENTRY glDeleteBuffers (GLsizei n, const GLuint *buffers);
++GL_APICALL void GL_APIENTRY glDeleteFramebuffers (GLsizei n, const GLuint *framebuffers);
++GL_APICALL void GL_APIENTRY glDeleteProgram (GLuint program);
++GL_APICALL void GL_APIENTRY glDeleteRenderbuffers (GLsizei n, const GLuint *renderbuffers);
++GL_APICALL void GL_APIENTRY glDeleteShader (GLuint shader);
++GL_APICALL void GL_APIENTRY glDeleteTextures (GLsizei n, const GLuint *textures);
++GL_APICALL void GL_APIENTRY glDepthFunc (GLenum func);
++GL_APICALL void GL_APIENTRY glDepthMask (GLboolean flag);
++GL_APICALL void GL_APIENTRY glDepthRangef (GLfloat n, GLfloat f);
++GL_APICALL void GL_APIENTRY glDetachShader (GLuint program, GLuint shader);
++GL_APICALL void GL_APIENTRY glDisable (GLenum cap);
++GL_APICALL void GL_APIENTRY glDisableVertexAttribArray (GLuint index);
++GL_APICALL void GL_APIENTRY glDrawArrays (GLenum mode, GLint first, GLsizei count);
++GL_APICALL void GL_APIENTRY glDrawElements (GLenum mode, GLsizei count, GLenum type, const void *indices);
++GL_APICALL void GL_APIENTRY glEnable (GLenum cap);
++GL_APICALL void GL_APIENTRY glEnableVertexAttribArray (GLuint index);
++GL_APICALL void GL_APIENTRY glFinish (void);
++GL_APICALL void GL_APIENTRY glFlush (void);
++GL_APICALL void GL_APIENTRY glFramebufferRenderbuffer (GLenum target, GLenum attachment, GLenum renderbuffertarget, GLuint renderbuffer);
++GL_APICALL void GL_APIENTRY glFramebufferTexture2D (GLenum target, GLenum attachment, GLenum textarget, GLuint texture, GLint level);
++GL_APICALL void GL_APIENTRY glFrontFace (GLenum mode);
++GL_APICALL void GL_APIENTRY glGenBuffers (GLsizei n, GLuint *buffers);
++GL_APICALL void GL_APIENTRY glGenerateMipmap (GLenum target);
++GL_APICALL void GL_APIENTRY glGenFramebuffers (GLsizei n, GLuint *framebuffers);
++GL_APICALL void GL_APIENTRY glGenRenderbuffers (GLsizei n, GLuint *renderbuffers);
++GL_APICALL void GL_APIENTRY glGenTextures (GLsizei n, GLuint *textures);
++GL_APICALL void GL_APIENTRY glGetActiveAttrib (GLuint program, GLuint index, GLsizei bufSize, GLsizei *length, GLint *size, GLenum *type, GLchar *name);
++GL_APICALL void GL_APIENTRY glGetActiveUniform (GLuint program, GLuint index, GLsizei bufSize, GLsizei *length, GLint *size, GLenum *type, GLchar *name);
++GL_APICALL void GL_APIENTRY glGetAttachedShaders (GLuint program, GLsizei maxCount, GLsizei *count, GLuint *shaders);
++GL_APICALL GLint GL_APIENTRY glGetAttribLocation (GLuint program, const GLchar *name);
++GL_APICALL void GL_APIENTRY glGetBooleanv (GLenum pname, GLboolean *data);
++GL_APICALL void GL_APIENTRY glGetBufferParameteriv (GLenum target, GLenum pname, GLint *params);
++GL_APICALL GLenum GL_APIENTRY glGetError (void);
++GL_APICALL void GL_APIENTRY glGetFloatv (GLenum pname, GLfloat *data);
++GL_APICALL void GL_APIENTRY glGetFramebufferAttachmentParameteriv (GLenum target, GLenum attachment, GLenum pname, GLint *params);
++GL_APICALL void GL_APIENTRY glGetIntegerv (GLenum pname, GLint *data);
++GL_APICALL void GL_APIENTRY glGetProgramiv (GLuint program, GLenum pname, GLint *params);
++GL_APICALL void GL_APIENTRY glGetProgramInfoLog (GLuint program, GLsizei bufSize, GLsizei *length, GLchar *infoLog);
++GL_APICALL void GL_APIENTRY glGetRenderbufferParameteriv (GLenum target, GLenum pname, GLint *params);
++GL_APICALL void GL_APIENTRY glGetShaderiv (GLuint shader, GLenum pname, GLint *params);
++GL_APICALL void GL_APIENTRY glGetShaderInfoLog (GLuint shader, GLsizei bufSize, GLsizei *length, GLchar *infoLog);
++GL_APICALL void GL_APIENTRY glGetShaderPrecisionFormat (GLenum shadertype, GLenum precisiontype, GLint *range, GLint *precision);
++GL_APICALL void GL_APIENTRY glGetShaderSource (GLuint shader, GLsizei bufSize, GLsizei *length, GLchar *source);
++GL_APICALL const GLubyte *GL_APIENTRY glGetString (GLenum name);
++GL_APICALL void GL_APIENTRY glGetTexParameterfv (GLenum target, GLenum pname, GLfloat *params);
++GL_APICALL void GL_APIENTRY glGetTexParameteriv (GLenum target, GLenum pname, GLint *params);
++GL_APICALL void GL_APIENTRY glGetUniformfv (GLuint program, GLint location, GLfloat *params);
++GL_APICALL void GL_APIENTRY glGetUniformiv (GLuint program, GLint location, GLint *params);
++GL_APICALL GLint GL_APIENTRY glGetUniformLocation (GLuint program, const GLchar *name);
++GL_APICALL void GL_APIENTRY glGetVertexAttribfv (GLuint index, GLenum pname, GLfloat *params);
++GL_APICALL void GL_APIENTRY glGetVertexAttribiv (GLuint index, GLenum pname, GLint *params);
++GL_APICALL void GL_APIENTRY glGetVertexAttribPointerv (GLuint index, GLenum pname, void **pointer);
++GL_APICALL void GL_APIENTRY glHint (GLenum target, GLenum mode);
++GL_APICALL GLboolean GL_APIENTRY glIsBuffer (GLuint buffer);
++GL_APICALL GLboolean GL_APIENTRY glIsEnabled (GLenum cap);
++GL_APICALL GLboolean GL_APIENTRY glIsFramebuffer (GLuint framebuffer);
++GL_APICALL GLboolean GL_APIENTRY glIsProgram (GLuint program);
++GL_APICALL GLboolean GL_APIENTRY glIsRenderbuffer (GLuint renderbuffer);
++GL_APICALL GLboolean GL_APIENTRY glIsShader (GLuint shader);
++GL_APICALL GLboolean GL_APIENTRY glIsTexture (GLuint texture);
++GL_APICALL void GL_APIENTRY glLineWidth (GLfloat width);
++GL_APICALL void GL_APIENTRY glLinkProgram (GLuint program);
++GL_APICALL void GL_APIENTRY glPixelStorei (GLenum pname, GLint param);
++GL_APICALL void GL_APIENTRY glPolygonOffset (GLfloat factor, GLfloat units);
++GL_APICALL void GL_APIENTRY glReadPixels (GLint x, GLint y, GLsizei width, GLsizei height, GLenum format, GLenum type, void *pixels);
++GL_APICALL void GL_APIENTRY glReleaseShaderCompiler (void);
++GL_APICALL void GL_APIENTRY glRenderbufferStorage (GLenum target, GLenum internalformat, GLsizei width, GLsizei height);
++GL_APICALL void GL_APIENTRY glSampleCoverage (GLfloat value, GLboolean invert);
++GL_APICALL void GL_APIENTRY glScissor (GLint x, GLint y, GLsizei width, GLsizei height);
++GL_APICALL void GL_APIENTRY glShaderBinary (GLsizei count, const GLuint *shaders, GLenum binaryformat, const void *binary, GLsizei length);
++GL_APICALL void GL_APIENTRY glShaderSource (GLuint shader, GLsizei count, const GLchar *const*string, const GLint *length);
++GL_APICALL void GL_APIENTRY glStencilFunc (GLenum func, GLint ref, GLuint mask);
++GL_APICALL void GL_APIENTRY glStencilFuncSeparate (GLenum face, GLenum func, GLint ref, GLuint mask);
++GL_APICALL void GL_APIENTRY glStencilMask (GLuint mask);
++GL_APICALL void GL_APIENTRY glStencilMaskSeparate (GLenum face, GLuint mask);
++GL_APICALL void GL_APIENTRY glStencilOp (GLenum fail, GLenum zfail, GLenum zpass);
++GL_APICALL void GL_APIENTRY glStencilOpSeparate (GLenum face, GLenum sfail, GLenum dpfail, GLenum dppass);
++GL_APICALL void GL_APIENTRY glTexImage2D (GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const void *pixels);
++GL_APICALL void GL_APIENTRY glTexParameterf (GLenum target, GLenum pname, GLfloat param);
++GL_APICALL void GL_APIENTRY glTexParameterfv (GLenum target, GLenum pname, const GLfloat *params);
++GL_APICALL void GL_APIENTRY glTexParameteri (GLenum target, GLenum pname, GLint param);
++GL_APICALL void GL_APIENTRY glTexParameteriv (GLenum target, GLenum pname, const GLint *params);
++GL_APICALL void GL_APIENTRY glTexSubImage2D (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const void *pixels);
++GL_APICALL void GL_APIENTRY glUniform1f (GLint location, GLfloat v0);
++GL_APICALL void GL_APIENTRY glUniform1fv (GLint location, GLsizei count, const GLfloat *value);
++GL_APICALL void GL_APIENTRY glUniform1i (GLint location, GLint v0);
++GL_APICALL void GL_APIENTRY glUniform1iv (GLint location, GLsizei count, const GLint *value);
++GL_APICALL void GL_APIENTRY glUniform2f (GLint location, GLfloat v0, GLfloat v1);
++GL_APICALL void GL_APIENTRY glUniform2fv (GLint location, GLsizei count, const GLfloat *value);
++GL_APICALL void GL_APIENTRY glUniform2i (GLint location, GLint v0, GLint v1);
++GL_APICALL void GL_APIENTRY glUniform2iv (GLint location, GLsizei count, const GLint *value);
++GL_APICALL void GL_APIENTRY glUniform3f (GLint location, GLfloat v0, GLfloat v1, GLfloat v2);
++GL_APICALL void GL_APIENTRY glUniform3fv (GLint location, GLsizei count, const GLfloat *value);
++GL_APICALL void GL_APIENTRY glUniform3i (GLint location, GLint v0, GLint v1, GLint v2);
++GL_APICALL void GL_APIENTRY glUniform3iv (GLint location, GLsizei count, const GLint *value);
++GL_APICALL void GL_APIENTRY glUniform4f (GLint location, GLfloat v0, GLfloat v1, GLfloat v2, GLfloat v3);
++GL_APICALL void GL_APIENTRY glUniform4fv (GLint location, GLsizei count, const GLfloat *value);
++GL_APICALL void GL_APIENTRY glUniform4i (GLint location, GLint v0, GLint v1, GLint v2, GLint v3);
++GL_APICALL void GL_APIENTRY glUniform4iv (GLint location, GLsizei count, const GLint *value);
++GL_APICALL void GL_APIENTRY glUniformMatrix2fv (GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
++GL_APICALL void GL_APIENTRY glUniformMatrix3fv (GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
++GL_APICALL void GL_APIENTRY glUniformMatrix4fv (GLint location, GLsizei count, GLboolean transpose, const GLfloat *value);
++GL_APICALL void GL_APIENTRY glUseProgram (GLuint program);
++GL_APICALL void GL_APIENTRY glValidateProgram (GLuint program);
++GL_APICALL void GL_APIENTRY glVertexAttrib1f (GLuint index, GLfloat x);
++GL_APICALL void GL_APIENTRY glVertexAttrib1fv (GLuint index, const GLfloat *v);
++GL_APICALL void GL_APIENTRY glVertexAttrib2f (GLuint index, GLfloat x, GLfloat y);
++GL_APICALL void GL_APIENTRY glVertexAttrib2fv (GLuint index, const GLfloat *v);
++GL_APICALL void GL_APIENTRY glVertexAttrib3f (GLuint index, GLfloat x, GLfloat y, GLfloat z);
++GL_APICALL void GL_APIENTRY glVertexAttrib3fv (GLuint index, const GLfloat *v);
++GL_APICALL void GL_APIENTRY glVertexAttrib4f (GLuint index, GLfloat x, GLfloat y, GLfloat z, GLfloat w);
++GL_APICALL void GL_APIENTRY glVertexAttrib4fv (GLuint index, const GLfloat *v);
++GL_APICALL void GL_APIENTRY glVertexAttribPointer (GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void *pointer);
++GL_APICALL void GL_APIENTRY glViewport (GLint x, GLint y, GLsizei width, GLsizei height);
++#endif
++#endif /* GL_ES_VERSION_2_0 */
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif
+diff --git a/src/gpu/ganesh/gl/egl/gl2platform.h b/src/gpu/ganesh/gl/egl/gl2platform.h
+new file mode 100755
+index 0000000000..eb318dc3a3
+--- /dev/null
++++ b/src/gpu/ganesh/gl/egl/gl2platform.h
+@@ -0,0 +1,38 @@
++#ifndef __gl2platform_h_
++#define __gl2platform_h_
++
++/*
++** Copyright (c) 2017 The Khronos Group Inc.
++**
++** Licensed under the Apache License, Version 2.0 (the "License");
++** you may not use this file except in compliance with the License.
++** You may obtain a copy of the License at
++**
++**     http://www.apache.org/licenses/LICENSE-2.0
++**
++** Unless required by applicable law or agreed to in writing, software
++** distributed under the License is distributed on an "AS IS" BASIS,
++** WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++** See the License for the specific language governing permissions and
++** limitations under the License.
++*/
++
++/* Platform-specific types and definitions for OpenGL ES 2.X  gl2.h
++ *
++ * Adopters may modify khrplatform.h and this file to suit their platform.
++ * Please contribute modifications back to Khronos as pull requests on the
++ * public github repository:
++ *      https://github.com/KhronosGroup/OpenGL-Registry
++ */
++
++#include <KHR/khrplatform.h>
++
++#ifndef GL_APICALL
++#define GL_APICALL  KHRONOS_APICALL
++#endif
++
++#ifndef GL_APIENTRY
++#define GL_APIENTRY KHRONOS_APIENTRY
++#endif
++
++#endif /* __gl2platform_h_ */
+diff --git a/src/ports/skia_ohos/FontConfig_ohos.cpp b/src/ports/skia_ohos/FontConfig_ohos.cpp
+new file mode 100644
+index 0000000000..520a616e0f
+--- /dev/null
++++ b/src/ports/skia_ohos/FontConfig_ohos.cpp
+@@ -0,0 +1,1308 @@
++// Copyright (c) 2023 Huawei Device Co., Ltd. All rights reserved
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "FontConfig_ohos.h"
++
++#include<array>
++#include <dirent.h>
++#include <libgen.h>
++#include <sys/stat.h>
++#include <sys/types.h>
++#include <unistd.h>
++
++#include "SkFontStyle.h"
++#include "SkString.h"
++
++using namespace ErrorCode;
++#if defined(SK_BUILD_FONT_MGR_FOR_PREVIEW_WIN) or defined(SK_BUILD_FONT_MGR_FOR_PREVIEW_MAC) or defined(SK_BUILD_FONT_MGR_FOR_PREVIEW_LINUX)
++static const char* OHOS_DEFAULT_CONFIG = "fontconfig.json";
++#else
++static const char* OHOS_DEFAULT_CONFIG = "/system/etc/fontconfig.json";
++#endif
++
++static const char* PRODUCT_DEFAULT_CONFIG = "/system/etc/productfontconfig.json";
++/*! Constructor
++ * \param fontScanner the scanner to get the font information from a font file
++ * \param fname the full name of system font configuration document.
++ *     \n The default value is '/system/etc/fontconfig.json', if fname is given null
++ */
++FontConfig_OHOS::FontConfig_OHOS(const SkTypeface_FreeType::Scanner& fontScanner,
++    const char* fname)
++{
++    int err = checkProductFile(fname);
++    if (err != NO_ERROR) {
++        return;
++    }
++    scanFonts(fontScanner);
++    resetGenericValue();
++    resetFallbackValue();
++}
++
++/*! To get the fallbackForMap
++ *  \return The reference of fallbackForMap
++ */
++const FallbackForMap& FontConfig_OHOS::getFallbackForMap() const
++{
++    return fallbackForMap;
++}
++
++/*! To get the fallback set
++ *  \return The reference of fallbackSet
++ */
++const FallbackSet& FontConfig_OHOS::getFallbackSet() const
++{
++    return fallbackSet;
++}
++
++/*! To get the count of font style sets supported in the system
++ *  \return The count of font style sets in generic family
++ */
++int FontConfig_OHOS::getFamilyCount() const
++{
++    return genericFamilySet.size();
++}
++
++/*! To get the family name of the default font style set
++ *  \param[out] familyName a pointer of SkString object, to which the family value will be set.
++ *  \return The count of typeface in this font style set
++ *  \n Return -1, if there is no any font style set in the system.
++ */
++int FontConfig_OHOS::getDefaultFamily(SkString* familyName) const
++{
++    return getFamilyName(0, familyName);
++}
++
++/*! To get the family name of a font style set
++ * \param index the index of a font style set in generic family
++ * \param[out] familyName a pointer of SkString object, to which the family value will be set
++ * \return The count of typeface in the font style set
++ * \n      Return -1, if the 'index' is out of range
++ */
++int FontConfig_OHOS::getFamilyName(int index, SkString* familyName) const
++{
++    if (index < 0 || index >= this->getFamilyCount()) {
++        if (familyName) {
++            familyName->reset();
++        }
++        return -1;
++    }
++    if (familyName) {
++        *familyName = genericFamilySet[index]->familyName;
++    }
++    return genericFamilySet[index]->typefaceSet->size();
++}
++
++/*! To get the count of a font style set
++ * \param styleIndex the index of a font style set
++ * \param isFallback to indicate the font style set is from generic family or fallback family
++ * \n                 false , the font style set is from generic family list
++ * \n                 true, the font style set is from fallback family list
++ * \return The count of typeface in the font style set
++ */
++int FontConfig_OHOS::getTypefaceCount(int styleIndex, bool isFallback) const
++{
++    if (styleIndex < 0) {
++        return -1;
++    }
++    if (isFallback) {
++        if ((unsigned int)styleIndex < fallbackSet.size()) {
++            return fallbackSet[styleIndex]->typefaceSet->size();
++        }
++    } else {
++        if ((unsigned int)styleIndex < genericFamilySet.size()) {
++            return genericFamilySet[styleIndex]->typefaceSet->size();
++        }
++    }
++    return -1;
++}
++
++/*! To get a typeface
++ * \param styleIndex the index of a font style set
++ * \param index the index of a typeface in its style set
++ * \param isFallback false, the font style set is generic
++ * \n          true, the font style set is fallback
++ * \return The pointer of a typeface
++ * \n       Return null, if 'styleIndex' or 'index' is out of range
++ */
++SkTypeface_OHOS* FontConfig_OHOS::getTypeface(int styleIndex, int index,
++    bool isFallback) const
++{
++    if (styleIndex < 0 || index < 0 ||
++        (isFallback && (unsigned int)styleIndex >= fallbackSet.size()) ||
++        (!isFallback && (unsigned int)styleIndex >= genericFamilySet.size())) {
++        return nullptr;
++    }
++    if (isFallback) {
++        const TypefaceSet& tpSet = *(fallbackSet[styleIndex]->typefaceSet.get());
++        if ((unsigned int)index < tpSet.size()) {
++            return tpSet[index].get();
++        }
++    } else {
++        const TypefaceSet& tpSet = *(genericFamilySet[styleIndex]->typefaceSet.get());
++        if ((unsigned int)index < tpSet.size()) {
++            return tpSet[index].get();
++        }
++    }
++    return nullptr;
++}
++
++/*! To get a typeface
++ * \param styleIndex the index a font style set
++ * \param style the font style to be matching
++ * \param isFallback false, the font style set is generic
++ * \n                true, the font style set is fallback
++ * \return An object of typeface whose font style is the closest matching to 'style'
++ * \n      Return null, if 'styleIndex' is out of range
++ */
++SkTypeface_OHOS* FontConfig_OHOS::getTypeface(int styleIndex, const SkFontStyle& style,
++    bool isFallback) const
++{
++    if (styleIndex < 0 ||
++        (isFallback && (unsigned int)styleIndex >= fallbackSet.size()) ||
++        (!isFallback && (unsigned int)styleIndex >= genericFamilySet.size())) {
++        return nullptr;
++    }
++    const TypefaceSet* pSet = nullptr;
++    if (isFallback) {
++        pSet = fallbackSet[styleIndex]->typefaceSet.get();
++    } else {
++        pSet = genericFamilySet[styleIndex]->typefaceSet.get();
++    }
++    sk_sp<SkTypeface_OHOS> tp = matchFontStyle(*pSet, style);
++    return tp.get();
++}
++
++/*! To get the index of a font style set
++ *  \param familyName the family name of the font style set
++ *  \n     get the index of default font style set, if 'familyName' is null
++ *  \param[out] isFallback to tell if the family is from generic or fallback to the caller.
++ *  \n          isFallback is false, if the font style is from generic family list
++ *  \n          isFallback is true, if the font style is from fallback family list
++ *  \return The index of the font style set
++ *  \n      Return -1, if 'familyName' is not found in the system
++ */
++int FontConfig_OHOS::getStyleIndex(const char* familyName, bool& isFallback) const
++{
++    if (familyName == nullptr) {
++        isFallback = false;
++        return 0;
++    }
++    SkString fname(familyName);
++    int* p = genericNames.find(fname);
++    if (p) {
++        isFallback = false;
++        return *p;
++    } else {
++        p = fallbackNames.find(fname);
++        if (p) {
++            isFallback = true;
++            return *p;
++        }
++    }
++    return -1;
++}
++
++/*! Find the closest matching typeface
++ * \param typefaceSet a typeface set belonging to the same font style set
++ * \param pattern the font style to be matching
++ * \return The typeface object which is the closest matching to 'pattern'
++ * \n      Return null, if the count of typeface is 0
++ */
++sk_sp<SkTypeface_OHOS> FontConfig_OHOS::matchFontStyle(const TypefaceSet& typefaceSet,
++    const SkFontStyle& pattern)
++{
++    int count = typefaceSet.size();
++    if (count == 1) {
++        return typefaceSet[0];
++    }
++    sk_sp<SkTypeface_OHOS> res = nullptr;
++    uint32_t minDiff = 0xFFFFFFFF;
++    for (int i = 0; i < count; i++) {
++        const SkFontStyle& fontStyle = typefaceSet[i]->fontStyle();
++        uint32_t diff = getFontStyleDifference(pattern, fontStyle);
++        if (diff < minDiff) {
++            minDiff = diff;
++            res = typefaceSet[i];
++        }
++    }
++    return res;
++}
++
++/*! To get the difference between a font style and the matching font style
++ * \param dstStyle the style to be matching
++ * \param srcStyle a font style
++ * \return The difference value of a specified style with the matching style
++ */
++uint32_t FontConfig_OHOS::getFontStyleDifference(const SkFontStyle& dstStyle,
++    const SkFontStyle& srcStyle)
++{
++    int normalWidth = SkFontStyle::kNormal_Width;
++    int dstWidth = dstStyle.width();
++    int srcWidth = srcStyle.width();
++
++    uint32_t widthDiff = 0;
++    // The maximum font width is kUltraExpanded_Width i.e. '9'.
++    // If dstWidth <= kNormal_Width (5), first check narrower values, then wider values.
++    // If dstWidth > kNormal_Width, first check wider values, then narrower values.
++    // When dstWidth and srcWidth are at different side of kNormal_Width,
++    // the width difference between them should be more than 5 (9/2+1)
++    if (dstWidth <= normalWidth) {
++        if (srcWidth <= dstWidth) {
++            widthDiff = dstWidth - srcWidth;
++        } else {
++            widthDiff = srcWidth - dstWidth + 5;
++        }
++    } else {
++        if (srcWidth >= dstWidth) {
++            widthDiff = srcWidth - dstWidth;
++        } else {
++            widthDiff = dstWidth - srcWidth + 5;
++        }
++    }
++
++    int diffSlantValue[3][3] = {
++        {0, 2, 1},
++        {2, 0, 1},
++        {2, 1, 0}
++    };
++    uint32_t slantDiff = diffSlantValue[dstStyle.slant()][srcStyle.slant()];
++
++    int dstWeight = dstStyle.weight();
++    int srcWeight = srcStyle.weight();
++    uint32_t weightDiff = 0;
++
++    // The maximum weight is kExtraBlack_Weight (1000), when dstWeight and srcWeight are at the different
++    // side of kNormal_Weight, the weight difference between them should be more than 500 (1000/2)
++    if ((dstWeight == SkFontStyle::kNormal_Weight && srcWeight == SkFontStyle::kMedium_Weight) ||
++        (dstWeight == SkFontStyle::kMedium_Weight && srcWeight == SkFontStyle::kNormal_Weight)) {
++        weightDiff = 50;
++    } else if (dstWeight <= SkFontStyle::kNormal_Weight) {
++        if (srcWeight <= dstWeight) {
++            weightDiff = dstWeight - srcWeight;
++        } else {
++            weightDiff = srcWeight - dstWeight + 500;
++        }
++    } else if (dstWeight > SkFontStyle::kNormal_Weight) {
++        if (srcWeight >= dstWeight) {
++            weightDiff = srcWeight - dstWeight;
++        } else {
++            weightDiff = dstWeight - srcWeight + 500;
++        }
++    }
++    // The first 2 bytes to save weight difference, the third byte to save slant difference,
++    // and the fourth byte to save width difference
++    uint32_t diff = (widthDiff << 24) + (slantDiff << 16) + weightDiff;
++    return diff;
++}
++
++/*! To get the data of font configuration file
++ * \param fname the full name of the font configuration file
++ * \param[out] size the size of data returned to the caller
++ * \return The pointer of content of the file
++ * \note The returned pointer should be freed by the caller
++ */
++char* FontConfig_OHOS::getFileData(const char* fname, int& size)
++{
++    FILE* fp = fopen(fname, "r");
++    if (fp == nullptr) {
++        return nullptr;
++    }
++    fseek(fp, 0L, SEEK_END);
++    size = ftell(fp) + 1;
++    rewind(fp);
++    void* data = malloc(size);
++    if (data == nullptr) {
++        fclose(fp);
++        return nullptr;
++    }
++    memset(data, 0, size);
++    (void) fread(data, size, 1, fp);
++    fclose(fp);
++    return (char*)data;
++}
++
++/*! parse the system font configuration document
++ * \param fname the full name of the font configuration document
++ * \return NO_ERROR successful
++ * \return ERROR_CONFIG_NOT_FOUND config document is not found
++ * \return ERROR_CONFIG_FORMAT_NOT_SUPPORTED config document format is not supported
++ * \return ERROR_CONFIG_INVALID_VALUE_TYPE wrong type of value in the configuration
++ */
++int FontConfig_OHOS::parseConfig(const char* fname)
++{
++    if (fname == nullptr) {
++        fname = OHOS_DEFAULT_CONFIG;
++    }
++    Json::Value root;
++    int err = checkConfigFile(fname, root);
++    if (err != NO_ERROR) {
++        return err;
++    }
++    // "fontdir" - optional, the data type should be string
++    const char* key = "fontdir";
++    if (root.isMember(key)) {
++        if (root[key].isArray()) {
++            parseFontDir(root[key]);
++        } else {
++            return logErrInfo(ERROR_CONFIG_INVALID_VALUE_TYPE, key);
++        }
++    }
++    // "generic", "fallback" - necessary, the data type should be array
++    const char* keys[] = {"generic", "fallback", nullptr};
++    int index = 0;
++    while (true) {
++        if (keys[index] == nullptr) {
++            break;
++        }
++        key = keys[index++];
++        if (!root.isMember(key)) {
++            return logErrInfo(ERROR_CONFIG_MISSING_TAG, key);
++        } else if (!root[key].isArray()) {
++            return logErrInfo(ERROR_CONFIG_INVALID_VALUE_TYPE, key, Json::arrayValue, root[key].type());
++        }
++        const Json::Value& arr = root[key];
++        for (unsigned int i = 0; i < arr.size(); i++) {
++            if (arr[i].isObject()) {
++                if (!strcmp(key, "generic")) {
++                    parseGeneric(arr[i]);
++                } else if (!strcmp(key, "fallback")) {
++                    parseFallback(arr[i]);
++                }
++            } else {
++                SkString errKey;
++                errKey.appendf("%s#%d", key, i + 1);
++                (void) logErrInfo(ERROR_CONFIG_INVALID_VALUE_TYPE, errKey.c_str(),
++                    Json::objectValue, arr[i].type());
++            }
++        }
++    }
++    root.clear();
++    return NO_ERROR;
++}
++
++/*! check the system font configuration document
++ * \param fname the full name of the font configuration document
++ * \return NO_ERROR successful
++ * \return ERROR_CONFIG_NOT_FOUND config document is not found
++ * \return ERROR_CONFIG_FORMAT_NOT_SUPPORTED config document format is not supported
++ */
++int FontConfig_OHOS::checkConfigFile(const char* fname, Json::Value& root)
++{
++    int size = 0;
++    char* data = getFileData(fname, size);
++    if (data == nullptr) {
++        return logErrInfo(ERROR_CONFIG_NOT_FOUND, fname);
++    }
++    std::string errs;
++    Json::CharReaderBuilder charReaderBuilder;
++    std::unique_ptr<Json::CharReader> jsonReader(charReaderBuilder.newCharReader());
++    bool isJson = jsonReader->parse(data, data + size, &root, &errs);
++    free((void*)data);
++    data = nullptr;
++
++    if (!isJson || !errs.empty()) {
++        return logErrInfo(ERROR_CONFIG_FORMAT_NOT_SUPPORTED, fname);
++    }
++    return NO_ERROR;
++}
++#if ENABLE_DEBUG
++/*! To print out the font information
++ * \param font the font object to be printed
++ */
++void FontConfig_OHOS::dumpFont(const FontInfo& font) const
++{
++    LOGI("name=%s, family=%s, weight=%d, width=%d, slant=%d, index=%d",
++        font.fname.c_str(), font.familyName.c_str(), font.style.weight(), font.style.width(), font.style.slant(),
++        font.index);
++    int count = font.axisSet.axis.size();
++    if (count > 0) {
++        SkString str;
++        for (unsigned int i = 0; i < count; i++) {
++            str.appendU32(SkFixedFloorToInt(font.axisSet.axis[i]));
++            if (i < count - 1) {
++                str.append(",");
++            }
++        }
++        LOGI("axis={%s}\n", str.c_str());
++    }
++}
++
++/*! To print out the information of generic font style set
++ */
++void FontConfig_OHOS::dumpGeneric() const
++{
++    LOGI("\n");
++    for (unsigned int i = 0; i < genericFamilySet.size(); i++) {
++        LOGI("[%d] familyName : %s - %d\n", i, genericFamilySet[i]->familyName.c_str(),
++            static_cast<int>(genericFamilySet[i]->typefaceSet->size()));
++        for (int j = 0; j < genericFamilySet[i]->typefaceSet->size(); j++) {
++            if ((*(genericFamilySet[i]->typefaceSet))[j].get()) {
++                const FontInfo* font = (*(genericFamilySet[i]->typefaceSet))[j]->getFontInfo();
++                if (font) {
++                    dumpFont(*font);
++                } else {
++                    LOGE("font [%d] is null\n", j);
++                }
++            } else {
++                LOGE("typefeace [%d] is null\n", j);
++            }
++        }
++    }
++}
++
++/*! To print out the information of fallback font style set
++ */
++void FontConfig_OHOS::dumpFallback() const
++{
++    LOGI("\n");
++    int count = 0;
++    fallbackForMap.foreach([this, &count](const SkString& key,
++        const FallbackSetPos& setIndex) {
++        LOGI("[%d] family : %s - %d\n", count++, key.c_str(), setIndex.count);
++        for (unsigned int i = setIndex.index; i < setIndex.index + setIndex.count; i++) {
++            const TypefaceSet& tpSet = *(fallbackSet[i]->typefaceSet.get());
++            LOGI("[%s] - %d\n", fallbackSet[i]->familyName.c_str(), static_cast<int>(tpSet.size()));
++
++            for (unsigned int j = 0; j < tpSet.size(); j++) {
++                const FontInfo* font = tpSet[j]->getFontInfo();
++                if (font) {
++                    this->dumpFont(*font);
++                } else {
++                    LOGE("font [%d] is null\n", j);
++                }
++            }
++        }
++    });
++}
++#endif
++
++/*! To parse 'fontdir' attribute
++ * \param root the root node of 'fontdir'
++ * \return NO_ERROR successful
++ * \return ERROR_CONFIG_INVALID_VALUE_TYPE invalid value type
++ */
++int FontConfig_OHOS::parseFontDir(const Json::Value& root)
++{
++    for (unsigned int i = 0; i < root.size(); i++) {
++        if (root[i].isString()) {
++            const char* dir = root[i].asCString();
++            fontDirSet.emplace_back(SkString(dir));
++        } else {
++            SkString text;
++            text.appendf("fontdir#%d", i + 1);
++            return logErrInfo(ERROR_CONFIG_INVALID_VALUE_TYPE, text.c_str(), Json::stringValue, root[i].type());
++        }
++    }
++    return NO_ERROR;
++}
++
++/*! To parse an item of 'generic' family
++ * \param root the root node of an item in 'generic' list
++ * \return NO_ERROR successful
++ * \return ERROR_CONFIG_INVALID_VALUE_TYPE invalid value type for an attribute
++ * \return ERROR_CONFIG_MISSING_TAG missing tag of 'family' or 'alias'
++ */
++int FontConfig_OHOS::parseGeneric(const Json::Value& root)
++{
++    // "family" - necessary, the data type should be String
++    const char* key = "family";
++    if (!root.isMember(key)) {
++        return logErrInfo(ERROR_CONFIG_MISSING_TAG, key);
++    } else if (!root[key].isString()) {
++        return logErrInfo(ERROR_CONFIG_INVALID_VALUE_TYPE, key, Json::stringValue, root[key].type());
++    }
++    SkString familyName = SkString(root[key].asCString());
++    // "alias" - necessary, the data type should be Array
++    if (!root.isMember("alias")) {
++        return logErrInfo(ERROR_CONFIG_MISSING_TAG, "alias");
++    }
++    // "adjust", "variation" - optional
++    const char* tags[] = {"alias", "adjust", "variations", "index"};
++    std::vector<AliasInfo> aliasSet;
++    std::vector<AdjustInfo> adjustSet;
++    std::vector<VariationInfo> variationSet;
++    for (unsigned int i = 0; i < sizeof(tags) / sizeof(char*); i++) {
++        key = tags[i];
++        if (!root.isMember(key)) {
++            continue;
++        }
++        if (root[key].isArray()) {
++            if (!strcmp(key, "index")) {
++                parseTtcIndex(root[key], familyName);
++                continue;
++            }
++            const Json::Value& arr = root[key];
++            for (unsigned int j = 0; j < arr.size(); j++) {
++                if (arr[j].isObject()) {
++                    if (!strcmp(key, "alias")) {
++                        parseAlias(arr[j], aliasSet);
++                    } else if (!strcmp(key, "adjust")) {
++                        parseAdjust(arr[j], adjustSet);
++                    } else {
++                        parseVariation(arr[j], variationSet);
++                    }
++                } else {
++                    SkString text;
++                    text.appendf("%s#%d", key, j + 1);
++                    (void) logErrInfo(ERROR_CONFIG_INVALID_VALUE_TYPE, text.c_str(), Json::objectValue,
++                        arr[j].type());
++                }
++            }
++        } else {
++            (void) logErrInfo(ERROR_CONFIG_INVALID_VALUE_TYPE, key, Json::arrayValue, root[key].type());
++        }
++        if (root.size() == 2) {
++            break;
++        }
++    }
++    if (aliasSet.size()) {
++        aliasMap.set(SkString(familyName), aliasSet);
++    }
++    if (adjustSet.size()) {
++        adjustMap.set(SkString(familyName), adjustSet);
++    }
++    if (variationSet.size()) {
++        variationMap.set(SkString(familyName), variationSet);
++    }
++    return NO_ERROR;
++}
++
++/*! To parse an item of 'alias' attribute
++ * \param root the root node of an item in an 'alias' list
++ * \param[out] aliasSet the value of AliasInfo will be written to and returned to the caller
++ * \return NO_ERROR successful
++ * \return ERROR_CONFIG_INVALID_VALUE_TYPE invalid value type for an attribute
++ * \return ERROR_CONFIG_MISSING_TAG missing tag of alias name
++ */
++int FontConfig_OHOS::parseAlias(const Json::Value& root, std::vector<AliasInfo>& aliasSet)
++{
++    if (root.empty()) {
++        return logErrInfo(ERROR_CONFIG_MISSING_TAG, "generic-alias-name");
++    }
++    Json::Value::Members members = root.getMemberNames();
++    const char* key = members[0].c_str();
++    if (!root[key].isInt()) {
++        return logErrInfo(ERROR_CONFIG_INVALID_VALUE_TYPE, "generic-alias-weight",
++            Json::intValue, root[key].type());
++    }
++
++    SkString aliasName = SkString(key);
++    int weight = root[key].asInt();
++    std::unique_ptr<GenericFamily> genericFamily = std::make_unique<GenericFamily>();
++    genericFamily->familyName = SkString(key);
++    if (aliasSet.size() == 0 || weight > 0) {
++        genericFamily->typefaceSet = std::make_shared<TypefaceSet>();
++    } else {
++        int index = aliasSet[0].pos;
++        genericFamily->typefaceSet = genericFamilySet[index]->typefaceSet;
++    }
++    genericNames.set(SkString(genericFamily->familyName), genericFamilySet.size());
++
++    AliasInfo info = {static_cast<int>(genericFamilySet.size()), weight};
++    aliasSet.emplace_back(std::move(info));
++    genericFamilySet.emplace_back(std::move(genericFamily));
++    return NO_ERROR;
++}
++
++/*! To parse an item of 'adjust' attribute
++ * \param root the root node of an item in an 'adjust' list
++ * \param[out] adjustSet the value of AdjustInfo will be written to and returned to the caller
++ * \return NO_ERROR successful
++ * \return ERROR_CONFIG_INVALID_VALUE_TYPE invalid value type for an attribute
++ * \return ERROR_CONFIG_MISSING_TAG missing tag of 'weight' or 'to'
++ */
++int FontConfig_OHOS::parseAdjust(const Json::Value& root, std::vector<AdjustInfo>& adjustSet)
++{
++    const char* tags[] = {"weight", "to"};
++    int values[2]; // value[0] - to save 'weight', value[1] - to save 'to'
++    for (unsigned int i = 0; i < sizeof(tags) / sizeof(char*); i++) {
++        const char* key = tags[i];
++        if (!root.isMember(key)) {
++            return logErrInfo(ERROR_CONFIG_MISSING_TAG, key);
++        } else if (!root[key].isInt()) {
++            return logErrInfo(ERROR_CONFIG_INVALID_VALUE_TYPE, key,
++                Json::intValue, root[key].type());
++        } else {
++            values[i] = root[key].asInt();
++        }
++    }
++    AdjustInfo info = {values[0], values[1]};
++    adjustSet.push_back(info);
++    return NO_ERROR;
++}
++
++/*! To parse an item of 'fallback' attribute
++ * \param root the root node of an item in 'fallback' list
++ * \return NO_ERROR successful
++ * \return ERROR_CONFIG_INVALID_VALUE_TYPE invalid value type for an attribute
++ * \return ERROR_CONFIG_MISSING_TAG missing tag of fallbackFor
++ */
++int FontConfig_OHOS::parseFallback(const Json::Value& root)
++{
++    if (root.empty()) {
++        return logErrInfo(ERROR_CONFIG_MISSING_TAG, "fallback-fallbackFor");
++    }
++    Json::Value::Members members = root.getMemberNames();
++    const char* key = members[0].c_str();
++    if (!root[key].isArray()) {
++        return logErrInfo(ERROR_CONFIG_INVALID_VALUE_TYPE, "fallback-items",
++            Json::arrayValue, root[key].type());
++    }
++    unsigned int startPos = fallbackSet.size();
++    SkString fallbackFor = SkString(key);
++    const Json::Value& fallbackArr = root[key];
++    for (unsigned int i = 0; i < fallbackArr.size(); i++) {
++        if (!fallbackArr[i].isObject()) {
++            SkString text;
++            text.appendf("fallback-%s#%d", key, i + 1);
++            (void) logErrInfo(ERROR_CONFIG_INVALID_VALUE_TYPE, text.c_str(), Json::objectValue,
++                fallbackArr[i].type());
++            continue;
++        }
++        parseFallbackItem(fallbackArr[i]);
++    }
++    FallbackSetPos setPos = {startPos, (unsigned int)(fallbackSet.size() - startPos)};
++    fallbackForMap.set(fallbackFor, setPos);
++    return NO_ERROR;
++}
++
++/*! To parse an item of fallback family
++ * \param root the root node of a fallback item
++ * \return NO_ERROR successful
++ * \return ERROR_CONFIG_INVALID_VALUE_TYPE invalid value type for an attribute
++ * \return ERROR_CONFIG_MISSING_TAG missing tag of language
++ */
++int FontConfig_OHOS::parseFallbackItem(const Json::Value& root)
++{
++    if (root.empty()) {
++        return logErrInfo(ERROR_CONFIG_MISSING_TAG, "fallback-item-lang");
++    }
++    Json::Value::Members members = root.getMemberNames();
++    const char* key = nullptr;
++    bool hasIndex = false;
++    bool hasVariations = false;
++    for (unsigned int i = 0; i < members.size(); i++) {
++        if (members[i] == "variations") {
++            hasVariations = true;
++        } else if (members[i] == "index") {
++            hasIndex = true;
++        } else {
++            key = members[i].c_str();
++        }
++    }
++    if (key == nullptr) {
++        return logErrInfo(ERROR_CONFIG_MISSING_TAG, "fallback-item-lang");
++    }
++    if (!root[key].isString()) {
++        return logErrInfo(ERROR_CONFIG_INVALID_VALUE_TYPE, "fallback-item-family",
++            Json::stringValue, root[key].type());
++    }
++    SkString lang = SkString(key);
++    SkString familyName = SkString(root[key].asCString());
++    if (hasVariations) {
++        key = "variations";
++        if (root[key].isArray()) {
++            const Json::Value& varArr = root[key];
++            std::vector<VariationInfo> variationSet;
++            for (unsigned int i = 0; i < varArr.size(); i++) {
++                if (varArr[i].isObject()) {
++                    parseVariation(varArr[i], variationSet);
++                } else {
++                    SkString text = SkString("variations#");
++                    text.appendU32(i + 1);
++                    (void) logErrInfo(ERROR_CONFIG_INVALID_VALUE_TYPE, text.c_str(),
++                        Json::objectValue, varArr[i].type());
++                }
++            }
++            if (variationSet.size()) {
++                variationMap.set(SkString(familyName), variationSet);
++            }
++        } else {
++            (void) logErrInfo(ERROR_CONFIG_INVALID_VALUE_TYPE, key, Json::arrayValue,
++                root[key].type());
++        }
++    }
++    if (hasIndex) {
++        key = "index";
++        if (root[key].isArray()) {
++            parseTtcIndex(root[key], familyName);
++        } else {
++            (void) logErrInfo(ERROR_CONFIG_INVALID_VALUE_TYPE, key, Json::arrayValue, root[key].type());
++        }
++    }
++    std::unique_ptr<FallbackInfo> fallback = std::make_unique<FallbackInfo>();
++    fallback->familyName = familyName;
++    fallback->langs = lang;
++    fallback->typefaceSet = std::make_shared<TypefaceSet>();
++    fallbackNames.set(SkString(familyName), fallbackSet.size());
++    fallbackSet.emplace_back(std::move(fallback));
++    return NO_ERROR;
++}
++
++/*! To parse an item of 'variations' attribute
++ * \param root the root node of an item in 'variations' list
++ * \param[out] variationSet the value of VariationInfo is written to and returned to the caller
++ * \return NO_ERROR successful
++ * \return ERROR_CONFIG_INVALID_VALUE_TYPE invalid value type for an attribute
++ * \return ERROR_CONFIG_MISSING_TAG missing tag of 'weight' or 'wght'
++ */
++int FontConfig_OHOS::parseVariation(const Json::Value& root, std::vector<VariationInfo>& variationSet)
++{
++    const char* key = nullptr;
++    const char* tags[] = {"wght", "wdth", "slnt", "weight", "width", "slant"};
++    VariationInfo info;
++    for (unsigned int i = 0; i < sizeof(tags) / sizeof(char*); i++) {
++        key = tags[i];
++        if ((!strcmp(key, "wght") || !strcmp(key, "weight")) &&
++            !root.isMember(key)) {
++            return logErrInfo(ERROR_CONFIG_MISSING_TAG, key);
++        }
++        if (!root.isMember(key)) {
++            continue;
++        }
++        if (!strcmp(key, "weight")) {
++            if (!root[key].isInt()) {
++                return logErrInfo(ERROR_CONFIG_INVALID_VALUE_TYPE, key, Json::intValue, root[key].type());
++            }
++            info.weight = root[key].asInt();
++        } else if (!strcmp(key, "width")) {
++            if (!root[key].isInt()) {
++                return logErrInfo(ERROR_CONFIG_INVALID_VALUE_TYPE, key, Json::intValue, root[key].type());
++            }
++            info.width = root[key].asInt();
++        } else if (!strcmp(key, "slant")) {
++            if (!root[key].isString()) {
++                return logErrInfo(ERROR_CONFIG_INVALID_VALUE_TYPE, key, Json::stringValue, root[key].type());
++            }
++            const char* str = root[key].asCString();
++            if (!strcmp(str, "normal")) {
++                info.slant = static_cast<int>(SkFontStyle::kUpright_Slant);
++            } else if (!strcmp(str, "italic")) {
++                info.slant = static_cast<int>(SkFontStyle::kItalic_Slant);
++            } else if (!strcmp(str, "oblique")) {
++                info.slant = static_cast<int>(SkFontStyle::kOblique_Slant);
++            }
++        } else {
++            if (!root[key].isNumeric()) {
++                return logErrInfo(ERROR_CONFIG_INVALID_VALUE_TYPE, key, Json::realValue, root[key].type());
++            }
++            Coordinate axis;
++            axis.axis = SkSetFourByteTag(key[0], key[1], key[2], key[3]);
++            axis.value = root[key].asFloat();
++            info.axis.emplace_back(axis);
++        }
++    }
++    variationSet.emplace_back(info);
++    return NO_ERROR;
++}
++
++/*! To parse  'index' attribute
++ * \param root the root node of 'index' attribute
++ * \param familyName the name of the family which the root node belongs to
++ * \return NO_ERROR successful
++ * \return ERROR_CONFIG_INVALID_VALUE_TYPE invalid value type for an attribute
++ */
++int FontConfig_OHOS::parseTtcIndex(const Json::Value& root, const SkString& familyName)
++{
++    unsigned int keyCount = 2; // the value of 'index' is an array with 2 items.
++    if (root.size() == keyCount && root[0].isString() && root[1].isNumeric()) {
++        TtcIndexInfo item = { SkString(root[0].asCString()), root[1].asInt() };
++        if (item.ttcIndex != 0 && ttcIndexMap.find(item.familyName) == nullptr) {
++            ttcIndexMap.set(SkString(item.familyName), {SkString(item.familyName), 0});
++        }
++        ttcIndexMap.set(SkString(familyName), item);
++    } else {
++        int ret = ERROR_CONFIG_INVALID_VALUE_TYPE;
++        SkString text;
++        const char* key = "index";
++        if (root.size() != keyCount) {
++            text.appendf("%s#0", key);
++            errSet.emplace_back(ret, text.c_str());
++            LOGE("%s : '%s' size should be 2, but here it's %d\n", errToString(ret), key, root.size());
++            return ret;
++        } else if (!root[0].isString()) {
++            text.appendf("%s#1", key);
++            return logErrInfo(ret, text.c_str(), Json::stringValue, root[0].type());
++        } else {
++            text.appendf("%s#2", key);
++            return logErrInfo(ret, text.c_str(), Json::intValue, root[1].type());
++        }
++    }
++    return NO_ERROR;
++}
++
++/*! To get the axis value and set to 'font'
++ * \param axisDefs the axis ranges of a font
++ * \param variation the variation data from which axis values are generated
++ * \param[out] font the axis values will be written to and returned to the caller
++ */
++void FontConfig_OHOS::getAxisValues(const AxisDefinitions& axisDefs,
++    const VariationInfo& variation, FontInfo& font) const
++{
++    SkFontArguments::VariationPosition position;
++    position.coordinateCount = variation.axis.size();
++    position.coordinates = variation.axis.data();
++
++    int count = axisDefs.size();
++    SkFixed axisValues[count];
++    SkTypeface_FreeType::Scanner::computeAxisValues(axisDefs, position,
++        axisValues, font.familyName);
++    font.axisSet.axis.clear();
++    font.axisSet.range.clear();
++    for (int i = 0; i < count; i++) {
++        font.axisSet.axis.emplace_back(axisValues[i]);
++        font.axisSet.range.emplace_back(axisDefs[i]);
++    }
++}
++
++/*! To insert a ttc font into a font style set
++ * \param count the count of typeface in a ttc font
++ * \param font an object of the FontInfo with font information
++ * \return true, if the font is a ttc font and added to corresponding font style set
++ * \return false, if the font is not a ttc font
++ */
++bool FontConfig_OHOS::insertTtcFont(int count, FontInfo& font)
++{
++    bool ret = false;
++    ttcIndexMap.foreach([this, count, &font, &ret]
++        (const SkString& familyName, TtcIndexInfo* info) {
++        if (info->familyName == font.familyName && info->ttcIndex < count) {
++            SkString specifiedName;
++            TypefaceSet* tpSet = this->getTypefaceSet(familyName, specifiedName);
++            if (tpSet) {
++                FontInfo newFont(font);
++                newFont.familyName = familyName;
++                newFont.index = info->ttcIndex;
++                sk_sp<SkTypeface_OHOS> typeface = sk_make_sp<SkTypeface_OHOS>(specifiedName, newFont);
++                tpSet->push_back(std::move(typeface));
++                ret = true;
++            }
++        }
++    });
++    return ret;
++}
++
++/*! To insert a variable font into a font style set
++ * \param axisDefs the axis ranges of a variable font
++ * \param font an object of the FontInfo with font information
++ * \return true, if the font is a variable and some typefaces are added to the corresponding font style set
++ * \return false, if the font is not variable
++ */
++bool FontConfig_OHOS::insertVariableFont(const AxisDefinitions& axisDefs, FontInfo& font)
++{
++    const SkString& key = font.familyName;
++    if (variationMap.find(key) == nullptr || axisDefs.size() == 0) {
++        return false;
++    }
++    SkString specifiedName;
++    TypefaceSet* tpSet = getTypefaceSet(key, specifiedName);
++    if (tpSet == nullptr) {
++        return false;
++    }
++    const std::vector<VariationInfo>& variationSet = *(variationMap.find(key));
++    for (unsigned int i = 0; i < variationSet.size(); i++) {
++        FontInfo newFont(font);
++        getAxisValues(axisDefs, variationSet[i], newFont);
++        int width = font.style.width();
++        SkFontStyle::Slant slant = font.style.slant();
++        if (variationSet[i].width != -1) {
++            width = variationSet[i].width;
++        }
++        if (variationSet[i].slant != -1) {
++            slant = (SkFontStyle::Slant) variationSet[i].slant;
++        }
++        newFont.style = SkFontStyle(variationSet[i].weight, width, slant);
++        sk_sp<SkTypeface_OHOS> typeface = sk_make_sp<SkTypeface_OHOS>(specifiedName, newFont);
++        tpSet->push_back(std::move(typeface));
++    }
++    return true;
++}
++
++/*! To get the typeface set of a font style set
++ * \param familyName the family name of a font style set
++ * \param[out] specifiedName the specified family name of a font style set returned to the caller
++ * \return The object of typeface set
++ * \n      Return null, if the family name is not found in the system
++ */
++TypefaceSet* FontConfig_OHOS::getTypefaceSet(const SkString& familyName,
++    SkString& specifiedName) const
++{
++    if (aliasMap.find(familyName) != nullptr) {
++        const std::vector<AliasInfo>& aliasSet = *(aliasMap.find(familyName));
++        if (aliasSet.size()) {
++            int index = aliasSet[0].pos;
++            specifiedName = genericFamilySet[index]->familyName;
++            return genericFamilySet[index]->typefaceSet.get();
++        }
++    } else if (fallbackNames.find(familyName) != nullptr) {
++        int index = *(fallbackNames.find(familyName));
++        return fallbackSet[index]->typefaceSet.get();
++    }
++    return nullptr;
++}
++
++/*! To load font information from a font file
++ * \param scanner a scanner used to parse the font file
++ * \param fname the full name of a font file
++ * \return NO_ERROR successful
++ * \return ERROR_FONT_NOT_EXIST font file is not exist
++ * \return ERROR_FONT_INVALID_STREAM the stream is not recognized
++ */
++int FontConfig_OHOS::loadFont(const SkTypeface_FreeType::Scanner& scanner, const char* fname)
++{
++    std::unique_ptr<SkStreamAsset> stream = SkStream::MakeFromFile(fname);
++    int count = 1;
++    SkTypeface_FreeType::Scanner::AxisDefinitions axisDefs;
++    FontInfo font(fname, 0);
++    if (stream == nullptr ||
++        scanner.recognizedFont(stream.get(), &count) == false ||
++        scanner.scanFont(stream.get(), 0, &font.familyName, &font.style,
++            &font.isFixedWidth, &axisDefs) == false) {
++        int err = NO_ERROR;
++        if (stream == nullptr) {
++            err = ERROR_FONT_NOT_EXIST;
++        } else {
++            err = ERROR_FONT_INVALID_STREAM;
++        }
++        LOGE("%s : %s\n", errToString(err), fname);
++        char* fnameCopy = strdup(fname);
++        errSet.emplace_back(err, basename(fnameCopy));
++        free(fnameCopy);
++        return err;
++    }
++    // for adjustMap - update weight
++    if (adjustMap.find(font.familyName) != nullptr) {
++        const std::vector<AdjustInfo> adjustSet = *(adjustMap.find(font.familyName));
++        for (unsigned int i = 0; i < adjustSet.size(); i++) {
++            if (font.style.weight() == adjustSet[i].origValue) {
++                font.style = SkFontStyle(adjustSet[i].newValue, font.style.width(), font.style.slant());
++                break;
++            }
++        }
++    }
++    bool ret = false;
++    if (count > 1) {
++        ret = insertTtcFont(count, font);
++    } else if (axisDefs.size() > 0) {
++        ret = insertVariableFont(axisDefs, font);
++    }
++    if (!ret) {
++        SkString specifiedName;
++        TypefaceSet* tpSet = getTypefaceSet(font.familyName, specifiedName);
++        if (tpSet) {
++            sk_sp<SkTypeface_OHOS> typeface = sk_make_sp<SkTypeface_OHOS>(specifiedName, font);
++            tpSet->push_back(std::move(typeface));
++        }
++    }
++    return NO_ERROR;
++}
++
++/*! To scan the system font directories
++ * \param fontScanner the scanner used to parse a font file
++ * \return NO_ERROR success
++ * \return ERROR_DIR_NOT_FOUND a font directory is not exist
++ */
++int FontConfig_OHOS::scanFonts(const SkTypeface_FreeType::Scanner& fontScanner)
++{
++    int err = NO_ERROR;
++    if (fontDirSet.size() == 0) {
++        fontDirSet.emplace_back(SkString("/system/fonts/"));
++    }
++    for (unsigned int i = 0; i < fontDirSet.size(); i++) {
++        DIR* dir = opendir(fontDirSet[i].c_str());
++        if (dir == nullptr) {
++            err = logErrInfo(ERROR_DIR_NOT_FOUND, fontDirSet[i].c_str());
++            continue;
++        }
++        struct dirent* node = nullptr;
++#if defined(SK_BUILD_FONT_MGR_FOR_PREVIEW_WIN)
++        struct stat filestat;
++#endif
++        while ((node = readdir(dir))) {
++#if defined(SK_BUILD_FONT_MGR_FOR_PREVIEW_WIN)
++            stat(node->d_name, &filestat);
++            if(S_ISDIR(filestat.st_mode)) {
++                continue;
++            }
++#else
++            if (node->d_type != DT_REG) {
++                continue;
++            }
++#endif
++            const char* fname = node->d_name;
++            int len = strlen(fname);
++            int suffixLen = strlen(".ttf");
++            if (len < suffixLen || (strncmp(fname + len - suffixLen, ".ttf", suffixLen) &&
++                strncmp(fname + len - suffixLen, ".otf", suffixLen) &&
++                strncmp(fname + len - suffixLen, ".ttc", suffixLen) &&
++                strncmp(fname + len - suffixLen, ".otc", suffixLen))) {
++                continue;
++            }
++            len += (fontDirSet[i].size() + 2); // 2 more characters for '/' and '\0'
++            char fullname[len];
++            memset(fullname,  0, len);
++            strncpy(fullname, fontDirSet[i].c_str(), len);
++#if defined(SK_BUILD_FONT_MGR_FOR_PREVIEW_WIN)
++            if (fontDirSet[i][fontDirSet[i].size() - 1] != '\\') {
++                strcat(fullname, "\\");
++            }
++#else
++            if (fontDirSet[i][fontDirSet[i].size() - 1] != '/') {
++                strcat(fullname, "/");
++            }
++#endif
++            strcat(fullname, fname);
++            loadFont(fontScanner, fullname);
++        }
++        closedir(dir);
++    }
++    fontDirSet.clear();
++    return err;
++}
++
++/*! To reset the generic family
++ * \n 1. To sort the typefaces for each font style set in generic list
++ * \n 2. To build typeface set for those font style sets which have single weight value
++ */
++void FontConfig_OHOS::resetGenericValue()
++{
++    aliasMap.foreach([this](SkString& key, std::vector<AliasInfo>* pAliasSet) {
++        std::vector<AliasInfo>& aliasSet = *pAliasSet;
++        int index = aliasSet[0].pos;
++        if (genericFamilySet[index]->typefaceSet->size() == 0) {
++            this->logErrInfo(ERROR_FAMILY_NOT_FOUND, key.c_str());
++        } else {
++            sortTypefaceSet(genericFamilySet[index]->typefaceSet);
++            for (unsigned int i = 1; i < aliasSet.size(); i++) {
++                if (aliasSet[i].weight == 0) {
++                    continue;
++                }
++                buildSubTypefaceSet(genericFamilySet[index]->typefaceSet,
++                    genericFamilySet[index + i]->typefaceSet,
++                    genericFamilySet[index + i]->familyName,
++                    aliasSet[i].weight);
++                if (genericFamilySet[index + i]->typefaceSet->size() == 0) {
++                    this->logErrInfo(ERROR_FAMILY_NOT_FOUND,
++                        genericFamilySet[index + i]->familyName.c_str());
++                }
++            }
++        }
++    });
++
++    aliasMap.reset();
++    adjustMap.reset();
++    variationMap.reset();
++    ttcIndexMap.reset();
++}
++
++/*! To build a sub typeface set according to weight from a typeface set
++ * \param typefaceSet the parent typeface set
++ * \param[out] subSet the sub typeface set returned to the caller
++ * \param familyName the family name of the sub typeface set
++ * \param weight the weight of the sub typeface set
++ */
++void FontConfig_OHOS::buildSubTypefaceSet(const std::shared_ptr<TypefaceSet>& typefaceSet,
++    std::shared_ptr<TypefaceSet>& subSet, const SkString& familyName, int weight)
++{
++    if (typefaceSet->size() == 0) {
++        return;
++    }
++    for (unsigned int i = 0; i < typefaceSet->size(); i++) {
++        const SkTypeface_OHOS* typeface = (*typefaceSet)[i].get();
++        if (typeface && typeface->fontStyle().weight() == weight) {
++            const FontInfo* pFont = typeface->getFontInfo();
++            if (pFont == nullptr) {
++                continue;
++            }
++            FontInfo font(*pFont);
++            sk_sp<SkTypeface_OHOS> newTypeface = sk_make_sp<SkTypeface_OHOS>(familyName, font);
++            subSet->push_back(std::move(newTypeface));
++        }
++    }
++}
++
++/*! To reset the fallback value
++ * \n To sort the typefaces for each font style set in fallback list.
++ */
++void FontConfig_OHOS::resetFallbackValue()
++{
++    for (unsigned int i = 0; i < fallbackSet.size(); i++) {
++        if (fallbackSet[i]->typefaceSet->size() == 0) {
++            logErrInfo(ERROR_FAMILY_NOT_FOUND, fallbackSet[i]->familyName.c_str());
++        }
++        sortTypefaceSet(fallbackSet[i]->typefaceSet);
++    }
++}
++
++/*! To check if an error happened
++ * \param err the id of an error
++ * \param text the key to indicate the part with the error happened
++ * \return false, this kind of error did not happen
++ * \return true, the error happened
++ */
++bool FontConfig_OHOS::hasError(int err, const SkString& text) const
++{
++    for (unsigned int i = 0; i < errSet.size(); i++) {
++        if (errSet[i].err == err && errSet[i].text == text) {
++            return true;
++        }
++    }
++    return false;
++}
++
++/*! To get the total count of errors happened
++ * \return The count of errors
++ */
++int FontConfig_OHOS::getErrorCount() const
++{
++    return errSet.size();
++}
++
++/*! To sort the typeface set
++ * \param typefaceSet the typeface set to be sorted
++ */
++void FontConfig_OHOS::sortTypefaceSet(std::shared_ptr<TypefaceSet>& typefaceSet)
++{
++    if (typefaceSet.get() == nullptr || typefaceSet->size() <= 1) {
++        return;
++    }
++    TypefaceSet& tpSet = *(typefaceSet.get());
++    for (unsigned int i = 0; i < tpSet.size(); i++)
++    for (unsigned int j = 0; j < tpSet.size() - 1; j++) {
++        if ((tpSet[j]->fontStyle().weight() > tpSet[j + 1]->fontStyle().weight()) ||
++            (tpSet[j]->fontStyle().weight() == tpSet[j + 1]->fontStyle().weight() &&
++            tpSet[j]->fontStyle().slant() > tpSet[j + 1]->fontStyle().slant())) {
++            tpSet[j].swap(tpSet[j + 1]);
++        }
++    }
++}
++
++/*! To get the display text of an error
++ * \param err the id of an error
++ * \return The text to explain the error
++ */
++const char* FontConfig_OHOS::errToString(int err)
++{
++    const static std::array<const char*, ERROR_TYPE_COUNT> errToString{
++        "successful",                                                      // NO_ERROR = 0
++        "config file is not found",                              // ERROR_CONFIG_NOT_FOUND
++        "the format of config file is not supported", // ERROR_CONFIG_FORMAT_NOT_SUPPORTED
++        "missing tag",                                         // ERROR_CONFIG_MISSING_TAG
++        "invalid value type",                           // ERROR_CONFIG_INVALID_VALUE_TYPE
++        "font file is not exist",                                  // ERROR_FONT_NOT_EXIST
++        "invalid font stream",                                // ERROR_FONT_INVALID_STREAM
++        "no font stream",                                          // ERROR_FONT_NO_STREAM
++        "family is not found",                                   // ERROR_FAMILY_NOT_FOUND
++        "no available family in the system",                   //ERROR_NO_AVAILABLE_FAMILY
++        "no such directory"                                         // ERROR_DIR_NOT_FOUND
++    };
++    if (err >= 0 && err < ERROR_TYPE_COUNT) {
++        return errToString[err];
++    }
++    return "unknown error";
++}
++
++/*! To log the error information
++ * \param err the id of an error
++ * \param key the key which indicates the the part with the error
++ * \param expected the expected type of json node.
++ * \n     It's used only for err 'ERROR_CONFIG_INVALID_VALUE_TYPE'
++ * \param actual the actual type of json node.
++ * \n     It's used only for err 'ERROR_CONFIG_INVALID_VALUE_TYPE'
++ * \return err
++ */
++int FontConfig_OHOS::logErrInfo(int err, const char* key, Json::ValueType expected,
++    Json::ValueType actual)
++{
++    errSet.emplace_back(err, key);
++    if (err != ERROR_CONFIG_INVALID_VALUE_TYPE) {
++        LOGE("%s : %s\n", errToString(err), key);
++    } else {
++        const char* types[] = {
++            "null",
++            "int",
++            "unit",
++            "real",
++            "string",
++            "boolean",
++            "array",
++            "object",
++        };
++        int size = sizeof(types) / sizeof(char*);
++        if ((expected >= 0 && expected < size) &&
++            (actual >= 0 && actual < size)) {
++            LOGE("%s : '%s' should be '%s', but here it's '%s'\n",
++                errToString(err), key, types[expected], types[actual]);
++        } else {
++            LOGE("%s : %s\n", errToString(err), key);
++        }
++    }
++    return err;
++}
++
++bool FontConfig_OHOS::judgeFileExist()
++{
++    bool haveFile = false;
++    for (unsigned int i = 0; i < fontDirSet.size(); i++) {
++        DIR* dir = opendir(fontDirSet[i].c_str());
++        if (dir == nullptr) {
++            logErrInfo(ERROR_DIR_NOT_FOUND, fontDirSet[i].c_str());
++            continue;
++        }
++        struct dirent* node = nullptr;
++#if defined(SK_BUILD_FONT_MGR_FOR_PREVIEW_WIN)
++        struct stat fileStat;
++#endif
++        while ((node = readdir(dir))) {
++#if defined(SK_BUILD_FONT_MGR_FOR_PREVIEW_WIN)
++            stat(node->d_name, &fileStat);
++            if (S_ISDIR(fileStat.st_mode)) {
++                continue;
++            }
++#else
++            if (node->d_type != DT_REG) {
++                continue;
++            }
++#endif
++            const char* fileName = node->d_name;
++            int len = strlen(fileName);
++            int suffixLen = strlen(".ttf");
++            if (len < suffixLen || (strncmp(fileName + len - suffixLen, ".ttf", suffixLen) &&
++                strncmp(fileName + len - suffixLen, ".otf", suffixLen) &&
++                strncmp(fileName + len - suffixLen, ".ttc", suffixLen) &&
++                strncmp(fileName + len - suffixLen, ".otc", suffixLen))) {
++                continue;
++            }
++            haveFile = true;
++            break;
++        }
++        (void)closedir(dir);
++        if (haveFile) {
++            break;
++        }
++    }
++    return haveFile;
++}
++
++int FontConfig_OHOS::checkProductFile(const char* fname)
++{
++    int err = parseConfig(PRODUCT_DEFAULT_CONFIG);
++    SkDebugf("parse productfontconfig json file err = %d", err);
++    if ((err != NO_ERROR) || (!judgeFileExist())) {
++        SkDebugf("parse productfontconfig json file error");
++        fontDirSet.clear();
++        fallbackForMap.reset();
++        genericFamilySet.clear();
++        fallbackSet.clear();
++        genericNames.reset();
++        fallbackNames.reset();
++        errSet.clear();
++        aliasMap.reset();
++        adjustMap.reset();
++        variationMap.reset();
++        ttcIndexMap.reset();
++        err = parseConfig(fname);
++    }
++    return err;
++}
+diff --git a/src/ports/skia_ohos/FontConfig_ohos.h b/src/ports/skia_ohos/FontConfig_ohos.h
+new file mode 100644
+index 0000000000..3737b41c6c
+--- /dev/null
++++ b/src/ports/skia_ohos/FontConfig_ohos.h
+@@ -0,0 +1,234 @@
++// Copyright (c) 2023 Huawei Device Co., Ltd. All rights reserved
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef FONTCONFIG_OHOS_H
++#define FONTCONFIG_OHOS_H
++
++#include <json/json.h>
++#include <vector>
++
++#include "SkFontDescriptor.h"
++#include "SkFontHost_FreeType_common.h"
++#include "SkFontStyle.h"
++#include "SkStream.h"
++#include "SkString.h"
++#include "SkTypes.h"
++
++#include "FontInfo_ohos.h"
++#include "SkTypeface_ohos.h"
++
++#ifdef ENABLE_DEBUG
++
++#define LOGE(fmt, args...)        \
++    printf("E %s:%d  %s - " fmt, basename(__FILE__), __LINE__, __FUNCTION__, ##args)
++#define LOGI(fmt, args...)        \
++    printf("I %s:%d - " fmt,  __FUNCTION__, __LINE__, ##args)
++#define LOGW(fmt, args...)        \
++    printf("W %s:%d  %s - " fmt, basename(__FILE__), __LINE__, __FUNCTION__, ##args)
++
++#else
++
++#define LOGE        SkDEBUGF
++#define LOGI        SkDEBUGF
++#define LOGW        SkDEBUGF
++
++#endif
++
++struct FontInfo;
++struct FallbackInfo;
++struct GenericFamily;
++struct FallbackSetPos;
++
++using TypefaceSet = std::vector<sk_sp<SkTypeface_OHOS>>;
++using GenericFamilySet = std::vector<std::unique_ptr<GenericFamily>>;
++using FallbackSet = std::vector<std::unique_ptr<FallbackInfo>>;
++using FallbackForMap = SkTHashMap<SkString, FallbackSetPos>;
++using NamesMap = SkTHashMap<SkString, int>;
++using Coordinate = SkFontArguments::VariationPosition::Coordinate;
++using AxisDefinitions = SkTypeface_FreeType::Scanner::AxisDefinitions;
++
++/*!
++ * Error code definition
++ */
++namespace ErrorCode {
++
++enum {
++    NO_ERROR = 0,                           // no error
++    ERROR_CONFIG_NOT_FOUND,                 // the configuration document is not found
++    ERROR_CONFIG_FORMAT_NOT_SUPPORTED,      // the formation of configuration is not supported
++    ERROR_CONFIG_MISSING_TAG,               // missing tag in the configuration
++    ERROR_CONFIG_INVALID_VALUE_TYPE,        // invalid value type in the configuration
++    ERROR_FONT_NOT_EXIST,                   // the font file is not exist
++    ERROR_FONT_INVALID_STREAM,              // the stream is not recognized
++    ERROR_FONT_NO_STREAM,                   // no stream in the font data
++    ERROR_FAMILY_NOT_FOUND,                 // the family name is not found in the system
++    ERROR_NO_AVAILABLE_FAMILY,              // no available family in the system
++    ERROR_DIR_NOT_FOUND,                    // the directory is not exist
++
++    ERROR_TYPE_COUNT,
++};
++
++} /* namespace ErrorCode */
++
++/*!
++ *  \brief To manage the related information of a 'fallbackFor' family name
++ */
++struct FallbackSetPos {
++    unsigned int index; // the index of the first font style set in the fallback set for a specified family name
++    unsigned int count; // the count of font style sets for a specified family name
++};
++
++/*!
++ * \brief To manage the information for a generic family item
++ */
++struct GenericFamily {
++    SkString familyName; // the specified family name of the font style set
++    std::shared_ptr<TypefaceSet> typefaceSet; // the typeface set of the font style set
++    virtual ~GenericFamily() = default;
++};
++
++/*!
++ * \brief To manage the information for a fallback family item
++ */
++struct FallbackInfo : GenericFamily {
++    SkString langs; // the language for which the font style set is
++};
++
++/*!
++ * \brief To parse the font configuration document and manage the system fonts
++ */
++class FontConfig_OHOS {
++public:
++    explicit FontConfig_OHOS(const SkTypeface_FreeType::Scanner& fontScanner,
++        const char* fname = nullptr);
++    virtual ~FontConfig_OHOS() = default;
++    const FallbackForMap& getFallbackForMap() const;
++    const FallbackSet& getFallbackSet() const;
++    int getFamilyCount() const;
++    int getDefaultFamily(SkString* familyName) const;
++    int getFamilyName(int index, SkString* familyName) const;
++    int getTypefaceCount(int styleIndex, bool isFallback = false) const;
++    int getStyleIndex(const char* familyName, bool& isFallback) const;
++
++    SkTypeface_OHOS* getTypeface(int styleIndex, int index, bool isFallback = false) const;
++    SkTypeface_OHOS* getTypeface(int styleIndex, const SkFontStyle& style,
++        bool isFallback = false) const;
++
++#if ENABLE_DEBUG
++    void dumpFont(const FontInfo& font) const;
++    void dumpGeneric() const;
++    void dumpFallback() const;
++#endif
++    bool hasError(int err, const SkString& text) const;
++    int getErrorCount() const;
++
++    static sk_sp<SkTypeface_OHOS> matchFontStyle(const TypefaceSet& typefaceSet, const SkFontStyle& pattern);
++
++    static const char* errToString(int err);
++private:
++    struct AliasInfo;
++    struct AdjustInfo;
++    struct VariationInfo;
++    struct TtcIndexInfo;
++    using AliasMap = SkTHashMap<SkString, std::vector<AliasInfo>>;
++    using AjdustMap = SkTHashMap<SkString, std::vector<AdjustInfo>>;
++    using VariationMap = SkTHashMap<SkString, std::vector<VariationInfo>>;
++    using TtcIndexMap = SkTHashMap<SkString, TtcIndexInfo>;
++
++    /*!
++     * \brief To manage the adjust information
++     */
++    struct AdjustInfo {
++        int origValue; // the real value of the font weight
++        int newValue; // the specified value of weight for a font
++    };
++
++    /*!
++     * \brief To manage the alias information of
++     */
++    struct AliasInfo {
++        int pos; // the index of a font style set in generic family list.
++        int weight; // the weight of the font style set. 0 means no specified weight
++    };
++
++    /*!
++     * \brief To manage the variation information
++     */
++    struct VariationInfo {
++        VariationInfo() : weight(-1), width(-1), slant(-1){}
++        std::vector<Coordinate> axis; // the axis set such as 'wght', 'wdth' and 'slnt'.
++        int weight; // the value of mapping weight
++        int width;  // the value of mapping width
++        int slant; // the value of mapping slant
++    };
++
++    /*!
++     * \brief To manage the 'index' information for ttc fonts
++     */
++    struct TtcIndexInfo {
++        SkString familyName; // the family name of the first typeface in a ttc font
++        int ttcIndex; // the index of a typeface in a ttc font
++    };
++
++    /*!
++     * \brief To manage the information of errors happened
++     */
++    struct ErrorInfo {
++        ErrorInfo(int err, const char* text) : err(err), text(SkString(text)){}
++        ErrorInfo(int err, SkString& text) : err(err), text(std::move(text)){}
++        int err; // error id
++        SkString text; // the part with error
++    };
++
++    std::vector<SkString> fontDirSet; // the directories where the fonts are
++
++    FallbackForMap    fallbackForMap; // a hash table to save the fallbackFor pairs
++    GenericFamilySet genericFamilySet; // the font style set list of generic family
++    FallbackSet fallbackSet; // the font style set list of fallback family
++
++    NamesMap genericNames; // a map to store the index of a family for generic family
++    NamesMap fallbackNames; // a map to store the index of a family for fallback family
++
++    std::vector<ErrorInfo> errSet; // the errors happened
++    AliasMap aliasMap; // to save alias information temporarily
++    AjdustMap adjustMap; // to save adjust information temporarily
++    VariationMap variationMap; // to save variation information temporarily
++    TtcIndexMap ttcIndexMap; // to save 'index' information temporarily
++
++    int parseConfig(const char* fname);
++    int checkConfigFile(const char* fname, Json::Value& root);
++    int parseFontDir(const Json::Value& root);
++    int parseGeneric(const Json::Value& root);
++    int parseFallback(const Json::Value& root);
++    int parseFallbackItem(const Json::Value& root);
++    int parseAlias(const Json::Value& root, std::vector<AliasInfo>& aliasSet);
++    int parseAdjust(const Json::Value& root, std::vector<AdjustInfo>& adjustSet);
++    int parseVariation(const Json::Value& root, std::vector<VariationInfo>& variationSet);
++    int parseTtcIndex(const Json::Value& root, const SkString& familyName);
++    void getAxisValues(const AxisDefinitions& axisDefinitions,
++        const VariationInfo& variation, FontInfo& font) const;
++    bool insertTtcFont(int count, FontInfo& font);
++    bool insertVariableFont(const AxisDefinitions& axisDefinitions, FontInfo& font);
++    TypefaceSet* getTypefaceSet(const SkString& familyName, SkString& specifiedName) const;
++
++    int loadFont(const SkTypeface_FreeType::Scanner& scanner, const char* fname);
++    int scanFonts(const SkTypeface_FreeType::Scanner& fontScanner);
++    void resetGenericValue();
++    void buildSubTypefaceSet(const std::shared_ptr<TypefaceSet>& typefaceSet,
++        std::shared_ptr<TypefaceSet>& subSet, const SkString& familyName, int weight);
++    void resetFallbackValue();
++    int logErrInfo(int err, const char* key, Json::ValueType expected = Json::nullValue,
++        Json::ValueType actual = Json::nullValue);
++    static void sortTypefaceSet(std::shared_ptr<TypefaceSet>& typefaceSet);
++    static uint32_t getFontStyleDifference(const SkFontStyle& style1, const SkFontStyle& style2);
++    static char* getFileData(const char* fname, int& size);
++    FontConfig_OHOS(const FontConfig_OHOS&) = delete;
++    FontConfig_OHOS& operator = (const FontConfig_OHOS&) = delete;
++    FontConfig_OHOS(FontConfig_OHOS&&) = delete;
++    FontConfig_OHOS& operator = (FontConfig_OHOS&&) = delete;
++    int checkProductFile(const char* fname);
++    bool judgeFileExist();
++};
++
++#endif /* FONTCONFIG_OHOS_H */
+diff --git a/src/ports/skia_ohos/FontInfo_ohos.h b/src/ports/skia_ohos/FontInfo_ohos.h
+new file mode 100644
+index 0000000000..8bcbb772a0
+--- /dev/null
++++ b/src/ports/skia_ohos/FontInfo_ohos.h
+@@ -0,0 +1,145 @@
++// Copyright (c) 2023 Huawei Device Co., Ltd. All rights reserved
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef FONTINFO_OHOS_H
++#define FONTINFO_OHOS_H
++
++#include "SkFixed.h"
++#include "SkFontDescriptor.h"
++#include "SkFontHost_FreeType_common.h"
++
++/*!
++ * \brief To manage the font information
++ */
++struct FontInfo {
++public:
++    /*! Constructor
++     *
++     */
++    FontInfo() : familyName(""), fname(""), index(0),
++        style(SkFontStyle::Normal()), isFixedWidth(false), stream(nullptr)
++    {
++        memset(&axisSet, 0, sizeof(AxisSet));
++    }
++    /*! Copy Constructor
++     * \param font an object of FontInfo
++     */
++    explicit FontInfo(const FontInfo& font)
++        : familyName(font.familyName), fname(font.fname), index(font.index),
++          style(font.style), isFixedWidth(font.isFixedWidth), stream(nullptr)
++    {
++        axisSet.axis = font.axisSet.axis;
++        axisSet.range = font.axisSet.range;
++        if (font.stream) {
++            stream = font.stream->duplicate();
++        }
++    }
++
++    /*! Move Constructor
++     * \param font an object of FontInfo
++     */
++    explicit FontInfo(FontInfo&& font)
++        : familyName(std::move(font.familyName)), fname(std::move(font.fname)), index(font.index),
++          style(font.style), isFixedWidth(font.isFixedWidth), stream(nullptr)
++    {
++        axisSet.axis = std::move(font.axisSet.axis);
++        axisSet.range = std::move(font.axisSet.range);
++        if (font.stream) {
++            stream = std::move(font.stream);
++        }
++    }
++
++    /*! Constructor
++     * \param fname the fullname of font file
++     * \param index the index of the typeface in the font file
++     */
++    FontInfo(const char* fname, int index)
++        : familyName(""), fname(""), index(index),
++          style(SkFontStyle::Normal()), isFixedWidth(false), stream(nullptr)
++    {
++        if (fname) {
++            this->fname.set(fname);
++        }
++        memset(&axisSet, 0, sizeof(axisSet));
++    }
++
++    /*! Destructor
++     *
++     */
++    virtual ~FontInfo() = default;
++
++    /*! Copy assignment operator
++     * \param font an object of FontInfo
++     */
++    FontInfo& operator = (const FontInfo& font)
++    {
++        if (this == &font) {
++            return *this;
++        }
++        familyName = font.familyName;
++        fname = font.fname;
++        index = font.index;
++        style = font.style;
++        isFixedWidth = font.isFixedWidth;
++        axisSet.axis = font.axisSet.axis;
++        axisSet.range = font.axisSet.range;
++        if (font.stream) {
++            stream = font.stream->duplicate();
++        }
++        return *this;
++    }
++
++    /*! The move assignment operator
++     * \param font an object of FontInfo
++     */
++    FontInfo& operator = (FontInfo&& font)
++    {
++        if (this == &font) {
++            return *this;
++        }
++        familyName = std::move(font.familyName);
++        fname = std::move(font.fname);
++        index = font.index;
++        style = font.style;
++        isFixedWidth = font.isFixedWidth;
++        axisSet.axis = std::move(font.axisSet.axis);
++        axisSet.range = std::move(font.axisSet.range);
++        if (font.stream) {
++            stream = std::move(font.stream);
++        }
++        return *this;
++    }
++
++    /*! To set axis values
++     * \param count the count of axis
++     * \param axis an array of SkFixed value
++     * \param range an array of AxisDefinition
++     */
++    void setAxisSet(int count, const SkFixed* axis,
++        const SkTypeface_FreeType::Scanner::AxisDefinition* range)
++    {
++        axisSet.axis.clear();
++        axisSet.range.clear();
++        for (int i = 0; i < count; i++) {
++            axisSet.axis.emplace_back(axis[i]);
++            axisSet.range.emplace_back(range[i]);
++        }
++    }
++
++    SkString familyName;  // the real family name of the font
++    SkString fname; // the full name of font file
++    int index; // the index of the font in a ttc font
++    SkFontStyle style; // the font style
++    bool isFixedWidth; // the flag to indicate if the font has fixed width or not
++    /*!
++     * \brief To manage the axis values for variable font
++     */
++    struct AxisSet {
++        std::vector<SkFixed> axis;  // the axis values
++        std::vector<SkTypeface_FreeType::Scanner::AxisDefinition> range; // the axis ranges
++    } axisSet; // the axis values for a variable font
++    std::unique_ptr<SkStreamAsset> stream; // the data stream of font file
++};
++
++#endif /* FONTINFO_OHOS_H */
+diff --git a/src/ports/skia_ohos/SkFontMgr_ohos.cpp b/src/ports/skia_ohos/SkFontMgr_ohos.cpp
+new file mode 100644
+index 0000000000..25424904fe
+--- /dev/null
++++ b/src/ports/skia_ohos/SkFontMgr_ohos.cpp
+@@ -0,0 +1,437 @@
++// Copyright (c) 2023 Huawei Device Co., Ltd. All rights reserved
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "SkFontMgr_ohos.h"
++
++#include "SkTypeface_ohos.h"
++
++using namespace ErrorCode;
++
++/*! Constructor
++ * \param path the full path of system font configuration document
++ */
++SkFontMgr_OHOS::SkFontMgr_OHOS(const char* path)
++{
++    fontConfig = std::make_shared<FontConfig_OHOS>(fontScanner, path);
++    familyCount = fontConfig->getFamilyCount();
++}
++
++/*! To get the count of families
++ * \return The count of families in the system
++ */
++int SkFontMgr_OHOS::onCountFamilies() const
++{
++    return familyCount;
++}
++
++/*! To get the family name for a font style set
++ * \param index the index of a font style set
++ * \param[out] familyName the family name returned to the caller
++ * \n          The family name will be reset to "", if index is out of range
++ */
++void SkFontMgr_OHOS::onGetFamilyName(int index, SkString* familyName) const
++{
++    if (fontConfig == nullptr || familyName == nullptr) {
++        return;
++    }
++    fontConfig->getFamilyName(index, familyName);
++}
++
++/*! To create an object of SkFontStyleSet
++ * \param index the index of a font style set
++ * \return The pointer of SkFontStyleSet
++ * \n      Return null, if index is out of range
++ * \note   The caller must call unref() on the returned object if it's not null
++ */
++SkFontStyleSet* SkFontMgr_OHOS::onCreateStyleSet(int index) const
++{
++    if (fontConfig == nullptr) {
++        return nullptr;
++    }
++    if (index < 0 || index >= this->countFamilies()) {
++        return nullptr;
++    }
++    return new SkFontStyleSet_OHOS(fontConfig, index);
++}
++
++/*! To get a matched object of SkFontStyleSet
++ * \param familyName the family name of a font style set
++ * \return The pointer of SkFontStyleSet
++ * \n      Return the default font style set, if family name is null
++ * \n      Return null, if family name is not found
++ * \note   The caller must call unref() on the returned object if it's not null
++ */
++SkFontStyleSet* SkFontMgr_OHOS::onMatchFamily(const char familyName[]) const
++{
++    if (fontConfig == nullptr) {
++        return nullptr;
++    }
++    // return default system font when familyName is null
++    if (familyName == nullptr) {
++        return new SkFontStyleSet_OHOS(fontConfig, 0);
++    }
++
++    bool isFallback = false;
++    int index = fontConfig->getStyleIndex(familyName, isFallback);
++    if (index == -1) {
++        return nullptr;
++    }
++    return new SkFontStyleSet_OHOS(fontConfig, index, isFallback);
++}
++
++/*! To get a matched typeface
++ * \param familyName the family name of a font style set
++ * \param style the font style to be matched
++ * \return An object of typeface which is closest matching to 'style'
++ * \n      Return the typeface in the default font style set, if family name is null
++ * \n      Return null, if family name is not found
++ * \note   The caller must call unref() on the returned object if it's not null
++ */
++SkTypeface* SkFontMgr_OHOS::onMatchFamilyStyle(const char familyName[], const SkFontStyle& style) const
++{
++    if (fontConfig == nullptr) {
++        return nullptr;
++    }
++    bool isFallback = false;
++    int styleIndex = 0;
++    if (familyName) {
++        styleIndex = fontConfig->getStyleIndex(familyName, isFallback);
++    }
++    return SkSafeRef(fontConfig->getTypeface(styleIndex, style, isFallback));
++}
++
++/*! To get a matched typeface
++ * \n Use the system fallback to find a typeface for the given character.
++ * \param familyName the family name which the typeface is fallback For
++ * \param style the font style to be matched
++ * \param bcp47 an array of languages which indicate the language of 'character'
++ * \param bcp47Count the array size of bcp47
++ * \param character a UTF8 value to be matched
++ * \return An object of typeface which is for the given character
++ * \return Return the typeface in the default fallback set, if familyName is null
++ * \return Return null, if the typeface is not found for the given character
++ * \note The caller must call unref() on the returned object if it's not null
++ */
++SkTypeface* SkFontMgr_OHOS::onMatchFamilyStyleCharacter(const char familyName[], const SkFontStyle& style,
++    const char* bcp47[], int bcp47Count, SkUnichar character) const
++{
++    if (fontConfig == nullptr) {
++        return nullptr;
++    }
++    const FallbackForMap& fallbackForMap = fontConfig->getFallbackForMap();
++    const FallbackSet& fallbackSet = fontConfig->getFallbackSet();
++    SkString defaultFamily("");
++    SkString key = defaultFamily;
++    FallbackSetPos* item = nullptr;
++    if (familyName == nullptr) {
++        item = fallbackForMap.find(defaultFamily);
++    } else {
++        item = fallbackForMap.find(SkString(familyName));
++        if (item) {
++            key = SkString(familyName);
++        } else {
++            item = fallbackForMap.find(defaultFamily);
++        }
++    }
++    if (item == nullptr) {
++        LOGE("%s : '%s' must be a fallback key in the config file\n",
++            FontConfig_OHOS::errToString(ERROR_FAMILY_NOT_FOUND), defaultFamily.c_str());
++        return nullptr;
++    }
++    while (true) {
++        if (bcp47Count > 0) {
++            SkTypeface* retTp = findTypeface(*item, style, bcp47, bcp47Count, character);
++            if (retTp) {
++                return retTp;
++            }
++            if (key == defaultFamily) {
++                bcp47Count = 0;
++                continue;
++            }
++            item = fallbackForMap.find(defaultFamily);
++            key = defaultFamily;
++        } else {
++            for (unsigned int i = item->index; i < item->index + item->count && i < fallbackSet.size(); i++) {
++                const TypefaceSet& tpSet = *(fallbackSet[i]->typefaceSet.get());
++                if (tpSet.size() > 0 && tpSet[0]->unicharToGlyph(character) != 0) {
++                    sk_sp<SkTypeface> typeface = FontConfig_OHOS::matchFontStyle(tpSet, style);
++                    return SkSafeRef(typeface.get());
++                }
++            }
++            if (key == defaultFamily) {
++                break;
++            }
++            item = fallbackForMap.find(defaultFamily);
++            key = defaultFamily;
++        }
++    }
++    return nullptr;
++}
++
++/*! To find the matched typeface for the given parameters
++ * \n Use the system fallback to find a typeface for the given character.
++ * \param fallbackItem the fallback items in which to find the typeface
++ * \param style the font style to be matched
++ * \param bcp47 an array of languages which indicate the language of 'character'
++ * \param bcp47Count the array size of bcp47
++ * \param character a UTF8 value to be matched
++ * \return An object of typeface which is for the given character
++ * \return Return null, if the typeface is not found for the given character
++ */
++SkTypeface* SkFontMgr_OHOS::findTypeface(const FallbackSetPos& fallbackItem, const SkFontStyle& style,
++    const char* bcp47[], int bcp47Count, SkUnichar character) const
++{
++    if (bcp47Count == 0) {
++        return nullptr;
++    }
++
++    const FallbackSet& fallbackSet = fontConfig->getFallbackSet();
++    // example bcp47 code : 'zh-Hans' : ('zh' : iso639 code, 'Hans' : iso15924 code)
++    // iso639 code will be taken from bcp47 code, so that we can try to match
++    // bcp47 or only iso639. Therefore totalCount need to be 'bcp47Count * 2'
++    int totalCount = bcp47Count * 2;
++    int tps[totalCount];
++    for (int i = 0; i < totalCount; i++) {
++        tps[i] = -1;
++    }
++    // find the families matching the bcp47 list
++    for (unsigned int i = fallbackItem.index; i < fallbackItem.index + fallbackItem.count
++        && i < fallbackSet.size(); i++) {
++        int ret = compareLangs(fallbackSet[i]->langs, bcp47, bcp47Count, tps);
++        if (ret == -1) {
++            continue;
++        }
++        tps[ret] = i;
++    }
++    // match typeface in families
++    for (int i = bcp47Count - 1; i >= 0; i--) {
++        if (tps[i] == -1) {
++            continue;
++        }
++        const TypefaceSet& tpSet = *(fallbackSet[tps[i]]->typefaceSet.get());
++        if (tpSet.size() > 0 && tpSet[0]->unicharToGlyph(character) != 0) {
++            sk_sp<SkTypeface> typeface = FontConfig_OHOS::matchFontStyle(tpSet, style);
++            return SkSafeRef(typeface.get());
++        }
++    }
++    for (int i = totalCount - 1; i >= bcp47Count; i--) {
++        if (tps[i] == -1) {
++            continue;
++        }
++        const TypefaceSet& tpSet = *(fallbackSet[tps[i]]->typefaceSet.get());
++        if (tpSet.size() > 0 && tpSet[0]->unicharToGlyph(character) != 0) {
++            sk_sp<SkTypeface> typeface = FontConfig_OHOS::matchFontStyle(tpSet, style);
++            return SkSafeRef(typeface.get());
++        }
++    }
++    return nullptr;
++}
++
++/*! To compare the languages of an typeface with a bcp47 list
++ * \param langs the supported languages by an typeface
++ * \param bcp47 the array of bcp47 language to be matching
++ * \param bcp47Count the array size of bcp47
++ * \param tps an array of the index of typeface which is matching one value of bcp47
++ * \return The index of language in bcp47, if matching happens
++ * \n      Return -1, if no language matching happens
++ */
++int SkFontMgr_OHOS::compareLangs(const SkString& langs, const char* bcp47[],
++    int bcp47Count, const int tps[]) const
++{
++    /*
++     * zh-Hans : ('zh' : iso639 code, 'Hans' : iso15924 code)
++     */
++    if (bcp47 == nullptr || bcp47Count == 0) {
++        return -1;
++    }
++    for (int i = bcp47Count - 1; i >= 0; i--) {
++        if (tps[i] != -1) {
++            continue;
++        }
++        if (langs.find(bcp47[i]) != -1) {
++            return i;
++        } else {
++            const char* iso15924 = strrchr(bcp47[i], '-');
++            if (iso15924 == nullptr) {
++                continue;
++            }
++            iso15924++;
++            int len = iso15924 - 1 - bcp47[i];
++            SkString country(bcp47[i], len);
++            if (langs.find(iso15924) != -1 ||
++                (strncmp(bcp47[i], "und", strlen("und")) && langs.find(country.c_str()) != -1)) {
++                return i + bcp47Count;
++            }
++        }
++    }
++    return -1;
++}
++
++/*! To get a matched typeface
++ * \param typeface the given typeface with which the returned object should be in the same style set
++ * \param style the font style to be matching
++ * \return The object of typeface which is closest matching to the given 'style'
++ * \n      Return null, if the family name of the given typeface is not found in the system
++ * \note The caller must call unref() on the returned object if it's not null
++ */
++SkTypeface* SkFontMgr_OHOS::onMatchFaceStyle(const SkTypeface* typeface, const SkFontStyle& style) const
++{
++    if (typeface == nullptr) {
++        return nullptr;
++    }
++    SkString familyName;
++    typeface->getFamilyName(&familyName);
++    return this->onMatchFamilyStyle(familyName.c_str(), style);
++}
++
++/*! To create a typeface from the specified data and TTC index
++ * \param data the data to be parsed
++ * \param index the index of typeface. 0 for none
++ * \return The object of typeface, if successful
++ * \n      Return null if the data is not recognized.
++ * \note The caller must call unref() on the returned object if it's not null
++ */
++sk_sp<SkTypeface> SkFontMgr_OHOS::onMakeFromData(sk_sp<SkData> data, int ttcIndex) const
++{
++    if (data == nullptr) {
++        return nullptr;
++    }
++    std::unique_ptr<SkMemoryStream> memoryStream = std::make_unique<SkMemoryStream>(data);
++    SkFontArguments args;
++    args.setCollectionIndex(ttcIndex);
++    return this->makeTypeface(std::move(memoryStream), args, nullptr);
++}
++
++/*! To create a typeface from the specified stream and TTC index
++ * \param data the stream to be parsed
++ * \param index the index of typeface. 0 for none
++ * \return The object of typeface, if successful
++ * \n      Return null if the stream is not recognized.
++ * \note The caller must call unref() on the returned object if it's not null
++ */
++sk_sp<SkTypeface> SkFontMgr_OHOS::onMakeFromStreamIndex(std::unique_ptr<SkStreamAsset> stream,
++    int ttcIndex) const
++{
++    if (stream == nullptr) {
++        return nullptr;
++    }
++    SkFontArguments args;
++    args.setCollectionIndex(ttcIndex);
++    return this->makeTypeface(std::move(stream), args, nullptr);
++}
++
++/*! To create a typeface from the specified stream and font arguments
++ * \param data the stream to be parsed
++ * \param args the arguments of font
++ * \return The object of typeface, if successful
++ * \n      Return null if the stream is not recognized.
++ * \note The caller must call unref() on the returned object if it's not null
++ */
++sk_sp<SkTypeface> SkFontMgr_OHOS::onMakeFromStreamArgs(std::unique_ptr<SkStreamAsset> stream,
++    const SkFontArguments& args) const
++{
++    if (stream == nullptr) {
++        return nullptr;
++    }
++
++    return this->makeTypeface(std::move(stream), args, nullptr);
++}
++
++/*! To create a typeface from the specified font file and TTC index
++ * \param path the full path of the given font file
++ * \param ttcIndex the index of typeface in a ttc font file. 0 means none.
++ * \return The object of typeface, if successful
++ * \n      Return null if the font file is not found or the content of file is not recognized.
++ * \note The caller must call unref() on the returned object if it's not null
++ */
++sk_sp<SkTypeface> SkFontMgr_OHOS::onMakeFromFile(const char path[], int ttcIndex) const
++{
++    if (fontConfig == nullptr) {
++        return nullptr;
++    }
++
++    std::unique_ptr<SkStreamAsset> stream = SkStreamAsset::MakeFromFile(path);
++    if (stream == nullptr) {
++        LOGE("%s : %s\n", FontConfig_OHOS::errToString(ERROR_FONT_NOT_EXIST), path);
++        return nullptr;
++    }
++    SkFontArguments args;
++    args.setCollectionIndex(ttcIndex);
++    return this->makeTypeface(std::move(stream), args, path);
++}
++
++/*! To get a typeface matching the specified family and style
++ * \param familyName the specified name to be matching
++ * \param style the specified style to be matching
++ * \return The object of typeface which is the closest matching 'style' when the familyName is found
++ * \return Return a typeface from the default family, if familyName is not found
++ * \return Return null, if there is no any typeface in the system
++ * \note The caller must caller unref() on the returned object is it's not null
++ */
++sk_sp<SkTypeface> SkFontMgr_OHOS::onLegacyMakeTypeface(const char familyName[], SkFontStyle style) const
++{
++    SkTypeface* typeface = this->onMatchFamilyStyle(familyName, style);
++    // if familyName is not found, then try the default family
++    if (typeface == nullptr && familyName != nullptr) {
++        typeface = this->onMatchFamilyStyle(nullptr, style);
++    }
++
++    if (typeface) {
++        return sk_sp<SkTypeface>(typeface);
++    }
++    LOGE("%s\n", FontConfig_OHOS::errToString(ERROR_NO_AVAILABLE_FAMILY));
++    return nullptr;
++}
++
++/*! To make a typeface from the specified stream and font arguments
++ * \param stream the specified stream to be parsed to get font information
++ * \param args the arguments of index or axis values
++ * \param path the fullname of font file
++ * \return The object of typeface if successful
++ * \n      Return null, if the stream is not recognized
++ */
++sk_sp<SkTypeface> SkFontMgr_OHOS::makeTypeface(std::unique_ptr<SkStreamAsset> stream,
++    const SkFontArguments& args, const char path[]) const
++{
++    FontInfo fontInfo;
++    int ttcIndex = args.getCollectionIndex();
++    int axisCount = args.getVariationDesignPosition().coordinateCount;
++
++    if (path) {
++        fontInfo.fname.set(path);
++    }
++    if (axisCount == 0) {
++        if (!fontScanner.scanFont(stream.get(), ttcIndex, &fontInfo.familyName, &fontInfo.style,
++            &fontInfo.isFixedWidth, nullptr)) {
++            LOGE("%s\n", FontConfig_OHOS::errToString(ERROR_FONT_INVALID_STREAM));
++            return nullptr;
++        }
++    } else {
++        AxisDefinitions axisDef;
++        if (!fontScanner.scanFont(stream.get(), ttcIndex, &fontInfo.familyName, &fontInfo.style,
++            &fontInfo.isFixedWidth, &axisDef)) {
++            LOGE("%s\n", FontConfig_OHOS::errToString(ERROR_FONT_INVALID_STREAM));
++            return nullptr;
++        }
++        if (axisDef.size() > 0) {
++            SkFixed axis[axisCount];
++            fontScanner.computeAxisValues(axisDef, args.getVariationDesignPosition(),
++                axis, fontInfo.familyName);
++            fontInfo.setAxisSet(axisCount, axis, axisDef.data());
++        }
++    }
++
++    fontInfo.stream = std::move(stream);
++    fontInfo.index = ttcIndex;
++    return sk_make_sp<SkTypeface_OHOS>(fontInfo);
++}
++
++/*! To create SkFontMgr object for Harmony platform
++ * \param fname the full name of system font configuration documents
++ * \return The object of SkFontMgr_OHOS
++ */
++sk_sp<SkFontMgr> SkFontMgr_New_OHOS(const char* fname)
++{
++    return sk_make_sp<SkFontMgr_OHOS>(fname);
++}
+diff --git a/src/ports/skia_ohos/SkFontMgr_ohos.h b/src/ports/skia_ohos/SkFontMgr_ohos.h
+new file mode 100644
+index 0000000000..728a60428a
+--- /dev/null
++++ b/src/ports/skia_ohos/SkFontMgr_ohos.h
+@@ -0,0 +1,69 @@
++/*
++ * Copyright 2015 Google Inc.
++ *
++ * Use of this source code is governed by a BSD-style license that can be
++ * found in the LICENSE file.
++ * 2023.4.23 SkFontMgr on ohos.
++ *           Copyright (c) 2023 Huawei Device Co., Ltd. All rights reserved.
++ */
++
++#ifndef SKFONTMGR_OHOS_H
++#define SKFONTMGR_OHOS_H
++
++#include "SkFontDescriptor.h"
++#include "SkFontMgr.h"
++
++#include "FontConfig_ohos.h"
++#include "SkFontStyleSet_ohos.h"
++
++/*!
++ * \brief To implement the SkFontMgr for ohos platform
++ */
++class SkFontMgr_OHOS : public SkFontMgr {
++public:
++    explicit SkFontMgr_OHOS(const char* path = nullptr);
++    virtual ~SkFontMgr_OHOS() override = default;
++protected:
++    virtual int onCountFamilies() const override;
++    virtual void onGetFamilyName(int index, SkString* familyName) const override;
++    virtual SkFontStyleSet* onCreateStyleSet(int index)const override;
++
++    virtual SkFontStyleSet* onMatchFamily(const char familyName[]) const override;
++
++    virtual SkTypeface* onMatchFamilyStyle(const char familyName[],
++                                           const SkFontStyle& style) const override;
++    virtual SkTypeface* onMatchFamilyStyleCharacter(const char familyName[], const SkFontStyle& style,
++                                                    const char* bcp47[], int bcp47Count,
++                                                    SkUnichar character) const override;
++
++    virtual SkTypeface* onMatchFaceStyle(const SkTypeface* typeface,
++                                         const SkFontStyle& style) const override;
++
++    virtual sk_sp<SkTypeface> onMakeFromData(sk_sp<SkData> data, int ttcIndex) const override;
++    virtual sk_sp<SkTypeface> onMakeFromStreamIndex(std::unique_ptr<SkStreamAsset> stream,
++                                                    int ttcIndex) const override;
++    virtual sk_sp<SkTypeface> onMakeFromStreamArgs(std::unique_ptr<SkStreamAsset> stream,
++                                                   const SkFontArguments& args) const override;
++    virtual sk_sp<SkTypeface> onMakeFromFile(const char path[], int ttcIndex) const override;
++
++    virtual sk_sp<SkTypeface> onLegacyMakeTypeface(const char familyName[], SkFontStyle style) const override;
++
++private:
++    std::shared_ptr<FontConfig_OHOS> fontConfig = nullptr; // the pointer of FontConfig_OHOS
++    SkTypeface_FreeType::Scanner fontScanner; // the scanner to parse a font file
++    int familyCount = 0; // the count of font style sets in generic family list
++
++    int compareLangs(const SkString& langs, const char* bcp47[], int bcp47Count, const int tps[]) const;
++    sk_sp<SkTypeface> makeTypeface(std::unique_ptr<SkStreamAsset> stream,
++                                    const SkFontArguments& args, const char path[]) const;
++    SkTypeface* findTypeface(const FallbackSetPos& fallbackItem, const SkFontStyle& style,
++                             const char* bcp47[], int bcp47Count,
++                             SkUnichar character) const;
++};
++
++SK_API sk_sp<SkFontMgr> SkFontMgr_New_OHOS(const char* path);
++SK_API sk_sp<SkFontMgr> SkFontMgr_New_OHOS() {
++   return SkFontMgr_New_OHOS("/system/etc/fontconfig.json");
++}
++
++#endif /* SKFONTMGR_OHOS_H */
+diff --git a/src/ports/skia_ohos/SkFontMgr_ohos_factory.cpp b/src/ports/skia_ohos/SkFontMgr_ohos_factory.cpp
+new file mode 100644
+index 0000000000..c2b97721ed
+--- /dev/null
++++ b/src/ports/skia_ohos/SkFontMgr_ohos_factory.cpp
+@@ -0,0 +1,14 @@
++// Copyright (c) 2023 Huawei Device Co., Ltd. All rights reserved
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "include/core/SkFontMgr.h"
++SK_API sk_sp<SkFontMgr> SkFontMgr_New_OHOS(const char* path);
++
++/*! To implement the porting layer to return the default factory for Harmony platform
++ * \return the default font manager for Harmony platform
++ */
++sk_sp<SkFontMgr> SkFontMgr::Factory()
++{
++    return SkFontMgr_New_OHOS(nullptr);
++}
+diff --git a/src/ports/skia_ohos/SkFontStyleSet_ohos.cpp b/src/ports/skia_ohos/SkFontStyleSet_ohos.cpp
+new file mode 100644
+index 0000000000..33d34f692f
+--- /dev/null
++++ b/src/ports/skia_ohos/SkFontStyleSet_ohos.cpp
+@@ -0,0 +1,102 @@
++// Copyright (c) 2023 Huawei Device Co., Ltd. All rights reserved
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "SkFontStyleSet_ohos.h"
++
++/*! Constructor
++ * \param fontConfig the pointer of FontConfig_OHOS
++ * \param index the index of the font style set
++ * \param isFallback true - the font style is from fallback family
++ * \n                false - the font style is from generic family
++ */
++SkFontStyleSet_OHOS::SkFontStyleSet_OHOS(const std::shared_ptr<FontConfig_OHOS>& fontConfig,
++    int index, bool isFallback)
++    : fontConfig_(fontConfig), styleIndex(index), isFallback(isFallback)
++{
++    if (fontConfig) {
++        tpCount = fontConfig_->getTypefaceCount(styleIndex, isFallback);
++    }
++}
++
++/*! To get the count of typeface
++ * \return The count of typeface in this font style set
++ */
++int SkFontStyleSet_OHOS::count()
++{
++    return tpCount;
++}
++
++/*! To get the font style for the specified typeface
++ * \param the index of a typeface
++ * \param[out] style the style value returned to the caller
++ * \param[out] the style name returned to the caller
++ */
++void SkFontStyleSet_OHOS::getStyle(int index, SkFontStyle* style, SkString* styleName)
++{
++    if (index < 0 || index >= this->count() || fontConfig_ == nullptr) {
++        return;
++    }
++
++    SkTypeface* typeface = fontConfig_->getTypeface(styleIndex, index, isFallback);
++    if (typeface == nullptr) {
++        return;
++    }
++
++    if (style) {
++        *style = typeface->fontStyle();
++    }
++    if (styleName) {
++        const char* names[] = {
++            "invisible",
++            "thin",
++            "extralight",
++            "light",
++            "normal",
++            "medium",
++            "semibold",
++            "bold",
++            "extrabold",
++            "black",
++            "extrablack"
++        };
++        // the value of font weight is between 0 ~ 1000 (refer to SkFontStyle::Weight)
++        // the weight is divided by 100 to get the matched name
++        unsigned int i = typeface->fontStyle().weight() / 100;
++        if (i < sizeof(names) / sizeof(char*)) {
++            styleName->set(names[i]);
++        } else {
++            styleName->reset();
++        }
++    }
++}
++
++/*! To create a typeface
++ * \param index the index of the typeface in this font style set
++ * \return The object of a typeface, if successful
++ * \n      Return null, if the 'index' is out of range
++ * \note The caller must call unref() on the returned object if it's not null
++ */
++SkTypeface* SkFontStyleSet_OHOS::createTypeface(int index)
++{
++    if (index < 0 || index >= this->count()) {
++        return nullptr;
++    }
++    if (fontConfig_) {
++        return SkSafeRef(fontConfig_->getTypeface(styleIndex, index, isFallback));
++    }
++    return nullptr;
++}
++
++/*! To get the closest matching typeface
++ * \param pattern the style value to be matching
++ * \return the object of a typeface which is the closest matching to 'pattern'
++ * \note The caller must call unref() on the returned object
++ */
++SkTypeface* SkFontStyleSet_OHOS::matchStyle(const SkFontStyle& pattern)
++{
++    if (fontConfig_) {
++        return SkSafeRef(fontConfig_->getTypeface(styleIndex, pattern, isFallback));
++    }
++    return nullptr;
++}
+diff --git a/src/ports/skia_ohos/SkFontStyleSet_ohos.h b/src/ports/skia_ohos/SkFontStyleSet_ohos.h
+new file mode 100644
+index 0000000000..681785dc3d
+--- /dev/null
++++ b/src/ports/skia_ohos/SkFontStyleSet_ohos.h
+@@ -0,0 +1,32 @@
++// Copyright (c) 2023 Huawei Device Co., Ltd. All rights reserved
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef SKFONTSTYLESET_OHOS_H
++#define SKFONTSTYLESET_OHOS_H
++
++#include "SkFontMgr.h"
++
++#include "FontConfig_ohos.h"
++#include "SkTypeface_ohos.h"
++
++/*!
++ * \brief To implement SkFontStyleSet for ohos platform
++ */
++class SkFontStyleSet_OHOS : public SkFontStyleSet {
++public:
++    SkFontStyleSet_OHOS(const std::shared_ptr<FontConfig_OHOS>& fontConfig,
++        int index, bool isFallback = false);
++    virtual ~SkFontStyleSet_OHOS() override = default;
++    virtual int count() override;
++    virtual void getStyle(int index, SkFontStyle* style, SkString* styleName) override;
++    virtual SkTypeface* createTypeface(int index) override;
++    virtual SkTypeface* matchStyle(const SkFontStyle& pattern) override;
++private:
++    std::shared_ptr<FontConfig_OHOS> fontConfig_ = nullptr; // the object of FontConfig_OHOS
++    int styleIndex = 0; // the index of the font style set
++    bool isFallback = false; // the flag of font style set. False for fallback family, true for generic family.
++    int tpCount = -1; // the typeface count in the font style set
++};
++
++#endif /* SKFONTSTYLESET_OHOS_H */
+diff --git a/src/ports/skia_ohos/SkTypeface_ohos.cpp b/src/ports/skia_ohos/SkTypeface_ohos.cpp
+new file mode 100644
+index 0000000000..2d02e75d4f
+--- /dev/null
++++ b/src/ports/skia_ohos/SkTypeface_ohos.cpp
+@@ -0,0 +1,139 @@
++// Copyright (c) 2023 Huawei Device Co., Ltd. All rights reserved
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#include "SkTypeface_ohos.h"
++
++#include "SkFontDescriptor.h"
++#include "SkFontHost_FreeType_common.h"
++#include "SkTArray.h"
++
++/*! Constructor
++ * \param familyName the specified family name for the typeface
++ * \param info the font information for the typeface
++ */
++SkTypeface_OHOS::SkTypeface_OHOS(const SkString& familyName, FontInfo& info)
++    : SkTypeface_FreeType(info.style, info.isFixedWidth),
++      specifiedName(familyName)
++{
++    fontInfo = std::make_unique<FontInfo>(std::move(info));
++}
++
++/*! Constructor
++ * \param info the font information for the typeface
++ */
++SkTypeface_OHOS::SkTypeface_OHOS(FontInfo& info)
++    : SkTypeface_FreeType(info.style, info.isFixedWidth)
++{
++    specifiedName.reset();
++    fontInfo = std::make_unique<FontInfo>(std::move(info));
++}
++
++/*! To get stream of the typeface
++ * \param[out] ttcIndex the index of the typeface in a ttc file returned to the caller
++ * \return The stream object of the typeface
++ */
++std::unique_ptr<SkStreamAsset> SkTypeface_OHOS::onOpenStream(int* ttcIndex) const
++{
++    if (fontInfo) {
++        if (ttcIndex) {
++            *ttcIndex = fontInfo->index;
++        }
++        if (fontInfo->stream == nullptr) {
++            fontInfo->stream = SkStream::MakeFromFile(fontInfo->fname.c_str());
++        }
++        if (fontInfo->stream) {
++            return fontInfo->stream->duplicate();
++        }
++    }
++    return nullptr;
++}
++
++/*! To make font data from the typeface
++ * \return The object of SkFontData
++ */
++std::unique_ptr<SkFontData> SkTypeface_OHOS::onMakeFontData() const
++{
++    if (fontInfo == nullptr) {
++        return nullptr;
++    }
++
++    if (fontInfo->stream.get() == nullptr) {
++        fontInfo->stream = SkStream::MakeFromFile(fontInfo->fname.c_str());
++    }
++    if (fontInfo->stream.get() == nullptr) {
++        return nullptr;
++    }
++    return std::make_unique<SkFontData>(fontInfo->stream->duplicate(), fontInfo->index, 0,
++               fontInfo->axisSet.axis.data(), fontInfo->axisSet.axis.size(), nullptr, 0);
++}
++
++/*! To get the font descriptor of the typeface
++ * \param[out] descriptor the font descriptor returned to the caller
++ * \param[out] isLocal the false to the caller
++ */
++void SkTypeface_OHOS::onGetFontDescriptor(SkFontDescriptor* descriptor, bool* isLocal) const
++{
++    if (isLocal) {
++        *isLocal = false;
++    }
++    if (descriptor) {
++        SkString familyName;
++        onGetFamilyName(&familyName);
++        descriptor->setFamilyName(familyName.c_str());
++        descriptor->setStyle(this->fontStyle());
++    }
++}
++
++/*! To get the family name of the typeface
++ * \param[out] familyName the family name returned to the caller
++ */
++void SkTypeface_OHOS::onGetFamilyName(SkString* familyName) const
++{
++    if (familyName == nullptr) {
++        return;
++    }
++    if (specifiedName.size() > 0) {
++        *familyName = specifiedName;
++    } else {
++        if (fontInfo) {
++            *familyName = fontInfo->familyName;
++        }
++    }
++}
++
++/*! To clone a typeface from this typeface
++ * \param args the specified font arguments from which the new typeface is created
++ * \return The object of a new typeface
++ * \note The caller must call unref() on the returned object
++ */
++sk_sp<SkTypeface> SkTypeface_OHOS::onMakeClone(const SkFontArguments& args) const
++{
++    FontInfo info(*(fontInfo.get()));
++    info.index = args.getCollectionIndex();
++    unsigned int count = args.getVariationDesignPosition().coordinateCount;
++    if (count > 0 && count == fontInfo->axisSet.range.size()) {
++        SkFontArguments::VariationPosition position = args.getVariationDesignPosition();
++        SkTypeface_FreeType::Scanner::AxisDefinitions axisDefs;
++        for (unsigned int i = 0; i < count; i++) {
++            axisDefs.push_back(fontInfo->axisSet.range[i]);
++        }
++        SkFixed axisValues[count];
++        memset(axisValues, 0, sizeof(axisValues));
++        SkTypeface_FreeType::Scanner::computeAxisValues(axisDefs, position,
++            axisValues, fontInfo->familyName);
++        info.axisSet.axis.clear();
++        for (unsigned int i = 0; i < count; i++) {
++            info.axisSet.axis.emplace_back(axisValues[i]);
++        }
++    }
++    return sk_make_sp<SkTypeface_OHOS>(specifiedName, info);
++}
++
++/*! To get the font information of the typeface
++ * \return The object of FontInfo
++ */
++const FontInfo* SkTypeface_OHOS::getFontInfo() const
++{
++    return fontInfo.get();
++}
+diff --git a/src/ports/skia_ohos/SkTypeface_ohos.h b/src/ports/skia_ohos/SkTypeface_ohos.h
+new file mode 100644
+index 0000000000..4cea2cad3d
+--- /dev/null
++++ b/src/ports/skia_ohos/SkTypeface_ohos.h
+@@ -0,0 +1,34 @@
++// Copyright (c) 2023 Huawei Device Co., Ltd. All rights reserved
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef SKTYPEFACE_OHOS_H
++#define SKTYPEFACE_OHOS_H
++
++#include "SkFontHost_FreeType_common.h"
++#include "SkFontStyle.h"
++#include "SkStream.h"
++
++#include "FontInfo_ohos.h"
++
++/*!
++ * \brief The implementation of SkTypeface for ohos platform
++ */
++class SkTypeface_OHOS : public SkTypeface_FreeType {
++public:
++    SkTypeface_OHOS(const SkString& specifiedName, FontInfo& info);
++    explicit SkTypeface_OHOS(FontInfo& info);
++    virtual ~SkTypeface_OHOS() override = default;
++    const FontInfo* getFontInfo() const;
++protected:
++    virtual std::unique_ptr<SkStreamAsset> onOpenStream(int* ttcIndex) const override;
++    virtual std::unique_ptr<SkFontData> onMakeFontData() const override;
++    virtual void onGetFontDescriptor(SkFontDescriptor* descriptor, bool* isLocal) const override;
++    virtual void onGetFamilyName(SkString* familyName) const override;
++    virtual sk_sp<SkTypeface> onMakeClone(const SkFontArguments& args) const override;
++private:
++    SkString specifiedName; // specified family name which is defined in the configuration file
++    std::unique_ptr<FontInfo> fontInfo; // the font information of this typeface
++};
++
++#endif /* SKTYPEFACE_OHOS_H */
+diff --git a/src/ports/skia_ohos/config/fontconfig.json b/src/ports/skia_ohos/config/fontconfig.json
+new file mode 100644
+index 0000000000..eee1b57878
+--- /dev/null
++++ b/src/ports/skia_ohos/config/fontconfig.json
+@@ -0,0 +1,76 @@
++{
++  "fontdir": ["/system/fonts/"],
++  "generic": [
++    {
++      "family": "HarmonyOS Sans",
++      "alias": [
++        {
++          "HarmonyOS-Sans": 0
++        },
++        {
++          "HarmonyOS-Sans-Light": 100
++        },
++        {
++          "HarmonyOS-Sans-Regular": 400
++        },
++        {
++          "HarmonyOS-Sans-Medium": 700
++        },
++        {
++          "HarmonyOS-Sans-Bold": 900
++        }
++      ],
++      "adjust": [
++        {
++          "weight": 50, "to": 100
++        },
++        {
++          "weight": 80, "to": 400
++        },
++        {
++          "weight": 100, "to": 700
++        },
++        {
++          "weight": 200, "to": 900
++        }
++      ]
++    },
++    {
++      "family": "HarmonyOS Sans Condensed",
++      "alias": [
++        {
++          "HarmonyOS-Sans-Condensed": 0
++        }
++      ]
++    },
++    {
++      "family": "HarmonyOS Sans Digit",
++      "alias": [
++        {
++          "HarmonyOS-Sans-Digit": 0
++        }
++      ]
++    }
++  ],
++  "fallback": [
++    {
++      "": [
++        {
++          "zh-Hans": "HarmonyOS Sans SC"
++        },
++        {
++          "zh-Hant": "HarmonyOS Sans TC"
++        },
++        {
++          "und-Arab": "HarmonyOS Sans Naskh Arabic UI"
++        },
++        {
++          "ja": "Noto Sans JP"
++        },
++        {
++          "ko": "Noto Sans KR"
++        }
++      ]
++    }
++  ]
++}

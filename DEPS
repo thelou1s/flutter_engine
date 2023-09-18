@@ -936,5 +936,11 @@ hooks = [
       'python3',
       'src/flutter/tools/githooks/setup.py',
     ]
+  },
+  {
+    # Generate the ohos compile environment
+    'name': 'ohos_setup',
+    'pattern': 'src/flutter/attachment/scripts/.*\\.py',
+    'action': ['python3', 'src/flutter/attachment/scripts/ohos_setup.py'],
   }
 ]

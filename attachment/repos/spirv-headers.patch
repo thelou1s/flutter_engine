@@ -1,0 +1,16 @@
+diff --git a/tools/buildHeaders/jsoncpp/dist/jsoncpp.cpp b/tools/buildHeaders/jsoncpp/dist/jsoncpp.cpp
+index 1304914..7cdb50b 100644
+--- a/tools/buildHeaders/jsoncpp/dist/jsoncpp.cpp
++++ b/tools/buildHeaders/jsoncpp/dist/jsoncpp.cpp
+@@ -2564,11 +2564,9 @@ LogicError::LogicError(std::string const& msg)
+ {}
+ void throwRuntimeError(std::string const& msg)
+ {
+-  throw RuntimeError(msg);
+ }
+ void throwLogicError(std::string const& msg)
+ {
+-  throw LogicError(msg);
+ }
+ 
+ // //////////////////////////////////////////////////////////////////
