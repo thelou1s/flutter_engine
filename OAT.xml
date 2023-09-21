@@ -98,6 +98,9 @@ used to filter file path.
                 <filteritem type="filepath" name="third_party/gn/gn_linux" desc="二进制，构建文件" />
                 <filteritem type="filepath" name="third_party/gn/gn_mac" desc="二进制，构建文件" />
                 <filteritem type="filepath" name="third_party/ninja/ninja" desc="二进制，构建文件" />
+                <filteritem type="filepath" name="shell/platform/ohos/flutter_embedding/hvigor/hvigor-wrapper.js" desc="hvigor编译标准程序" />
+                <filteritem type="filepath" name="shell/platform/ohos/flutter_embedding/hvigorw" desc="hvigor编译标准程序" />
+                <filteritem type="filepath" name="shell/platform/ohos/flutter_embedding/hvigorw.bat" desc="hvigor编译标准程序" />
             </filefilter>
             <filefilter name="defaultPolicyFilter"
                 desc="Filters for compatibility，license header policies">
