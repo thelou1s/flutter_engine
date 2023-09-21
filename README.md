@@ -36,3 +36,17 @@ solutions = [
 
 5. engine目录，执行make，既可以开始构建支持ohos设备的flutter engine。
 
+
+## embedding层代码构建指导
+
+1. 编辑shell/platform/ohos/flutter_embedding/local.properties，
+    sdk.dir=\<OpenHarmony的sdk目录\>
+    nodejs.dir=\<nodejs的sdk目录\>
+  
+2. 在shell/platform/ohos/flutter_embedding目录下，执行 
+```
+./hvigorw --mode module -p module=flutter@default -p product=default assembleHar
+```
+
+
+3. har文件输出路径为：shell/platform/ohos/flutter_embedding/flutter/build
