@@ -343,6 +343,8 @@ def to_gn_args(args):
     gn_args['target_os'] = args.target_os
     gn_args['target_cpu'] = get_target_cpu(args)
     gn_args['dart_target_arch'] = gn_args['target_cpu']
+    if (args.target_os == 'ohos'):
+      gn_args['host_cpu'] = get_host_cpu()
 
   print("ARGS.target_os:%s-%s" % (args.target_os,gn_args['target_os'] ) )
   # We cannot cross-compile for 32 bit arm on a Windows host. We work around
@@ -451,7 +453,7 @@ def to_gn_args(args):
   else:
     gn_args['skia_use_gl'] = args.target_os != 'fuchsia'
 
-  if sys.platform == 'darwin' and args.target_os not in ['android', 'fuchsia']:
+  if sys.platform == 'darwin' and args.target_os not in ['android', 'fuchsia', 'ohos']:
     # OpenGL is deprecated on macOS > 10.11.
     # This is not necessarily needed but enabling this until we have a way to
     # build a macOS metal only shell and a gl only shell.

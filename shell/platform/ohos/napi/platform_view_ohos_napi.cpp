@@ -693,13 +693,13 @@ napi_value PlatformViewOHOSNapi::nativeSetViewportMetrics(
   }
   LOGD("nativeSetViewportMetrics::shell_holder : %{public}ld", shell_holder);
 
-  int64_t devicePixelRatio;
-  ret = napi_get_value_int64(env, args[1], &devicePixelRatio);
+  double devicePixelRatio;
+  ret = napi_get_value_double(env, args[1], &devicePixelRatio);
   if (ret != napi_ok) {
     LOGE("nativeSetViewportMetrics napi_get_value_int64 error");
     return nullptr;
   }
-  LOGD("nativeSetViewportMetrics::devicePixelRatio : %{public}ld",
+  LOGD("nativeSetViewportMetrics::devicePixelRatio : %{public}lf",
        devicePixelRatio);
 
   int64_t physicalWidth;
