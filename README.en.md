@@ -32,7 +32,7 @@ solutions = [
 
 3. In the engine directory, execute gclient sync; here the engine source code, official packages warehouse will be synchronized, and the ohos_setup task will be executed;
 
-4. From http://ci.openharmony.cn/workbench/cicd/dailybuild/dailylist, download ohos-sdk-full, create a new folder ndk/4.0 in the engine root directory, and unzip ohos-sdk- Move all files in the native folder in full sdk to the ndk/4.0 folder;
+4. From http://ci.openharmony.cn/workbench/cicd/dailybuild/dailylist, download ohos-sdk-full, create a new folder ndk/linux/4.0 in the engine root directory, and unzip the native folder in ohos-sdk-full to the ndk/linux/4.0 folder;
 
 5. In the engine directory, execute make to start building the flutter engine that supports ohos devices.
 

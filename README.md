@@ -32,7 +32,7 @@ solutions = [
 
 3. 在engine目录，执行gclient sync；这里会同步engine源码、官方packages仓，还有执行ohos_setup任务；
 
-4. 从 http://ci.openharmony.cn/workbench/cicd/dailybuild/dailylist 每日构建中，下载ohos-sdk-full，在engine根目录下，新建文件夹 ndk/4.0 ，解压ohos-sdk-full sdk中的native文件夹内所有文件到 ndk/4.0文件夹中；
+4. 从 http://ci.openharmony.cn/workbench/cicd/dailybuild/dailylist 每日构建中，下载ohos-sdk-full，在engine根目录下，新建文件夹 ndk/linux/4.0 ，解压ohos-sdk-full中的native文件夹到ndk/linux/4.0文件夹中；
 
 5. engine目录，执行make，既可以开始构建支持ohos设备的flutter engine。
 
