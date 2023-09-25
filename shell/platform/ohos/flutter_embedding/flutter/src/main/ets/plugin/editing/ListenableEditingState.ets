@@ -143,7 +143,6 @@ export class ListenableEditingState {
       this.setSelectionStart(0);
       this.setSelectionEnd(0);
     }
-    //TODO: setComposingRange(state.composingStart,state.composingEnd);
     this.endBatchEdit();
   }
 

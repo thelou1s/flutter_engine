@@ -13,19 +13,8 @@
 * limitations under the License.
 */
 
-/**
- * ohos路径获取工具
- */
-export default class PathUtils {
-  static getFilesDir(): string {
-    return null;
-  }
+export interface FlutterUiDisplayListener {
+  onFlutterUiDisplayed(): void;
 
-  static getCacheDirectory(): string {
-    return null;
-  }
-
-  static getDataDirectory(): string {
-    return null;
-  }
+  onFlutterUiNoLongerDisplayed(): void;
 }

@@ -170,7 +170,6 @@ export default class FlutterLoader {
       shellArgs.push("--domain-network-policy=" + this.flutterApplicationInfo.domainNetworkPolicy);
     }
 
-    //todo 是否有其他需要迁移得参数
     const resourceCacheMaxBytesThreshold = 1080 * 1920 * 12 * 4;
     shellArgs.push("--resource-cache-max-bytes-threshold=" + resourceCacheMaxBytesThreshold);
 

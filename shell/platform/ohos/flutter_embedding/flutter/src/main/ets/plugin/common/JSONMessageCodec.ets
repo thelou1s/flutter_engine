@@ -14,16 +14,15 @@
 */
 
 import MessageCodec from './MessageCodec';
+import MethodCodec from './MethodCodec';
 import StringCodec from './StringCodec';
 
 /**
- * A {@link MessageCodec} using UTF-8 encoded JSON messages.
+ * A {@link MethodCodec} using UTF-8 encoded JSON method calls and result envelopes.
  *
  * <p>This codec is guaranteed to be compatible with the corresponding <a
- * href="https://api.flutter.dev/flutter/services/JSONMessageCodec-class.html">JSONMessageCodec</a>
- * on the Dart side. These parts of the Flutter SDK are evolved synchronously.
- *
- * <p>Supports the same Java values as {@link JSONObject#wrap(Object)}.
+ * href="https://api.flutter.dev/flutter/services/JSONMethodCodec-class.html">JSONMethodCodec</a> on
+ * the Dart side. These parts of the Flutter SDK are evolved synchronously.
  *
  * <p>On the Dart side, JSON messages are handled by the JSON facilities of the <a
  * href="https://api.dartlang.org/stable/dart-convert/JSON-constant.html">dart:convert</a> package.

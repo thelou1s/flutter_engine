@@ -12,23 +12,31 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
+import { PlatformViewWrapper } from '../../plugin/platform/PlatformViewWrapper';
+import { RootDvModeManager } from '../../plugin/platform/RootDvModelManager';
+import { DVModel,
+  DVModelChildren,
+  DVModelContainer,
+  DVModelEvents,
+  DVModelParameters, DynamicView } from '../../view/DynamicView/dynamicView';
+import { createDVModelFromJson } from '../../view/DynamicView/dynamicViewJson';
 
 /**
  * 基础page组件，承载XComponent组件
  */
 @Component
 export struct FlutterPage {
-  @State message: string = 'Hello World'
-  private context = null;
+  @State message: string = 'Hello World';
+
+  @State rootDvModel: DVModelContainer = RootDvModeManager.getRootDvMode();
 
   build() {
-    Column() {
-      XComponent({ id: 'flutterXComponent', type: 'texture', libraryname: 'flutter' })
-        .onLoad((context) => {
-          this.context = context;
-        })
-        .onDestroy(() => {
-        })
-    }
+    DynamicView({
+      model: this.rootDvModel.model as DVModel,
+      params: this.rootDvModel.model.params as DVModelParameters,
+      events: this.rootDvModel.model.events as DVModelEvents,
+      children: this.rootDvModel.model.children as DVModelChildren,
+      customBuilder: this.rootDvModel.model.builder as ($$: { params: DVModelParameters }) => void
+    })
   }
 }

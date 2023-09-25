@@ -44,7 +44,7 @@ const PLUGINS_RESTORATION_BUNDLE_KEY = "plugins";
  */
 class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
   private host: Host;
-  private flutterEngine: FlutterEngine;
+  flutterEngine: FlutterEngine;
   platformPlugin: PlatformPlugin;
   private context: common.Context;
   private textInputPlugin: TextInputPlugin;
@@ -222,7 +222,6 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
   }
 
   onDetach() {
-    //todo
     if (this.host.shouldAttachEngineToActivity()) {
       // Notify plugins that they are no longer attached to an Activity.
       Log.d(TAG, "Detaching FlutterEngine from the Ability");
@@ -352,7 +351,6 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
   onSaveState(reason: AbilityConstant.StateType, wantParam: { [key: string]: Object; }): AbilityConstant.OnSaveResult {
     Log.i(TAG, "onSaveInstanceState. Giving framework and plugins an opportunity to save state.");
     this.ensureAlive();
-    // TODO shouldRestoreAndSaveState
     if (this.host.shouldAttachEngineToActivity()) {
       const plugins = {}
       const result = this.flutterEngine.getAbilityControlSurface().onSaveState(reason, plugins);

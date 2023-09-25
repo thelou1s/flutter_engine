@@ -194,7 +194,6 @@ export class Configuration {
   inputType:InputType;
   inputAction: Number;
   actionLabel: String;
-  //TODO: Autofill autofill;
   contentCommitMimeTypes: String[];
   fields: Configuration[];
 

@@ -20,7 +20,7 @@ import DartExecutor from '../dart/DartExecutor';
 const TAG: string = "SystemChannel";
 
 /**
- * TODO(mattcarroll): fill in javadoc for SystemChannel.
+ * fill in javadoc for SystemChannel.
  */
 export default class SystemChannel {
   public channel: BasicMessageChannel<object>;

@@ -27,7 +27,6 @@ export default class TextInputPlugin implements EditingStateWatcher{
   private inputMethodController: inputMethod.InputMethodController;
   private inputTarget: InputTarget;
   private configuration: Configuration;
-  //TODO:private autofillConfiguration:
   private mEditable: ListenableEditingState;
   private mRestartInputPending: boolean;
 
