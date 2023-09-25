@@ -18,6 +18,7 @@ import common from '@ohos.app.ability.common'
 import FlutterLoader from './loader/FlutterLoader'
 import FlutterInjector from '../../FlutterInjector'
 import { DartEntrypoint } from './dart/DartExecutor'
+import PlatformViewsController from '../../plugin/platform/PlatformViewsController'
 
 export default class FlutterEngineGroup {
   private activeEngines: Array<FlutterEngine> = new Array();
@@ -40,7 +41,7 @@ export default class FlutterEngineGroup {
     let dartEntrypoint: DartEntrypoint = options.getDartEntrypoint();
     let initialRoute: string = options.getInitialRoute();
     let dartEntrypointArgs: Array<string> = options.getDartEntrypointArgs();
-    //TODO:接入PlatformViewsController
+    let platformViewsController: PlatformViewsController = options.getPlatformViewsController();
     let automaticallyRegisterPlugins: boolean = options.getAutomaticallyRegisterPlugins();
     let waitForRestorationData: boolean = options.getWaitForRestorationData();
 
@@ -48,8 +49,12 @@ export default class FlutterEngineGroup {
       dartEntrypoint = DartEntrypoint.createDefault();
     }
 
+    if (platformViewsController == null) {
+      platformViewsController = new PlatformViewsController();
+    }
+
     if (this.activeEngines.length == 0) {
-      engine = this.createEngine(context);
+      engine = this.createEngine(context, platformViewsController);
       await engine.init(context, null, // String[]. The Dart VM has already started, this arguments will have no effect.
         automaticallyRegisterPlugins, // boolean.
         waitForRestorationData, // boolean.
@@ -64,6 +69,7 @@ export default class FlutterEngineGroup {
           dartEntrypoint,
           initialRoute,
           dartEntrypointArgs,
+          platformViewsController,
           automaticallyRegisterPlugins,
           waitForRestorationData);
     }
@@ -72,7 +78,7 @@ export default class FlutterEngineGroup {
     const engineToCleanUpOnDestroy = engine;
     engine.addEngineLifecycleListener({
       onPreEngineRestart(): void {
-        // No-op. Not interested.
+        platformViewsController.onPreEngineRestart();
       },
       onEngineWillDestroy(): void {
         this.activeEngines.remove(engineToCleanUpOnDestroy);
@@ -81,8 +87,8 @@ export default class FlutterEngineGroup {
     return engine;
   }
 
-  createEngine(context: common.Context): FlutterEngine {
-    return new FlutterEngine(context, null, null);
+  createEngine(context: common.Context, platformViewsController: PlatformViewsController): FlutterEngine {
+    return new FlutterEngine(context, null, null, platformViewsController);
   }
 }
 
@@ -91,7 +97,7 @@ export class Options {
   private dartEntrypoint: DartEntrypoint;
   private initialRoute: string;
   private dartEntrypointArgs: Array<string>;
-  //TODO:声明成员platformViewsController:PlatformViewsController
+  private platformViewsController: PlatformViewsController;
   private automaticallyRegisterPlugins: boolean = true;
   private waitForRestorationData: boolean = false;
 
@@ -122,7 +128,10 @@ export class Options {
   getWaitForRestorationData(): boolean {
     return this.waitForRestorationData;
   }
-  //TODO:实现getPlatformViewsController
+
+  getPlatformViewsController(): PlatformViewsController {
+    return this.platformViewsController;
+  }
 
   setDartEntrypoint(dartEntrypoint: DartEntrypoint): Options {
     this.dartEntrypoint = dartEntrypoint;
@@ -148,5 +157,9 @@ export class Options {
     this.waitForRestorationData = waitForRestorationData;
     return this;
   }
-  //TODO:实现setPlatformViewsController
+
+  setPlatformViewsController(platformViewsController: PlatformViewsController): Options {
+    this.platformViewsController = platformViewsController;
+    return this;
+  }
 }

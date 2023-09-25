@@ -772,7 +772,6 @@ export class ByteBuffer {
    * @returns The byte length.
    */
   setString(byteOffset: number, value: string, byteEncoding?: string, write?: boolean): number {
-    // TODO: add support for "utf-16-be" and "utf-16-le"
     if (byteEncoding && byteEncoding !== "utf-8") {
       throw new TypeError("String encoding '" + byteEncoding + "' is not supported")
     }

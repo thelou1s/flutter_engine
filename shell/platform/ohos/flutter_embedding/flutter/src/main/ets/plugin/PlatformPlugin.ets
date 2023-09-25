@@ -12,6 +12,7 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
+
 import PlatformChannel, {
   AppSwitcherDescription,
   Brightness,
@@ -98,7 +99,6 @@ export default class PlatformPlugin {
       },
 
       setApplicationSwitcherDescription:(description: AppSwitcherDescription): void => {
-        //TODO:The Flutter application would like to be displayed in app switcher with the visual
         //   representation described in the given {@code description}.
       },
 
@@ -276,8 +276,6 @@ export default class PlatformPlugin {
   }
 
   setSystemChromeChangeListener(): void {
-    //TODO: Set up a listener to notify the framework when the system ui has changed.
-    //
     if(this.callbackId == null && this.applicationContext != null) {
       let that = this;
       this.callbackId = this.applicationContext.on('environment',{

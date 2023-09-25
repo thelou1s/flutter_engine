@@ -43,7 +43,6 @@ export default class PlatformChannel {
         try {
           switch (method) {
             case "SystemSound.play":
-              //TODO:
               break;
             case "HapticFeedback.vibrate":
               try {

@@ -1,0 +1,136 @@
+/*
+* Copyright (c) 2023 Hunan OpenValley Digital Industry Development Co., Ltd.
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
+
+import matrix4 from '@ohos.matrix4'
+import List from '@ohos.util.List';
+
+export enum FlutterMutatorType {
+  CLIP_RECT,
+  CLIP_PATH,
+  TRANSFORM,
+  OPACITY
+}
+
+class Rect {
+  width: number;
+  height: number;
+  radius?: string | number | Array<string | number>;
+
+  constructor(width:number, height:number, radius?:string | number | Array<string | number>) {
+    this.width = width;
+    this.height = height;
+    this.radius = radius;
+  }
+}
+
+class Path {
+  width: number | string;
+  height: number | string;
+  commands?: string;
+
+  constructor(width:number | string, height:number | string, commands?:string) {
+    this.width = width;
+    this.height = height;
+    this.commands = commands;
+  }
+}
+
+export class FlutterMutator {
+  private matrix: matrix4.Matrix4Transit;
+  private rect: Rect;
+  private path: Path;
+
+  constructor(args: matrix4.Matrix4Transit | Rect | Path) {
+    if (args instanceof Rect) {
+      this.rect = args;
+    } else if (args instanceof Path) {
+      this.path = args;
+    } else {
+      this.matrix = args;
+    }
+  }
+
+  public getMatrix() {
+    return this.matrix;
+  }
+
+  public getRect() {
+    return this.rect;
+  }
+
+  public getPath() {
+    return this.path;
+  }
+}
+
+export class FlutterMutatorsStack {
+  private mutators: List<FlutterMutator>;
+  private finalClippingPaths: List<Path>;
+  private finalClippingRects: List<Rect>;
+
+  private finalMatrix: matrix4.Matrix4Transit;
+
+  constructor() {
+    this.mutators = new List();
+    this.finalClippingPaths = new List();
+    this.finalClippingRects = new List();
+    this.finalMatrix = matrix4.identity();
+  }
+
+  public pushTransform(values: Array<number>): void {
+    if (values.length != 16) {
+      return;
+    }
+    let index = 0;
+    let matrix = matrix4.init(
+      [values[index++], values[index++], values[index++], values[index++],
+      values[index++], values[index++], values[index++], values[index++],
+      values[index++], values[index++], values[index++], values[index++],
+      values[index++], values[index++], values[index++], values[index++]]);
+    let mutator = new FlutterMutator(matrix);
+    this.mutators.add(mutator);
+    this.finalMatrix.combine(matrix);
+  }
+
+  public pushClipRect(width:number, height:number, radius?:number) {
+    let rect = new Rect(width, height, radius);
+    let mutator = new FlutterMutator(rect);
+    this.mutators.add(mutator);
+    this.finalClippingRects.add(rect);
+  }
+
+  public pushClipPath(width:number, height:number, command?:string) {
+    let path = new Path(width, height, command);
+    let mutator = new FlutterMutator(path);
+    this.mutators.add(mutator);
+    this.finalClippingPaths.add(path);
+  }
+
+  public getMutators() {
+    return this.mutators;
+  }
+
+  public getFinalClippingPaths() {
+    return this.finalClippingPaths;
+  }
+
+  public getFinalClippingRects() {
+    return this.finalClippingRects;
+  }
+
+  public getFinalMatrix() {
+    return this.finalMatrix;
+  }
+}

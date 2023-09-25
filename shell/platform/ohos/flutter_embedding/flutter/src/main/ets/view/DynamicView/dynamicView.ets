@@ -1,0 +1,253 @@
+/*
+ * Copyright (c) 2022 Huawei Device Co., Ltd.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/**
+ * Dynamic View creation
+ * from a recursive data structure
+ *
+ * exported @Component: DynamicView
+ * exported view model classes:
+ * - DVModelContainer
+ * - DVModel
+ * - DVModelParameters
+ * - DVModelEvents
+ * - DVModelChildren
+ *
+ * The purpose of exporting the DVModel classes
+ * is to make them available to the converter from
+ * JD's XML format and the expression parser. These
+ * components are expected to generate and update the
+ * DVModel.
+ *
+ * An application written by JS should only import
+ * DynamicView, DVModelContainer to be used in their own ArkUI
+ * container view.
+ */
+
+/**
+ * View Model classes
+ */
+
+@Observed
+export class DVModelParameters extends Object {
+  /* empty, just get any instance wrapped inside an ObservedObject
+  with the help of the decoration */
+}
+
+@Observed
+export class DVModelEvents extends Object {
+  /* empty, just get any instance wrapped inside an ObservedObject
+  with the help of the decoration */
+}
+
+@Observed
+export class DVModelChildren extends Array<DVModel> {
+  /* empty, just get any instance wrapped inside an ObservedObject
+  with the help of the decoration */
+}
+
+let nextId: number = 1;
+
+@Observed
+export class DVModel {
+  id_: number;
+  compType: string;
+  params: DVModelParameters;
+  events: DVModelEvents;
+  children: DVModelChildren;
+  builder: any;
+
+  constructor(compType: string, params: DVModelParameters, events: DVModelEvents, children: DVModelChildren, builder?: any) {
+    this.id_ = nextId++;
+    this.compType = compType;
+    this.params = params ?? new DVModelParameters;
+    this.events = events;
+    this.children = children;
+    this.builder = builder;
+  }
+
+  public getLayoutParams(): DVModelParameters {
+    return this.params;
+  }
+}
+
+// includes the root DVModel objects.
+export class DVModelContainer {
+  model: DVModel;
+
+  constructor(model: DVModel) {
+    this.model = model;
+  }
+}
+
+/**
+ DynamicView is the @Component that does all the work:
+
+ The following 4 features are the key solution elements for dynamic View
+ construction and update:
+
+ 1. The if statement decides which framework component to create.
+ We can not use a factory function here, because that would requite calling
+ a regular function inside build() or a @Builder function.
+
+ 2. Take note of the @Builder for Row, Column containers:
+ These functions create DynamicView Views inside a DynamicView
+ view. This behaviour is why we talk about DynamicView as a 'recursive' View.
+ All @Builder functions are member functions of the DynamicView @Component to
+ retain access ('this.xyz') to its decorated state variables.
+
+ 3. The @Extend functions execute attribute and event handler registration functions
+ for all attributes and events permissable on the framework component, irrespective
+ if DVModelParameters or DVModelEvents objects includes a value or not. If not
+ the attribute or event is set to 'undefined' by intention. This is required to unset
+ any previously set value.
+
+ 4. The scope ('this') of any lambda registered as an event hander function, e.g. for onClick,
+ is the @Component, in which the DVModel object is initialized. This said, it is advised to initialize
+ the DVModel object in the @Component that is parent to outmost DynamicView. Thereby,
+ any event handler function is able to mutate decorated state variables of that @Component
+
+ */
+
+@Component
+export struct DynamicView {
+  @ObjectLink model: DVModel;
+  @ObjectLink children: DVModelChildren;
+  @ObjectLink params: DVModelParameters;
+  @ObjectLink events: DVModelEvents;
+  @BuilderParam customBuilder?: ($$: { params: DVModelParameters }) => void;
+
+
+  /*
+    we use this @Styles member function to set all common attributes and event handlers
+    and set component specific attribute and event handler functions in the @Builder function
+  */
+  @Styles common_attrs() {
+    .width(this.params["width"])
+    .height(this.params["height"])
+    .backgroundColor(this.params["backgroundColor"])
+    .onClick(this.events["onClick"])
+    .margin({
+      left: this.params["marginLeft"],
+      right: this.params["marginRight"],
+      top: this.params["marginTop"],
+      bottom: this.params["marginBottom"]
+    })
+    .onTouch(this.events["onTouch"])
+    .onFocus(this.events['onFocus'])
+    .onBlur(this.events["onBlur"])
+    .translate({
+      x: this.params["translateX"],
+      y: this.params["translateY"],
+      z: this.params["translateZ"]
+    })
+    .transform(this.params["matrix"])
+    .direction(this.params["direction"])
+  }
+
+  @Styles clip_attrs() {
+    .clip(this.params["rectWidth"] ? new Rect({
+      width: this.params["rectWidth"],
+      height: this.params["rectHeight"],
+      radius: this.params["rectRadius"]
+    }) : null)
+    .clip(this.params["pathWidth"] ? new Path({
+      width: this.params["pathWidth"],
+      height: this.params["pathHeight"],
+      commands: this.params["pathCommands"]
+    }) : null)
+  }
+
+  @Builder buildChildren() {
+    ForEach(this.children,
+      child => {
+        DynamicView({
+          model: child as DVModel,
+          params: child.params,
+          events: child.events,
+          children: child.children,
+          customBuilder: child.builder
+        })
+      },
+      child => `${child.id_}`
+    )
+  }
+
+  @Builder buildRow() {
+    Row() {
+      this.buildChildren()
+    }
+    .common_attrs()
+    .clip_attrs()
+  }
+
+  @Builder buildColumn() {
+    Column() {
+      this.buildChildren()
+    }
+    .common_attrs()
+    .clip_attrs()
+  }
+
+  @Builder buildStack() {
+    Stack() {
+      this.buildChildren()
+    }
+    .common_attrs()
+    .clip_attrs()
+    .alignContent(this.params["alignContent"])
+  }
+
+  @Builder buildText() {
+    Text(`${this.params["value"]}`)
+      .common_attrs()
+      .fontColor(this.params["fontColor"])
+  }
+
+  @Builder buildImage() {
+    Image(this.params["src"])
+      .common_attrs()
+  }
+
+  // Button with label
+  @Builder buildButton() {
+    Button(this.params["value"])
+      .common_attrs()
+  }
+
+  @Builder buildCustom() {
+    if (this.customBuilder) {
+      this.customBuilder({ params: this.params });
+    }
+  }
+
+  build() {
+    if (this.model.compType == "Column") {
+      this.buildColumn()
+    } else if (this.model.compType == "Row") {
+      this.buildRow()
+    } else if (this.model.compType == "Stack") {
+      this.buildStack()
+    } else if (this.model.compType == "Text") {
+      this.buildText()
+    } else if (this.model.compType == "Image") {
+      this.buildImage()
+    } else if (this.model.compType == "Button") {
+      this.buildButton()
+    } else {
+      this.buildCustom()
+    }
+  }
+}

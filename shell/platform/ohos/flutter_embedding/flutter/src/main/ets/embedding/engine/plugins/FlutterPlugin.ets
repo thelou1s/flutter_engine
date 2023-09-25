@@ -15,6 +15,7 @@
 
 import common from '@ohos.app.ability.common';
 import { BinaryMessenger } from '../../../plugin/common/BinaryMessenger';
+import PlatformViewRegistry from '../../../plugin/platform/PlatformViewRegistry';
 import FlutterEngineGroup from '../FlutterEngineGroup';
 
 export interface FlutterPlugin {
@@ -50,12 +51,14 @@ export class FlutterPluginBinding {
   private binaryMessenger: BinaryMessenger;
   private flutterAssets: FlutterAssets;
   private group: FlutterEngineGroup;
+  private platformViewRegistry: PlatformViewRegistry;
 
-  constructor(applicationContext: common.Context, binaryMessenger: BinaryMessenger, flutterAssets: FlutterAssets, group: FlutterEngineGroup) {
+  constructor(applicationContext: common.Context, binaryMessenger: BinaryMessenger, flutterAssets: FlutterAssets, group: FlutterEngineGroup, platformViewRegistry?: PlatformViewRegistry) {
     this.applicationContext = applicationContext;
     this.binaryMessenger = binaryMessenger;
     this.flutterAssets = flutterAssets;
     this.group = group;
+    this.platformViewRegistry = platformViewRegistry;
   }
 
   getApplicationContext(): common.Context {
@@ -72,6 +75,10 @@ export class FlutterPluginBinding {
 
   getEngineGroup(): FlutterEngineGroup {
     return this.group;
+  }
+
+  public getPlatformViewRegistry(): PlatformViewRegistry {
+    return this.platformViewRegistry;
   }
 }
 

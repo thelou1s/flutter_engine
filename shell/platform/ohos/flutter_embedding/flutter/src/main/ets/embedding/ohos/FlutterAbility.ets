@@ -26,7 +26,11 @@ import display from '@ohos.display';
 import { FlutterPlugin } from '../engine/plugins/FlutterPlugin';
 import { AsyncCallback } from '@ohos.base';
 import AbilityConstant from '@ohos.app.ability.AbilityConstant';
-
+import I18n from '@ohos.i18n'
+import { PlatformBrightness } from '../engine/systemchannels/SettingsChannel';
+import ConfigurationConstant from '@ohos.app.ability.ConfigurationConstant';
+import { DVModelContainer } from '../../view/DynamicView/dynamicView';
+import { RootDvModeManager } from '../../plugin/platform/RootDvModelManager';
 
 const TAG = "FlutterAbility";
 /**
@@ -42,7 +46,6 @@ export class FlutterAbility extends UIAbility implements Host {
   private viewportMetrics = new ViewportMetrics();
   private displayInfo: display.Display;
 
-
   /**
    * onCreate
    * 1、create and attach delegate
@@ -55,6 +58,7 @@ export class FlutterAbility extends UIAbility implements Host {
     globalThis.flutterAbility = this
     this.displayInfo = display.getDefaultDisplaySync()
     this.viewportMetrics.devicePixelRatio = this.displayInfo.densityPixels
+
     this.delegate = new FlutterAbilityDelegate(this);
     await this.delegate.onAttach(this.context);
     Log.i(TAG, 'onAttach end');
@@ -65,6 +69,9 @@ export class FlutterAbility extends UIAbility implements Host {
     if (this.stillAttachedForEvent("onCreate")) {
       this.delegate.onCreate();
     }
+
+    console.log('MyAbility onCreate');
+    globalThis.applicationContext = this.context.getApplicationContext();
   }
 
   onDestroy() {
@@ -77,7 +84,7 @@ export class FlutterAbility extends UIAbility implements Host {
    * window状态改变回调
    * @param windowStage
    */
-  onWindowStageCreate(windowStage: window.WindowStage) {
+  async onWindowStageCreate(windowStage: window.WindowStage) {
     this.windowStage = windowStage
     try {
       windowStage.on('windowStageEvent', (data) => {
@@ -119,7 +126,8 @@ export class FlutterAbility extends UIAbility implements Host {
         this.onWindowPropertiesUpdated();
       });
 
-      this.loadContent()
+      this.loadContent();
+      this.mainWindow.setWindowLayoutFullScreen(true);
     } catch (exception) {
       Log.e(TAG, 'Failed to enable the listener for window stage event changes. Cause:' + JSON.stringify(exception));
     }
@@ -245,7 +253,6 @@ export class FlutterAbility extends UIAbility implements Host {
   }
 
   getDartEntrypointLibraryUri(): string {
-    // TODO form metaData read
     return null;
   }
 
@@ -257,7 +264,6 @@ export class FlutterAbility extends UIAbility implements Host {
     if (this.launchWant.parameters[FlutterAbilityLaunchConfigs.EXTRA_DART_ENTRYPOINT]) {
       return this.launchWant.parameters[FlutterAbilityLaunchConfigs.EXTRA_DART_ENTRYPOINT] as string;
     }
-    // TODO form metaData read
     return FlutterAbilityLaunchConfigs.DEFAULT_DART_ENTRYPOINT
   }
 
@@ -265,7 +271,6 @@ export class FlutterAbility extends UIAbility implements Host {
     if (this.launchWant.parameters[FlutterAbilityLaunchConfigs.EXTRA_INITIAL_ROUTE]) {
       return this.launchWant.parameters[FlutterAbilityLaunchConfigs.EXTRA_INITIAL_ROUTE] as string;
     }
-    // TODO form metaData read
     return null
   }
 
@@ -274,7 +279,6 @@ export class FlutterAbility extends UIAbility implements Host {
   }
 
   shouldDestroyEngineWithHost(): boolean {
-    //TODO shouldDestroyEngineWithHost
     return true;
   }
 
@@ -361,6 +365,14 @@ export class FlutterAbility extends UIAbility implements Host {
     }
   }
 
+  onConfigurationUpdated(config){
+    Log.i(TAG, 'onConfigurationUpdated config:' + JSON.stringify(config));
+    this.delegate.flutterEngine.getSettingsChannel().startMessage()
+      .setAlwaysUse24HourFormat(I18n.System.is24HourClock())
+      .setPlatformBrightness(config.colorMode != ConfigurationConstant.ColorMode.COLOR_MODE_DARK
+        ? PlatformBrightness.LIGHT : PlatformBrightness.DARK);
+  }
+
   getWindowId(callback: AsyncCallback<number>): void {
     if (callback === null) {
       return;
@@ -381,7 +393,7 @@ export class FlutterAbility extends UIAbility implements Host {
   }
 }
 
-class ViewportMetrics {
+export class ViewportMetrics {
   devicePixelRatio: number = 1.0;
   physicalWidth: number = 0;
   physicalHeight: number = 0;

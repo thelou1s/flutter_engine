@@ -131,7 +131,6 @@ export abstract class BinaryMessenger {
      */
     //setMessageHandler(channel: String, handler: BinaryMessageHandler)
     setMessageHandler(channel: String, handler: BinaryMessageHandler, taskQueue?: TaskQueue): void {
-        // TODO(92582): Remove default implementation when it is safe for Google Flutter users.
         if (taskQueue != null) {
             throw new Error("setMessageHandler called with nonnull taskQueue is not supported.")
         }

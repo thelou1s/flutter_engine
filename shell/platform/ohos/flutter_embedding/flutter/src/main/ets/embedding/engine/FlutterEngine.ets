@@ -38,6 +38,7 @@ import LocalizationChannel from './systemchannels/LocalizationChannel';
 import AccessibilityChannel from './systemchannels/AccessibilityChannel';
 import LocalizationPlugin from '../../plugin/localization/LocalizationPlugin'
 import SettingsChannel from './systemchannels/SettingsChannel';
+import PlatformViewsController from '../../plugin/platform/PlatformViewsController';
 
 const TAG = "FlutterEngine";
 
@@ -67,6 +68,7 @@ export default class FlutterEngine implements EngineLifecycleListener{
   private textInputPlugin: TextInputPlugin;
   private localizationPlugin: LocalizationPlugin;
   private settingsChannel: SettingsChannel;
+  private platformViewsController: PlatformViewsController;
 
   /**
    * 需要初始化的工作：
@@ -77,7 +79,7 @@ export default class FlutterEngine implements EngineLifecycleListener{
    * 5、初始化flutterJNI
    * 6、engineLifecycleListeners
    */
-  constructor(context: common.Context, flutterLoader: FlutterLoader, flutterNapi: FlutterNapi) {
+  constructor(context: common.Context, flutterLoader: FlutterLoader, flutterNapi: FlutterNapi, platformViewsController: PlatformViewsController) {
     const injector: FlutterInjector = FlutterInjector.getInstance();
 
     if(flutterNapi == null){
@@ -93,6 +95,12 @@ export default class FlutterEngine implements EngineLifecycleListener{
       flutterLoader = injector.getFlutterLoader();
     }
     this.flutterLoader = flutterLoader;
+
+    if(platformViewsController == null) {
+      platformViewsController = new PlatformViewsController();
+    }
+    this.platformViewsController = platformViewsController;
+    this.platformViewsController.attach(context, null, this.dartExecutor);
   }
 
   async init(context: common.Context, dartVmArgs: Array<string>, automaticallyRegisterPlugins: boolean,
@@ -142,6 +150,7 @@ export default class FlutterEngine implements EngineLifecycleListener{
               dartEntrypoint: DartEntrypoint,
               initialRoute: string,
               dartEntrypointArgs: Array<string>,
+              platformViewsController: PlatformViewsController,
               automaticallyRegisterPlugins: boolean, waitForRestorationData: boolean) {
     if (!this.isAttachedToNapi()) {
       throw new Error(
@@ -157,7 +166,8 @@ export default class FlutterEngine implements EngineLifecycleListener{
     const flutterEngine = new FlutterEngine(
       context,
       null,
-      newFlutterJNI
+      newFlutterJNI,
+      platformViewsController
     );
     await flutterEngine.init(context, null, automaticallyRegisterPlugins, waitForRestorationData, null)
     return flutterEngine
@@ -235,8 +245,8 @@ export default class FlutterEngine implements EngineLifecycleListener{
     Log.d(TAG, "Destroying.");
     this.engineLifecycleListeners.forEach(listener => listener.onEngineWillDestroy())
     this.flutterNapi.removeEngineLifecycleListener(this);
-    this.pluginRegistry.detachFromAbility()
-    //TODO
+    this.pluginRegistry.detachFromAbility();
+    this.platformViewsController.onDetachedFromNapi();
   }
 
   getRestorationChannel(): RestorationChannel{
@@ -253,6 +263,10 @@ export default class FlutterEngine implements EngineLifecycleListener{
 
   getSystemLanguages(): void {
     return this.flutterNapi.getSystemLanguages();
+  }
+
+  getPlatformViewsController(): PlatformViewsController {
+    return this.platformViewsController;
   }
 }
 

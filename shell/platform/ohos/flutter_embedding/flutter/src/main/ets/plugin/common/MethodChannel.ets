@@ -18,6 +18,7 @@ import MessageChannelUtils from '../../util/MessageChannelUtils';
 import { BinaryMessageHandler, BinaryMessenger, BinaryReply, TaskQueue } from './BinaryMessenger';
 import MethodCall from './MethodCall';
 import MethodCodec from './MethodCodec';
+import StandardMethodCodec from './StandardMethodCodec';
 /**
  * A named channel for communicating with the Flutter application using asynchronous method calls.
  *
@@ -39,7 +40,7 @@ export default class MethodChannel {
   private codec: MethodCodec;
   private taskQueue: TaskQueue;
 
-  constructor(messenger: BinaryMessenger, name: string, codec?: MethodCodec, taskQueue?: TaskQueue) {
+  constructor(messenger: BinaryMessenger, name: string, codec: MethodCodec = StandardMethodCodec.INSTANCE, taskQueue?: TaskQueue) {
     this.messenger = messenger
     this.name = name
     this.codec = codec

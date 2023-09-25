@@ -53,7 +53,7 @@ export default class FlutterEngineConnectionRegistry implements PluginRegistry, 
 
   constructor(appContext: common.Context, flutterEngine: FlutterEngine, flutterLoader: FlutterLoader, group: FlutterEngineGroup) {
     this.flutterEngine = flutterEngine;
-    this.pluginBinding = new FlutterPluginBinding(appContext, this.flutterEngine.getDartExecutor(), new DefaultFlutterAssets(flutterLoader), group);
+    this.pluginBinding = new FlutterPluginBinding(appContext, this.flutterEngine.getDartExecutor(), new DefaultFlutterAssets(flutterLoader), group, this.flutterEngine.getPlatformViewsController()?.getRegistry());
   }
 
   add(plugin: FlutterPlugin): void {
@@ -173,13 +173,11 @@ export default class FlutterEngineConnectionRegistry implements PluginRegistry, 
 
   private attachToAbilityInternal(ability: UIAbility): void {
     this.abilityPluginBinding = new FlutterEngineAbilityPluginBinding(ability);
-    //TODO set PlatformViewsController setSoftwareRendering  attach
     // Notify all AbilityAware plugins that they are now attached to a new Ability.
     this.abilityAwarePlugins.forEach(abilityAware => abilityAware.onAttachedToAbility(this.abilityPluginBinding));
   }
 
   private detachFromAbilityInternal(): void {
-    // TODO Deactivate PlatformViewsController. detach
     this.exclusiveAbility = null;
     this.abilityPluginBinding = null;
   }
