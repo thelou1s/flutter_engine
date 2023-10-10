@@ -51,5 +51,11 @@
         "target": "./src/build",
         "type": "patch",
         "file_path": "../flutter/attachment/repos/build2.bin"
+    },
+    {
+        "name": "build3",
+        "target": "./src/build",
+        "type": "patch",
+        "file_path": "../flutter/attachment/repos/build3.bin"
     }
 ]
