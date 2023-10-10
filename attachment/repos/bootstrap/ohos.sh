@@ -1,3 +1,4 @@
+#! /bin/bash
 # Copyright (c) 2023 Hunan OpenValley Digital Industry Development Co., Ltd.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -10,12 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#! /bin/bash
 #
 #编译依赖
 #sudo apt install g++-multilib git python3 curl
 
+if [[ `uname` =~ 'Darwin' ]]; then
+HOST_OS=mac
+elif [[ `uname` =~ 'Linux' ]];then
 HOST_OS=linux
+else
+HOST_OS=linux
+fi
+
 NDK_HOME=`pwd`/ndk/$HOST_OS/4.0/native
 NDK_TOOLCHAIN_CMAKE=$NDK_HOME/build/cmake/ohos.toolchain.cmake
 NDK_SDK_CMAKE=$NDK_HOME/build/cmake/sdk_native_platforms.cmake

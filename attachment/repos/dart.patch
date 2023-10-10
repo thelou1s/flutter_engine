@@ -112,7 +112,7 @@ index 33be98fc0aa..eda146a0580 100644
    String? _authCode;
  
 diff --git a/runtime/BUILD.gn b/runtime/BUILD.gn
-index 13bfd0a724b..65227b4be20 100644
+index 13bfd0a724b..28ea7c79797 100644
 --- a/runtime/BUILD.gn
 +++ b/runtime/BUILD.gn
 @@ -88,6 +88,7 @@ config("dart_precompiler_config") {
@@ -146,8 +146,16 @@ index 13bfd0a724b..65227b4be20 100644
  }
  
  # We need to build gen_snapshot targeting Fuchsia during a build of the SDK
+@@ -221,6 +231,7 @@ config("dart_config") {
+       "-ggdb3",
+       "-fno-rtti",
+       "-fno-exceptions",
++      "-Wno-sign-compare"
+     ]
+     if (is_clang) {
+       cflags += [
 diff --git a/runtime/bin/BUILD.gn b/runtime/bin/BUILD.gn
-index f597fa5b0c3..2bb3bd42adc 100644
+index f597fa5b0c3..fa98edfee62 100644
 --- a/runtime/bin/BUILD.gn
 +++ b/runtime/bin/BUILD.gn
 @@ -32,6 +32,11 @@ config("libdart_builtin_config") {
@@ -162,6 +170,33 @@ index f597fa5b0c3..2bb3bd42adc 100644
  }
  
  template("build_libdart_builtin") {
+@@ -452,7 +457,7 @@ template("dart_io") {
+       ]
+     }
+ 
+-    if (is_linux || is_win || is_fuchsia) {
++    if (is_linux || is_win || is_fuchsia || is_ohos) {
+       if (dart_use_fallback_root_certificates) {
+         sources += [ "//third_party/root_certificates/root_certificates.cc" ]
+       } else {
+@@ -1036,7 +1041,7 @@ shared_library("entrypoints_verification_test") {
+     # The only effect of DART_SHARED_LIB is to export the Dart API.
+     "DART_SHARED_LIB",
+   ]
+-  if (is_linux || is_android) {
++  if (is_linux || is_android || is_ohos) {
+     cflags = [ "-fPIC" ]
+   }
+   if (is_win) {
+@@ -1091,7 +1096,7 @@ shared_library("ffi_test_functions") {
+     # The only effect of DART_SHARED_LIB is to export the Dart API.
+     "DART_SHARED_LIB",
+   ]
+-  if (is_linux || is_android) {
++  if (is_linux || is_android || is_ohos) {
+     cflags = [ "-fPIC" ]
+   }
+   if (is_win) {
 diff --git a/runtime/bin/builtin_natives.cc b/runtime/bin/builtin_natives.cc
 index 14762ed7e63..74ea2336efc 100644
 --- a/runtime/bin/builtin_natives.cc
