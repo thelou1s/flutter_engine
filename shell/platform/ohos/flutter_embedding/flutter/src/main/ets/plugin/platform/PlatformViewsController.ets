@@ -159,6 +159,8 @@ export default class PlatformViewsController implements PlatformViewsAccessibili
         embeddedViewLayoutParams["height"] = physicalHeight;
       }
     }
+
+    onComplete.run(new PlatformViewBufferSize(request.newLogicalWidth, request.newLogicalHeight));
   }
 
   offset(viewId: number, top: number, left: number): void {

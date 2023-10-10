@@ -49,18 +49,42 @@ export default class TextInputChannel {
             break;
           case "TextInput.setClient":
             const textInputClientId: number = args[0] as number;
+            //TODO: parse configuration
             const config: Configuration = null;
             this.textInputMethodHandler.setClient(textInputClientId, config);
             result.success(null);
             break;
           case "TextInput.requestAutofill":
+            //TODO: requestAutofill
+            result.notImplemented();
+            break;
           case "TextInput.setPlatformViewClient":
+            //TODO:
+            result.notImplemented();
+            break;
           case "TextInput.setEditingState":
             this.textInputMethodHandler.setEditingState(TextEditState.fromJson(args));
+            result.success(null);
+            break;
           case "TextInput.setEditableSizeAndTransform":
+            //TODO:
+            result.notImplemented();
+            break;
           case "TextInput.clearClient":
+            this.textInputMethodHandler.clearClient();
+            result.success(null);
+            break;
           case "TextInput.sendAppPrivateCommand":
+            //TODO:
+            result.notImplemented();
+            break;
           case "TextInput.finishAutofillContext":
+            //TODO:
+            result.notImplemented();
+            break;
+          default:
+            result.notImplemented();
+            break;
         }
       }
     });

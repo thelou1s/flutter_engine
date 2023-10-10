@@ -58,7 +58,7 @@ export default class RestorationChannel {
   // Holds the most current restoration data which may have been provided by the engine
   // via "setRestorationData" or by the framework via the method channel. This is the data the
   // framework should be restored to in case the app is terminated.
-  private restorationData: Int8Array;
+  private restorationData: Uint8Array;
   private channel: MethodChannel;
   private pendingFrameworkRestorationChannelRequest: MethodResult;
   private engineHasProvidedData: boolean = false;
@@ -75,12 +75,12 @@ export default class RestorationChannel {
   }
 
   /** Obtain the most current restoration data that the framework has provided. */
-  getRestorationData(): Int8Array {
+  getRestorationData(): Uint8Array {
     return this.restorationData;
   }
 
   /** Set the restoration data from which the framework will restore its state. */
-  setRestorationData(data: Int8Array) {
+  setRestorationData(data: Uint8Array) {
     this.engineHasProvidedData = true;
     if (this.pendingFrameworkRestorationChannelRequest != null) {
       // If their is a pending request from the framework, answer it.
@@ -154,7 +154,7 @@ export default class RestorationChannel {
     }
   };
 
-  private packageData(data: Int8Array): Map<string, any> {
+  private packageData(data: Uint8Array): Map<string, any> {
     const packaged: Map<string, any> = new Map();
     packaged.set("enabled", true);
     packaged.set("data", data);
