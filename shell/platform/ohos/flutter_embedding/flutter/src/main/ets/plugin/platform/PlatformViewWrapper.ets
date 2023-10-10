@@ -55,8 +55,6 @@ export class PlatformViewWrapper {
     {
       compType: "Column",
       children: [],
-      attributes: {backgroundColor: Color.Red},
-      events: {onTouch : this.onTouch}
     }
   );
 
@@ -79,6 +77,14 @@ export class PlatformViewWrapper {
     this.model.params['marginTop'] = parameters['marginTop'];
     this.left = parameters['marginLeft'];
     this.top = parameters['marginTop'];
+
+    if (parameters.hasOwnProperty('width')) {
+      this.model.params['width'] = parameters['width'];
+    }
+
+    if (parameters.hasOwnProperty('height')) {
+      this.model.params['height'] = parameters['height'];
+    }
   }
 
   public addDvModel(model: DVModel): void {

@@ -91,7 +91,7 @@ export default class TextInputPlugin implements EditingStateWatcher{
     if(this.imcFlag != true) {
       this.listenKeyBoardEvent();
     }
-    this.inputMethodController.showSoftKeyboard().then(()=> {
+    this.inputMethodController.showTextInput().then(()=> {
       Log.d(TextInputPlugin.TAG, "Succeeded in showing softKeyboard");
     }).catch((err) => {
       Log.e(TextInputPlugin.TAG, "Failed to show softKeyboard:" + JSON.stringify(err));
@@ -99,7 +99,7 @@ export default class TextInputPlugin implements EditingStateWatcher{
   }
 
   private async hideTextInput(): Promise<void> {
-    this.inputMethodController.hideSoftKeyboard().then(() => {
+    this.inputMethodController.hideTextInput().then(() => {
       Log.d(TextInputPlugin.TAG, "Succeeded in hide softKeyboard");
     }).catch((err) => {
       Log.e(TextInputPlugin.TAG, "Failed to hide softKeyboard:" + JSON.stringify(err));

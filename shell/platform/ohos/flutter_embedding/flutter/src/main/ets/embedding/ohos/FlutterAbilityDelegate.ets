@@ -37,6 +37,8 @@ import Settings from './Settings';
 
 const TAG = "FlutterAbilityDelegate";
 const PLUGINS_RESTORATION_BUNDLE_KEY = "plugins";
+const FRAMEWORK_RESTORATION_BUNDLE_KEY = "framework";
+
 /**
  * 主要职责：
  * 1、初始化engine
@@ -130,7 +132,10 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
    * @param want
    */
   onRestoreInstanceState(want: Want) {
-
+    let frameworkState: Uint8Array = want.parameters[FRAMEWORK_RESTORATION_BUNDLE_KEY] as Uint8Array;
+    if (this.host.shouldRestoreAndSaveState()) {
+      this.flutterEngine.getRestorationChannel().setRestorationData(frameworkState ?? null);
+    }
   }
 
   /**
@@ -254,11 +259,11 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
   }
 
   onWindowStageCreate() {
+    this.ensureAlive();
+    this.doInitialFlutterViewRun();
     if (this.shouldDispatchAppLifecycleState()) {
       this.flutterEngine.getLifecycleChannel().appIsResumed();
     }
-    this.ensureAlive();
-    this.doInitialFlutterViewRun();
   }
 
   onWindowStageDestroy() {
@@ -351,6 +356,9 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
   onSaveState(reason: AbilityConstant.StateType, wantParam: { [key: string]: Object; }): AbilityConstant.OnSaveResult {
     Log.i(TAG, "onSaveInstanceState. Giving framework and plugins an opportunity to save state.");
     this.ensureAlive();
+    if (this.host.shouldRestoreAndSaveState()) {
+      wantParam[FRAMEWORK_RESTORATION_BUNDLE_KEY] = this.flutterEngine.getRestorationChannel().getRestorationData();
+    }
     if (this.host.shouldAttachEngineToActivity()) {
       const plugins = {}
       const result = this.flutterEngine.getAbilityControlSurface().onSaveState(reason, plugins);

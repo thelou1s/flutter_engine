@@ -112,7 +112,6 @@ export default class PlatformViewsChannel {
       direction = Direction.Rtl;
     }
 
-    Log.i(TAG, "Enter create " + usesPlatformViewLayer + " " + createArgs.get("direction") + createArgs.get("viewType"));
     try {
       if (usesPlatformViewLayer) {
         const request: PlatformViewCreationRequest = new PlatformViewCreationRequest(
@@ -144,6 +143,15 @@ export default class PlatformViewsChannel {
           additionalParams,
           displayMode
         );
+
+        Log.i(TAG, `Create texture param id:${request.viewId},
+          type:${request.viewType},
+          w:${request.logicalWidth},
+          h:${request.logicalHeight},
+          l:${request.logicalLeft},
+          t:${request.logicalTop},
+          d:${request.direction}`);
+
         const textureId = this.handler.createForTextureLayer(request);
         if (textureId == PlatformViewsHandler.NON_TEXTURE_FALLBACK) {
           if (!hybridFallback) {

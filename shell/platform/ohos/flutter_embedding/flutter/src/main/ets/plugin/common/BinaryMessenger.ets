@@ -87,7 +87,6 @@ export interface BinaryMessageHandler {
  * @see EventChannel , which supports communication using event streams.
  */
 export abstract class BinaryMessenger {
-    //makeBackgroundTaskQueue()
     makeBackgroundTaskQueue(options?: TaskQueueOptions): TaskQueue {
         throw new Error("makeBackgroundTaskQueue not implemented.")
     }
