@@ -32,7 +32,6 @@ OHOSExternalTextureGL::OHOSExternalTextureGL(int id)
 
 OHOSExternalTextureGL::~OHOSExternalTextureGL() {
   if (state_ == AttachmentState::attached) {
-    // glDeleteTextures(1, &texture_name_);
   }
 }
 
@@ -44,7 +43,6 @@ void OHOSExternalTextureGL::Paint(PaintContext& context,
     return;
   }
   if (state_ == AttachmentState::uninitialized) {
-    // glGenTextures(1, &texture_name_);
     Attach(static_cast<int>(texture_name_));
     state_ = AttachmentState::attached;
   }
@@ -89,7 +87,6 @@ void OHOSExternalTextureGL::OnGrContextCreated() {
 void OHOSExternalTextureGL::OnGrContextDestroyed() {
   if (state_ == AttachmentState::attached) {
     Detach();
-    // glDeleteTextures(1, &texture_name_);
   }
   state_ = AttachmentState::detached;
 }

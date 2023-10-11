@@ -95,7 +95,6 @@ const flutter::Settings& OhosMain::GetSettings() const {
 void OhosMain::Init(napi_env env, napi_callback_info info) {
   size_t argc = 6;
   napi_value param[6];
-  // char kernelPath[512], appStoragePath[512], engineCachesPath[512];
   std::string kernelPath, appStoragePath, engineCachesPath;
   int64_t initTimeMillis;
   napi_get_cb_info(env, info, &argc, param, nullptr, nullptr);
@@ -119,8 +118,6 @@ void OhosMain::Init(napi_env env, napi_callback_info info) {
   flutter::DartCallbackCache::SetCachePath(appStoragePath);
   fml::paths::InitializeOhosCachesPath(std::string(engineCachesPath));
   flutter::DartCallbackCache::LoadCacheFromDisk();
-  // TODO 使用CPU
-  // settings.skia_deterministic_rendering_on_cpu = true;
 
   if (!flutter::DartVM::IsRunningPrecompiledCode() && kernelPath[0]) {
     auto application_kernel_path = kernelPath;
@@ -140,7 +137,6 @@ void OhosMain::Init(napi_env env, napi_callback_info info) {
   };
   settings.log_message_callback = [](const std::string& tag,
                                      const std::string& message) {
-    // TODO: Hilog print
     FML_DLOG(INFO) << tag << " " << message;
   };
 

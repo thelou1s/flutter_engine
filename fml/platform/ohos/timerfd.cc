@@ -41,11 +41,7 @@ int timerfd_settime(int ufc,
 #endif  // FML_TIMERFD_AVAILABLE == 0
 
 namespace fml {
-
-#ifndef NSEC_PER_SEC
-#define NSEC_PER_SEC 1000000000
-#endif
-
+constexpr int NSEC_PER_SEC = 1000000000;
 bool TimerRearm(int fd, fml::TimePoint time_point) {
   uint64_t nano_secs = time_point.ToEpochDelta().ToNanoseconds();
 

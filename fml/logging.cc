@@ -21,27 +21,40 @@
 #ifdef FML_OS_OHOS
 #include <pthread.h>
 
-extern "C"{
+extern "C" {
 #define OHOS_LOG_TYPE_APP 0
 #define HILOG_LOG_DOMAIN 0
 #define HILOG_LOG_TAG "XComFlutterEngine"
-  typedef enum {
-	/** Debug level to be used by {@link OH_LOG_DEBUG} */
-	HILOG_LOG_DEBUG = 3,
-	/** Informational level to be used by {@link OH_LOG_INFO} */
-	HILOG_LOG_INFO = 4,
-	/** Warning level to be used by {@link OH_LOG_WARN} */
-	HILOG_LOG_WARN = 5,
-	/** Error level to be used by {@link OH_LOG_ERROR} */
-	HILOG_LOG_ERROR = 6,
-	/** Fatal level to be used by {@link OH_LOG_FATAL} */
-	HILOG_LOG_FATAL = 7,
+typedef enum {
+  /** Debug level to be used by {@link OH_LOG_DEBUG} */
+  HILOG_LOG_DEBUG = 3,
+  /** Informational level to be used by {@link OH_LOG_INFO} */
+  HILOG_LOG_INFO = 4,
+  /** Warning level to be used by {@link OH_LOG_WARN} */
+  HILOG_LOG_WARN = 5,
+  /** Error level to be used by {@link OH_LOG_ERROR} */
+  HILOG_LOG_ERROR = 6,
+  /** Fatal level to be used by {@link OH_LOG_FATAL} */
+  HILOG_LOG_FATAL = 7,
 } HiLog_LogLevel;
-int OH_LOG_Print(int type, HiLog_LogLevel level, unsigned int domain, const char *tag, const char *fmt, ...) ;
-#define HILOG_LOG(level,...) ((void)OH_LOG_Print(OHOS_LOG_TYPE_APP, (level), HILOG_LOG_DOMAIN, HILOG_LOG_TAG, __VA_ARGS__))
-#define HILOG_DEBUG(...) ((void)OH_LOG_Print(OHOS_LOG_TYPE_APP, HILOG_LOG_DEBUG, HILOG_LOG_DOMAIN, HILOG_LOG_TAG, __VA_ARGS__))
-#define HILOG_ERROR(...) ((void)OH_LOG_Print(OHOS_LOG_TYPE_APP, HILOG_LOG_ERROR, HILOG_LOG_DOMAIN, HILOG_LOG_TAG, __VA_ARGS__))
-#define HILOG_INFO(...) ((void)OH_LOG_Print(OHOS_LOG_TYPE_APP, HILOG_LOG_INFO, HILOG_LOG_DOMAIN, HILOG_LOG_TAG, __VA_ARGS__))
+int OH_LOG_Print(int type,
+                 HiLog_LogLevel level,
+                 unsigned int domain,
+                 const char* tag,
+                 const char* fmt,
+                 ...);
+#define HILOG_LOG(level, ...)                                       \
+  ((void)OH_LOG_Print(OHOS_LOG_TYPE_APP, (level), HILOG_LOG_DOMAIN, \
+                      HILOG_LOG_TAG, __VA_ARGS__))
+#define HILOG_DEBUG(...)                                                    \
+  ((void)OH_LOG_Print(OHOS_LOG_TYPE_APP, HILOG_LOG_DEBUG, HILOG_LOG_DOMAIN, \
+                      HILOG_LOG_TAG, __VA_ARGS__))
+#define HILOG_ERROR(...)                                                    \
+  ((void)OH_LOG_Print(OHOS_LOG_TYPE_APP, HILOG_LOG_ERROR, HILOG_LOG_DOMAIN, \
+                      HILOG_LOG_TAG, __VA_ARGS__))
+#define HILOG_INFO(...)                                                    \
+  ((void)OH_LOG_Print(OHOS_LOG_TYPE_APP, HILOG_LOG_INFO, HILOG_LOG_DOMAIN, \
+                      HILOG_LOG_TAG, __VA_ARGS__))
 }
 #endif
 namespace fml {
@@ -148,12 +161,12 @@ LogMessage::~LogMessage() {
   }
   fx_logger_log_with_source(fx_log_get_logger(), fx_severity, nullptr, file_,
                             line_, stream_.str().c_str());
-#elif  defined(FML_OS_OHOS)
+#elif defined(FML_OS_OHOS)
   HiLog_LogLevel fx_severity;
 
   switch (severity_) {
     case LOG_INFO:
-      fx_severity= HILOG_LOG_INFO;
+      fx_severity = HILOG_LOG_INFO;
       break;
     case LOG_WARNING:
       fx_severity = HILOG_LOG_WARN;
@@ -165,10 +178,10 @@ LogMessage::~LogMessage() {
       fx_severity = HILOG_LOG_FATAL;
       break;
     default:
-        fx_severity = HILOG_LOG_INFO;
-        //fx_severity = HILOG_LOG_DEBUG;
-  }//end switch
-  HILOG_LOG(fx_severity,"Thread:%{public}lu  %{public}s",pthread_self(),stream_.str().c_str()  );
+      fx_severity = HILOG_LOG_INFO;
+  }  // end switch
+  HILOG_LOG(fx_severity, "Thread:%{public}lu  %{public}s", pthread_self(),
+            stream_.str().c_str());
 
   std::cerr << stream_.str();
   std::cerr.flush();
@@ -192,9 +205,9 @@ bool ShouldCreateLogMessage(LogSeverity severity) {
 
 void KillProcess() {
 #ifdef FML_OS_OHOS
-   HILOG_ERROR("FML KILL PROCESS");
+  HILOG_ERROR("FML KILL PROCESS");
 #else
-   abort();
+  abort();
 #endif
 }
 

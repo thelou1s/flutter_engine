@@ -15,6 +15,7 @@
 
 #include "ohos_xcomponent_adapter.h"
 #include "flutter/shell/platform/ohos/napi/platform_view_ohos_napi.h"
+#include "types.h"
 namespace flutter {
 
 enum ContextType {
@@ -177,11 +178,6 @@ static int32_t SetNativeWindowOpt(OHNativeWindow* nativeWindow,
   }
   // Set the format of the native window buffer.
   code = SET_FORMAT;
-#ifndef PIXEL_FMT_RGBA_8888
-// foundation/graphic/graphic_2d/interfaces/inner_api/surface/surface_type.h
-// GRAPHIC_PIXEL_FMT_RGBA_8888,
-#define PIXEL_FMT_RGBA_8888 12
-#endif
   int32_t format = PIXEL_FMT_RGBA_8888;
 
   ret = OH_NativeWindow_NativeWindowHandleOpt(nativeWindow, code, format);
@@ -204,8 +200,6 @@ void XComponentAdapter::OnSurfaceCreated(OH_NativeXComponent* component,
   if (ret == OH_NATIVEXCOMPONENT_RESULT_SUCCESS) {
     LOGD("XComponent Current width:%{public}d,height:%{public}d",
          static_cast<int>(width_), static_cast<int>(height_));
-    // mXComponentRender.XComponentRenderInit(window, width_, height_);
-    // mXComponentRender.Draw();
   } else {
     LOGE("GetXComponentSize result:%{public}d", ret);
   }

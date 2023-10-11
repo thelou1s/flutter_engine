@@ -58,7 +58,7 @@ class OHOSSurfaceGLImpeller final : public GPUSurfaceGLDelegate,
   std::unique_ptr<Surface> CreateSnapshotSurface() override;
 
   // OHOSSurface
-  virtual std::shared_ptr<impeller::Context> GetImpellerContext() override;
+  std::shared_ptr<impeller::Context> GetImpellerContext() override;
 
   // |GPUSurfaceGLDelegate|
   std::unique_ptr<GLContextResult> GLContextMakeCurrent() override;

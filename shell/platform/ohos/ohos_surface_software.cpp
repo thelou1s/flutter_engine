@@ -19,6 +19,7 @@
 #include "flutter/fml/logging.h"
 #include "napi_common.h"
 #include "third_party/skia/include/core/SkImage.h"
+#include "types.h"
 
 namespace flutter {
 
@@ -26,7 +27,7 @@ bool GetSkColorType(int32_t buffer_format,
                     SkColorType* color_type,
                     SkAlphaType* alpha_type) {
   switch (buffer_format) {
-    case 12:  // PIXEL_FMT_RGBA_8888
+    case PIXEL_FMT_RGBA_8888:  // PIXEL_FMT_RGBA_8888
       *color_type = kRGBA_8888_SkColorType;
       *alpha_type = kPremul_SkAlphaType;
       return true;

@@ -92,7 +92,7 @@ static std::shared_ptr<impeller::Context> CreateImpellerContext(
 OHOSSurfaceGLImpeller::OHOSSurfaceGLImpeller(
     const std::shared_ptr<OHOSContext>& ohos_context)
     : OHOSSurface(ohos_context),
-      reactor_worker_(std::shared_ptr<ReactorWorker>(new ReactorWorker())) {
+      reactor_worker_(std::make_shared<ReactorWorker>()) {
   auto display = std::make_unique<impeller::egl::Display>();
   if (!display->IsValid()) {
     FML_DLOG(ERROR) << "Could not create EGL display.";

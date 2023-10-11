@@ -151,7 +151,6 @@ napi_value OHOSImageGenerator::NativeImageDecodeCallback(
 
   size_t argc = 4;
 
-  // width, height, OHOSImageGenerator this, pixmap;
   napi_value args[4] = {nullptr};
 
   napi_status status =

@@ -16,7 +16,6 @@
 #include "flutter/shell/platform/ohos/ohos_surface_gl_skia.h"
 
 #include <GLES2/gl2.h>
-#include <utility>
 
 #include "flutter/fml/logging.h"
 #include "flutter/fml/memory/ref_ptr.h"
