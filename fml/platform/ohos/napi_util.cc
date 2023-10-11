@@ -133,7 +133,6 @@ void NapiPrintValueType(napi_env env, napi_value cur) {
   if (ok) {
     FML_DLOG(INFO) << "args[" << i << "],type: " << argType << " is_array ";
   }
-  //(env,cur,&ok);
   if (IsArrayBuffer(env, cur)) {
     FML_DLOG(INFO) << "args[" << i << "],type: " << argType
                    << " is_arraybuffer ";
@@ -194,18 +193,13 @@ int32_t GetArrayBuffer(napi_env env,
                        void** message,
                        size_t* lenth) {
   napi_status status;
-  // bool  ok  = false ;
   if (NapiIsType(env, arg, napi_null)) {
     FML_DLOG(ERROR) << "GetArrayBuffer value is null :";
     return ERROR_NULL;
   }
 
-  // if( napi_ok != (status = napi_is_arraybuffer(env,arg,& ok ))  ){
   if (!IsArrayBuffer(env, arg)) {
-    // FML_DLOG(ERROR)<<"GetArrayBuffer valueType is Not arraybuffer
-    // status:"<<status  ;
     NapiPrintValueType(env, arg);
-
     return napi_invalid_arg;
   }
 

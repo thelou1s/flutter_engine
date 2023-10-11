@@ -17,7 +17,7 @@
 #include <crtdbg.h>
 #include <debugapi.h>
 #else  // FML_OS_WIN
-//#include <execinfo.h>
+#include <execinfo.h>
 #endif  // FML_OS_WIN
 
 namespace fml {

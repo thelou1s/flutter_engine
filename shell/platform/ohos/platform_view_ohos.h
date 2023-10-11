@@ -118,8 +118,6 @@ class PlatformViewOHOS final : public PlatformView {
 
   std::shared_ptr<OhosSurfaceFactoryImpl> surface_factory_;
 
-  // PlatformViewOhosdDelegate platform_view_ohos_delegate_;
-
   // |PlatformView|
   void UpdateSemantics(
       flutter::SemanticsNodeUpdates update,

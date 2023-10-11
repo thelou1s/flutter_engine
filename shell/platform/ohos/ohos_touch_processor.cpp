@@ -18,6 +18,9 @@
 #include "flutter/shell/platform/ohos/ohos_shell_holder.h"
 
 namespace flutter {
+
+constexpr int MSEC_PER_SECOND = 1000;
+
 PointerData::Change OhosTouchProcessor::getPointerChangeForAction(
     int maskedAction) {
   switch (maskedAction) {
@@ -72,7 +75,8 @@ void OhosTouchProcessor::HandleTouchEvent(
     PointerData pointerData;
     pointerData.Clear();
     pointerData.embedder_id = touchEvent->id;
-    pointerData.time_stamp = touchEvent->touchPoints[index].timeStamp / 1000;
+    pointerData.time_stamp =
+        touchEvent->touchPoints[index].timeStamp / MSEC_PER_SECOND;
     pointerData.change =
         getPointerChangeForAction(touchEvent->touchPoints[index].type);
     pointerData.physical_y = touchEvent->touchPoints[index].screenY;

@@ -74,6 +74,7 @@ source_set("flutter_ohos_sources") {
              "ohos_egl_surface.h",
              "ohos_environment_gl.h",
              "ohos_surface_gl_skia.h",
+             "types.h",
            ]
 
   #configs += [ "//flutter/shell/platform/ohos/config:gtk" ]

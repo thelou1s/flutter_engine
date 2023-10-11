@@ -28,8 +28,6 @@
 #define LOGI(...)                                                     \
   ((void)OH_LOG_Print(LOG_APP, LOG_INFO, APP_LOG_DOMAIN, APP_LOG_TAG, \
                       __VA_ARGS__))
-// #define LOGD(...) ((void)OH_LOG_Print(LOG_APP, LOG_DEBUG, APP_LOG_DOMAIN,
-// APP_LOG_TAG, __VA_ARGS__))
 #define LOGD(...)                                                     \
   ((void)OH_LOG_Print(LOG_APP, LOG_INFO, APP_LOG_DOMAIN, APP_LOG_TAG, \
                       __VA_ARGS__))

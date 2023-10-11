@@ -14,7 +14,6 @@
  */
 
 #include "flutter/shell/platform/ohos/platform_message_response_ohos.h"
-#include <utility>
 #include "flutter/fml/make_copyable.h"
 #include "flutter/shell/platform/ohos/napi/platform_view_ohos_napi.h"
 

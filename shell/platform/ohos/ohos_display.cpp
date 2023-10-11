@@ -20,7 +20,7 @@ namespace flutter {
 const double defaultFPS = 60;
 
 OHOSDisplay::OHOSDisplay(std::shared_ptr<PlatformViewOHOSNapi> napi_facade)
-    : Display(60), napi_facade_(std::move(napi_facade)) {}
+    : Display(defaultFPS), napi_facade_(std::move(napi_facade)) {}
 
 double OHOSDisplay::GetRefreshRate() const {
   return defaultFPS;

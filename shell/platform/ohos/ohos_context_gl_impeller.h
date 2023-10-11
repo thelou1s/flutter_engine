@@ -23,7 +23,7 @@ class OHOSContextGLImpeller : public OHOSContext {
  public:
   OHOSContextGLImpeller();
 
-  ~OHOSContextGLImpeller();
+  ~OHOSContextGLImpeller() override;
 
   bool IsValid() const override;
 

@@ -154,7 +154,7 @@ class PlatformViewOHOSNapi {
  private:
   static napi_env env_;
   static napi_ref ref_napi_obj_;
-  static int64_t shell_holder;
+  static int64_t shell_holder_value;
   static std::vector<std::string> system_languages;
   fml::RefPtr<fml::TaskRunner> platform_task_runner_;
 };

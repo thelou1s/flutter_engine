@@ -48,9 +48,6 @@ class OHOSShellHolder {
 
   fml::WeakPtr<PlatformViewOHOS> GetPlatformView();
 
-  // Rasterizer::Screenshot Screenshot(Rasterizer::ScreenshotType type,
-  //                                     bool base64_encode);
-
   void NotifyLowMemoryWarning();
 
   void Launch(std::unique_ptr<OHOSAssetProvider> apk_asset_provider,

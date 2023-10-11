@@ -19,6 +19,7 @@
 #include <rawfile/raw_file.h>
 #include <rawfile/raw_file_manager.h>
 #include <string>
+#include "../types.h"
 #include "flutter/fml/make_copyable.h"
 #include "flutter/fml/platform/ohos/napi_util.h"
 #include "flutter/shell/platform/ohos/ohos_main.h"
@@ -29,7 +30,7 @@
 #define OHOS_SHELL_HOLDER (reinterpret_cast<OHOSShellHolder*>(shell_holder))
 namespace flutter {
 
-int64_t PlatformViewOHOSNapi::shell_holder;
+int64_t PlatformViewOHOSNapi::shell_holder_value;
 napi_env PlatformViewOHOSNapi::env_;
 napi_ref PlatformViewOHOSNapi::ref_napi_obj_;
 std::vector<std::string> PlatformViewOHOSNapi::system_languages;
@@ -91,9 +92,6 @@ napi_value PlatformViewOHOSNapi::nativeDispatchPlatformMessage(
 
   int32_t status;
 
-  // flutter.nativeDispatchPlatformMessage(this.nativeShellHolderId, channel,
-  // message, position, responseId);
-  //
   ret = napi_get_cb_info(env, info, &argc, args, &thisArg, nullptr);
   if (argc < 5 || ret != napi_ok) {
     FML_DLOG(ERROR) << "nativeDispatchPlatformMessage napi get argc ,argc="
@@ -101,10 +99,6 @@ napi_value PlatformViewOHOSNapi::nativeDispatchPlatformMessage(
     napi_throw_type_error(env, nullptr, "Wrong number of arguments");
     return nullptr;
   }
-  // #ifndef  NDEBUG
-  fml::napi::NapiPrintValueTypes(env, argc, args);
-  // #endif
-
   napi_value napiShellHolder = args[0];
   napi_value napiChannel = args[1];
   napi_value napiMessage = args[2];
@@ -395,9 +389,9 @@ PlatformViewOHOSNapi::FlutterViewComputePlatformResolvedLocales(
   const int localeDataLength = 3;
   flutter::locale mlocale;
   for (size_t i = 0; i < support_locale_data.size(); i += localeDataLength) {
-    mlocale.language = support_locale_data[i + 0];
-    mlocale.region = support_locale_data[i + 1];
-    mlocale.script = support_locale_data[i + 2];
+    mlocale.language = support_locale_data[i + LANGUAGE_INDEX];
+    mlocale.region = support_locale_data[i + REGION_INDEX];
+    mlocale.script = support_locale_data[i + SCRIPT_INDEX];
     supportedLocales.push_back(mlocale);
   }
   mlocale = resolveNativeLocale(supportedLocales);
@@ -405,8 +399,9 @@ PlatformViewOHOSNapi::FlutterViewComputePlatformResolvedLocales(
   result.push_back(mlocale.region);
   result.push_back(mlocale.script);
   FML_DLOG(INFO) << "resolveNativeLocale result to flutter language: "
-                 << result[0] << " region: " << result[1]
-                 << " script: " << result[2];
+                 << result[LANGUAGE_INDEX]
+                 << " region: " << result[REGION_INDEX]
+                 << " script: " << result[SCRIPT_INDEX];
   return std::make_unique<std::vector<std::string>>(std::move(result));
 }
 
@@ -464,10 +459,10 @@ napi_value PlatformViewOHOSNapi::nativeAttach(napi_env env,
   auto shell_holder = std::make_unique<OHOSShellHolder>(
       OhosMain::Get().GetSettings(), napi_facade, platform_loop);
   if (shell_holder->IsValid()) {
-    PlatformViewOHOSNapi::shell_holder =
+    PlatformViewOHOSNapi::shell_holder_value =
         reinterpret_cast<int64_t>(shell_holder.get());
     FML_DLOG(INFO) << "PlatformViewOHOSNapi shell_holder:"
-                   << PlatformViewOHOSNapi::shell_holder;
+                   << PlatformViewOHOSNapi::shell_holder_value;
     napi_value id;
     napi_create_int64(env, reinterpret_cast<int64_t>(shell_holder.release()),
                       &id);
@@ -1370,7 +1365,7 @@ napi_value PlatformViewOHOSNapi::nativeGetSystemLanguages(
 }
 
 int64_t PlatformViewOHOSNapi::GetShellHolder() {
-  return PlatformViewOHOSNapi::shell_holder;
+  return PlatformViewOHOSNapi::shell_holder_value;
 }
 
 void PlatformViewOHOSNapi::SurfaceCreated(int64_t shell_holder, void* window) {

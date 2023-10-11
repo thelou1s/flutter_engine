@@ -25,8 +25,6 @@ EXTERN_C_START
 static napi_value Init(napi_env env, napi_value exports) {
   FML_DLOG(INFO) << "Flutter Init NAPI";
   napi_property_descriptor desc[] = {
-      // TODO:1 ArcTS import so库的时候应该先初始化shell
-      // Holder,然后再初始化XComponent
       DECLARE_NAPI_FUNCTION("nativeInit", flutter::OhosMain::NativeInit),
       DECLARE_NAPI_FUNCTION(
           "nativeImageDecodeCallback",
