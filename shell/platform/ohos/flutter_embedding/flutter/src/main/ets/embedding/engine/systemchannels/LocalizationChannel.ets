@@ -36,6 +36,7 @@ export default class LocalizationChannel implements MethodCallHandler{
     let method: string = call.method;
     switch (method) {
         case "Localization.getStringResource": {
+          Log.i(TAG, "Localization.getStringResource enter");
           let key: string = call.argument("key");
           let localeString: string = null;
           if (call.hasArgument("locale")) {
