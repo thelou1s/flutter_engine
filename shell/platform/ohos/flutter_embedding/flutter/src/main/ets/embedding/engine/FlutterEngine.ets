@@ -76,7 +76,7 @@ export default class FlutterEngine implements EngineLifecycleListener{
    * 2、初始化所有channel
    * 3、初始化plugin
    * 4、初始化flutterLoader
-   * 5、初始化flutterJNI
+   * 5、初始化flutterNapi
    * 6、engineLifecycleListeners
    */
   constructor(context: common.Context, flutterLoader: FlutterLoader, flutterNapi: FlutterNapi, platformViewsController: PlatformViewsController) {
@@ -125,7 +125,7 @@ export default class FlutterEngine implements EngineLifecycleListener{
     this.flutterNapi.addEngineLifecycleListener(this);
     this.localizationPlugin = new LocalizationPlugin(context, this.localeChannel);
 
-    // It should typically be a fresh, unattached JNI. But on a spawned engine, the JNI instance
+    // It should typically be a fresh, unattached NAPI. But on a spawned engine, the NAPI instance
     // is already attached to a native shell. In that case, the Java FlutterEngine is created around
     // an existing shell.
     if (!this.flutterNapi.isAttached()) {
@@ -137,7 +137,7 @@ export default class FlutterEngine implements EngineLifecycleListener{
   }
 
   private attachToNapi(): void {
-    Log.d(TAG, "Attaching to JNI.");
+    Log.d(TAG, "Attaching to NAPI.");
     this.flutterNapi.attachToNative();
 
     if (!this.isAttachedToNapi()) {
@@ -157,7 +157,7 @@ export default class FlutterEngine implements EngineLifecycleListener{
         "Spawn can only be called on a fully constructed FlutterEngine");
     }
 
-    const newFlutterJNI =
+    const newFlutterNapi =
     this.flutterNapi.spawn(
       dartEntrypoint.dartEntrypointFunctionName,
       dartEntrypoint.dartEntrypointLibrary,
@@ -166,7 +166,7 @@ export default class FlutterEngine implements EngineLifecycleListener{
     const flutterEngine = new FlutterEngine(
       context,
       null,
-      newFlutterJNI,
+      newFlutterNapi,
       platformViewsController
     );
     await flutterEngine.init(context, null, automaticallyRegisterPlugins, waitForRestorationData, null)
