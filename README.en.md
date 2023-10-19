@@ -9,44 +9,66 @@ This warehouse is based on the extension of Flutter's official engine warehouse 
 ## Build instructions:
 
 * Build environment:
-1. Currently only supports building under Linux;
+1. Currently supports building in Linux and Mac;
 
-2. Please ensure that the current build environment can access the allowed_hosts list configured in DEPS.
+2. Please ensure that the current build environment can access the allowed_hosts field configured in the DEPS file.
 
 * Building steps:
-1. Refer to the instructions at https://github.com/flutter/flutter/wiki/Setting-up-the-Engine-development-environment to configure the build environment under Linux;
+1. Build a basic environment: please refer to the [official](https://github.com/flutter/flutter/wiki/Setting-up-the-Engine-development-environment) website;
 
-2. Get the source code, create an empty folder engine, create a new .gclient file in the engine, and edit the file:
-```
-solutions = [
-   {
-     "managed": False,
-     "name": "src/flutter",
-     "url": "git@gitee.com:openharmony-sig/flutter_engine.git",
-     "custom_deps": {},
-     "deps_file": "DEPS",
-     "safesync_url": "",
-   },
-]
-```
+   Basic libraries that need to be installed:
 
-3. In the engine directory, execute gclient sync; here the engine source code, official packages warehouse will be synchronized, and the ohos_setup task will be executed;
+   ```
+    sudo apt install python3
+    sudo apt install make
+    sudo apt install pkg-config
+    sudo apt install ninja-build
+   ```
 
-4. From http://ci.openharmony.cn/workbench/cicd/dailybuild/dailylist, download ohos-sdk-full, create a new folder ndk/linux/4.0 in the engine root directory, and unzip the native folder in ohos-sdk-full to the ndk/linux/4.0 folder;
+   Configure node: Download `node` and unzip it, and configure it into environment variables:
 
-5. In the engine directory, execute make to start building the flutter engine that supports ohos devices.
+   ```
+    # nodejs
+    export NODE_HOME=/home/<user>/env/node-v14.19.1-linux-x64
+    export PATH=$NODE_HOME/bin:$PATH
+   ```
 
+2. Configuration file: Create an empty folder engine, create a new `.gclient` file in the engine, and edit the file:
+
+   ```
+   solutions = [
+      {
+        "managed": False,
+        "name": "src/flutter",
+        "url": "git@gitee.com:openharmony-sig/flutter_engine.git",
+        "custom_deps": {},
+        "deps_file": "DEPS",
+        "safesync_url": "",
+      },
+   ]
+   ```
+
+3. Synchronize code: In the engine directory, execute `gclient sync`; here the engine source code, official packages repository will be synchronized, and the ohos_setup task will be executed;
+
+4. Download sdk: Download ohos-sdk-full in [the daily build](http://ci.openharmony.cn/workbench/cicd/dailybuild/dailylist), create a new folder ndk/linux/4.0 in the engine root directory, unzip the native folder in ohos-sdk-full and place it in ndk/linux/4.0 in folder;
+
+5. Start building: engine directory, execute `make` to start building the flutter engine that supports ohos devices.
 
 ## Embedding layer code construction guide
 
-1. Edit shell/platform/ohos/flutter_embedding/local.properties,
-     sdk.dir=\<OpenHarmony sdk directory\>
-     nodejs.dir=\<nodejs sdk directory\>
-  
+1. Edit shell/platform/ohos/flutter_embedding/local.properties:
+
+     ```
+     sdk.dir=<OpenHarmony sdk directory>
+     nodejs.dir=<nodejs sdk directory>
+     ```
+
 2. In the shell/platform/ohos/flutter_embedding directory, execute
-```
-./hvigorw --mode module -p module=flutter@default -p product=default assembleHar
-```
+
+     ```
+     ./hvigorw --mode module -p module=flutter@default -p product=default assembleHar --no-daemon
+     ```
+
 
 
 3. The har file output path is: shell/platform/ohos/flutter_embedding/flutter/build
