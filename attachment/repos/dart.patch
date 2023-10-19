@@ -228,6 +228,21 @@ index 14762ed7e63..74ea2336efc 100644
  }
  
  }  // namespace bin
+diff --git a/runtime/bin/directory_linux.cc b/runtime/bin/directory_linux.cc
+index d2af2c50..d4e9082b 100644
+--- a/runtime/bin/directory_linux.cc
++++ b/runtime/bin/directory_linux.cc
+@@ -413,6 +413,10 @@ bool Directory::Create(Namespace* namespc, const char* dir_name) {
+ }
+ 
+ const char* Directory::SystemTemp(Namespace* namespc) {
++  if (Directory::system_temp_path_override_ != NULL) {
++    return DartUtils::ScopedCopyCString(Directory::system_temp_path_override_);
++  }
++
+   PathBuffer path;
+   const char* temp_dir = getenv("TMPDIR");
+   if (temp_dir == NULL) {
 diff --git a/runtime/bin/main_options.h b/runtime/bin/main_options.h
 index 2c9100f2af0..49293cd6306 100644
 --- a/runtime/bin/main_options.h
