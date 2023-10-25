@@ -25,7 +25,7 @@ const TAG:string = 'MouseCursorChannel'
 export default class MouseCursorChannel implements MethodCallHandler {
   public channel: MethodChannel;
 
-  private mouseCursorMethodHandler: MouseCursorMethodHandler;
+  private mouseCursorMethodHandler: MouseCursorMethodHandler | null = null;
 
   onMethodCall(call: MethodCall, result: MethodResult): void {
     if (this.mouseCursorMethodHandler === null) {
@@ -69,7 +69,7 @@ export default class MouseCursorChannel implements MethodCallHandler {
    * parsed from the underlying platform channel.
    * @param mouseCursorMethodHandler
    */
-  public setMethodHandler(mouseCursorMethodHandler: MouseCursorMethodHandler): void {
+  public setMethodHandler(mouseCursorMethodHandler: MouseCursorMethodHandler | null): void {
     this.mouseCursorMethodHandler = mouseCursorMethodHandler;
   }
 

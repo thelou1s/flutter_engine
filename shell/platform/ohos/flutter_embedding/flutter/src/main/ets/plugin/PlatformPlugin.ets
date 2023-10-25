@@ -39,7 +39,7 @@ export default class PlatformPlugin {
   constructor(platformChannel: PlatformChannel, context: common.Context, platformPluginDelegate?: PlatformPluginDelegate) {
     this.callback.platformChannel = platformChannel;
     this.callback.context = context;
-    this.callback.applicationContext = context.getApplicationContext();
+    this.callback.applicationContext = context?.getApplicationContext();
     this.callback.platform = this;
 
     try {
@@ -53,13 +53,13 @@ export default class PlatformPlugin {
     } catch (err) {
       Log.e(PlatformPlugin.TAG, "Failed to obtain the top window. Cause: " + JSON.stringify(err));
     }
-    this.callback.platformPluginDelegate = platformPluginDelegate;
-    this.callback.platformChannel.setPlatformMessageHandler(this.callback);
+    this.callback.platformPluginDelegate = platformPluginDelegate ?? null;
+    this.callback.platformChannel?.setPlatformMessageHandler(this.callback);
   }
 
 
   updateSystemUiOverlays(): void {
-    this.callback.windowClass.setWindowSystemBarEnable(this.callback.showBarOrNavigation);
+    this.callback.windowClass?.setWindowSystemBarEnable(this.callback.showBarOrNavigation);
     if (this.callback.currentTheme != null) {
       this.callback.setSystemChromeSystemUIOverlayStyle(this.callback.currentTheme);
     }
@@ -72,10 +72,10 @@ export default class PlatformPlugin {
   setSystemChromeChangeListener(): void {
     if (this.callback.callbackId == null && this.callback.applicationContext != null) {
       let that = this;
-      this.callback.callbackId = this.callback.applicationContext.on('environment', {
+      this.callback.callbackId = this.callback.applicationContext?.on('environment', {
         onConfigurationUpdated(config) {
           Log.d(PlatformPlugin.TAG, "onConfigurationUpdated: " + that.callback.showBarOrNavigation);
-          that.callback.platformChannel.systemChromeChanged(that.callback.showBarOrNavigation.includes('status'));
+          that.callback.platformChannel?.systemChromeChanged(that.callback.showBarOrNavigation.includes('status'));
         },
         onMemoryLevel(level) {
         }
@@ -90,16 +90,16 @@ export interface PlatformPluginDelegate {
 
 class PlatformPluginCallback implements PlatformMessageHandler {
   private static TAG = "PlatformPluginCallback";
-  platform: PlatformPlugin;
-  windowClass: window.Window = null;
-  platformChannel: PlatformChannel;
-  platformPluginDelegate: PlatformPluginDelegate;
-  context: common.Context;
+  platform: PlatformPlugin | null = null;
+  windowClass: window.Window | null = null;
+  platformChannel: PlatformChannel | null = null;
+  platformPluginDelegate: PlatformPluginDelegate | null = null;
+  context: common.Context | null = null;
   showBarOrNavigation: ('status' | 'navigation')[] = ['status', 'navigation'];
-  uiAbilityContext: common.UIAbilityContext = null;
-  callbackId: number = null;
-  applicationContext: common.ApplicationContext = null;
-  currentTheme: SystemChromeStyle = null;
+  uiAbilityContext: common.UIAbilityContext | null = null;
+  callbackId: number | null = null;
+  applicationContext: common.ApplicationContext | null = null;
+  currentTheme: SystemChromeStyle | null = null;
 
   playSystemSound(soundType: SoundType) {
   }
@@ -131,7 +131,7 @@ class PlatformPluginCallback implements PlatformMessageHandler {
 
   setPreferredOrientations(ohosOrientation: number) {
     Log.d(PlatformPluginCallback.TAG, "ohosOrientation: " + ohosOrientation);
-    this.windowClass.setPreferredOrientation(ohosOrientation);
+    this.windowClass?.setPreferredOrientation(ohosOrientation);
   }
 
   setApplicationSwitcherDescription(description: AppSwitcherDescription) {
@@ -147,11 +147,11 @@ class PlatformPluginCallback implements PlatformMessageHandler {
   }
 
   setSystemUiChangeListener() {
-    this.platform.setSystemChromeChangeListener();
+    this.platform?.setSystemChromeChangeListener();
   }
 
   restoreSystemUiOverlays() {
-    this.platform.updateSystemUiOverlays();
+    this.platform?.updateSystemUiOverlays();
   }
 
   setSystemUiOverlayStyle(systemUiOverlayStyle: SystemChromeStyle) {
@@ -160,7 +160,7 @@ class PlatformPluginCallback implements PlatformMessageHandler {
   }
 
   popSystemNavigator() {
-    if (this.platformPluginDelegate != null && this.platformPluginDelegate.popSystemNavigator()) {
+    if (this.platformPluginDelegate != null && this.platformPluginDelegate?.popSystemNavigator()) {
       return;
     }
     if (this.uiAbilityContext != null) {
@@ -188,35 +188,35 @@ class PlatformPluginCallback implements PlatformMessageHandler {
     let uiConfig: ('status' | 'navigation')[] = [];
     if (mode == SystemUiMode.LEAN_BACK) {
       //全屏显示，通过点击显示器上的任何位置都可以显示状态和导航栏
-      this.windowClass.setWindowLayoutFullScreen(false);
+      this.windowClass?.setWindowLayoutFullScreen(false);
 
     } else if (mode == SystemUiMode.IMMERSIVE) {
       //全屏显示，通过在显示器边缘的滑动手势可以显示状态和导航栏,应用程序不会接收到此手势
-      this.windowClass.setWindowLayoutFullScreen(true);
+      this.windowClass?.setWindowLayoutFullScreen(true);
 
     } else if (mode == SystemUiMode.IMMERSIVE_STICKY) {
       //全屏显示，通过在显示器边缘的滑动手势可以显示状态和导航栏,此手势由应用程序接收
-      this.windowClass.setWindowLayoutFullScreen(true);
+      this.windowClass?.setWindowLayoutFullScreen(true);
 
     } else if (mode == SystemUiMode.EDGE_TO_EDGE) {
       //全屏显示，在应用程序上呈现状态和导航元素
-      this.windowClass.setWindowLayoutFullScreen(false);
+      this.windowClass?.setWindowLayoutFullScreen(false);
       uiConfig = ['status', 'navigation'];
 
     } else {
       return;
     }
     this.showBarOrNavigation = uiConfig;
-    this.platform.updateSystemUiOverlays();
+    this.platform?.updateSystemUiOverlays();
   }
 
   setSystemChromeSystemUIOverlayStyle(systemChromeStyle: SystemChromeStyle): void {
     let isStatusBarLightIconValue: boolean = false;
-    let statusBarColorValue: string = null;
-    let statusBarContentColorValue: string = null;
-    let navigationBarColorValue: string = null;
+    let statusBarColorValue: string | undefined = undefined;
+    let statusBarContentColorValue: string | undefined = undefined;
+    let navigationBarColorValue: string | undefined = undefined;
     let isNavigationBarLightIconValue: boolean = false;
-    let navigationBarContentColorValue: string = null;
+    let navigationBarContentColorValue: string | undefined = undefined;
     if (systemChromeStyle.statusBarIconBrightness != null) {
       switch (systemChromeStyle.statusBarIconBrightness) {
         case Brightness.DARK:
@@ -262,7 +262,7 @@ class PlatformPluginCallback implements PlatformMessageHandler {
     systemBarProperties.isNavigationBarLightIcon = isNavigationBarLightIconValue;
     systemBarProperties.navigationBarContentColor = navigationBarContentColorValue;
     Log.d(PlatformPluginCallback.TAG, "systemBarProperties: " + JSON.stringify(systemBarProperties));
-    this.windowClass.setWindowSystemBarProperties(systemBarProperties);
+    this.windowClass?.setWindowSystemBarProperties(systemBarProperties);
   }
 
   setSystemChromeEnabledSystemUIOverlays(overlays: SystemUiOverlay[]): void {
@@ -282,7 +282,7 @@ class PlatformPluginCallback implements PlatformMessageHandler {
       }
     }
     this.showBarOrNavigation = uiConfig;
-    this.platform.updateSystemUiOverlays();
+    this.platform?.updateSystemUiOverlays();
   }
 }
 

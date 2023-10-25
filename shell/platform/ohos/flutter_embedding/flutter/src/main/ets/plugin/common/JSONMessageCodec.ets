@@ -12,6 +12,7 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
+import StringUtils from '../../util/StringUtils';
 
 import MessageCodec from './MessageCodec';
 import MethodCodec from './MethodCodec';
@@ -32,7 +33,7 @@ export default class JSONMessageCodec implements MessageCodec<Object> {
 
   encodeMessage(message: ESObject): ArrayBuffer {
     if (message == null) {
-      return null;
+      return StringUtils.stringToArrayBuffer("");
     }
     return StringCodec.INSTANCE.encodeMessage(JSON.stringify(message));
   }

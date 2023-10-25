@@ -20,6 +20,8 @@ import { BinaryReply } from './BinaryMessenger';
 import { TaskQueue } from './BinaryMessenger';
 import MessageCodec from './MessageCodec';
 import { BinaryMessenger } from './BinaryMessenger';
+import StringUtils from '../../util/StringUtils';
+
 /**
  * A named channel for communicating with the Flutter application using basic, asynchronous message
  * passing.
@@ -40,7 +42,7 @@ export default class BasicMessageChannel<T> {
   private messenger: BinaryMessenger;
   private name: string;
   private codec: MessageCodec<T>;
-  private taskQueue: TaskQueue;
+  private taskQueue?: TaskQueue;
 
   constructor(messenger: BinaryMessenger, name: string, codec: MessageCodec<T>, taskQueue?: TaskQueue) {
     this.messenger = messenger
@@ -77,10 +79,9 @@ export default class BasicMessageChannel<T> {
     // mock verify calls.
     // See https://github.com/flutter/flutter/issues/92582.
     if (this.taskQueue != null) {
-      this.messenger.setMessageHandler(
-      this.name, handler == null ? null : new IncomingMessageHandler(handler, this.codec), this.taskQueue);
+      this.messenger.setMessageHandler(this.name, new IncomingMessageHandler(handler, this.codec), this.taskQueue);
     } else {
-      this.messenger.setMessageHandler(this.name, handler == null ? null : new IncomingMessageHandler(handler, this.codec));
+      this.messenger.setMessageHandler(this.name, new IncomingMessageHandler(handler, this.codec));
     }
   }
 
@@ -164,7 +165,7 @@ class IncomingMessageHandler<T> implements BinaryMessageHandler {
         });
     } catch (e) {
       Log.e(BasicMessageChannel.TAG, "Failed to handle message", e);
-      callback.reply(null);
+      callback.reply(StringUtils.stringToArrayBuffer(""));
     }
   }
 }

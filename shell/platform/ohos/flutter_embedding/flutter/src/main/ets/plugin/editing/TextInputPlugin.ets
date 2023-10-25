@@ -23,33 +23,32 @@ import { EditingStateWatcher, ListenableEditingState } from './ListenableEditing
 export default class TextInputPlugin implements EditingStateWatcher{
   private static TAG = "TextInputPlugin";
   private textInputChannel: TextInputChannel;
-  private inputMethodController: inputMethod.InputMethodController;
-  private inputTarget: InputTarget;
-  private mEditable: ListenableEditingState;
+  private mTextInputHandler: TextInputMethodHandlerImpl;
 
   constructor(textInputChannel: TextInputChannel) {
     this.textInputChannel = textInputChannel;
-    this.mEditable = new ListenableEditingState();
-    this.inputMethodController = inputMethod.getController();
-    let textInputMethodHandler = new TextInputMethodHandlerImpl(this);
-    this.textInputChannel.setTextInputMethodHandler(textInputMethodHandler);
+    this.mTextInputHandler = new TextInputMethodHandlerImpl(this);
+    this.textInputChannel.setTextInputMethodHandler(this.mTextInputHandler);
   }
 
   public clearTextInputClient() {
-    this.textInputChannel.textInputMethodHandler.clearClient();
+    this.textInputChannel.textInputMethodHandler?.clearClient();
   }
+
   setTextInputEditingState(state: TextEditState) {
 
   }
 
   didChangeEditingState(textChanged: boolean, selectionChanged: boolean, composingRegionChanged: boolean): void {
-    this.textInputChannel.updateEditingState(this.inputTarget.id, this.mEditable.getStringCache(),
-      this.mEditable.getSelectionStart(), this.mEditable.getSelectionEnd(),
-      this.mEditable.getComposingStart(), this.mEditable.getComposingEnd())
+    let editable = this.mTextInputHandler.mEditable;
+    let inputTarget = this.mTextInputHandler.inputTarget;
+    this.textInputChannel.updateEditingState(inputTarget.id, editable.getStringCache(),
+      editable.getSelectionStart(), editable.getSelectionEnd(),
+      editable.getComposingStart(), editable.getComposingEnd())
   }
 
   detach(): void {
-    this.inputMethodController.detach((err) => {
+    this.mTextInputHandler.inputMethodController.detach((err) => {
       if(err) {
         Log.e(TextInputPlugin.TAG, "Failed to detach: " + JSON.stringify(err));
       }
@@ -61,22 +60,25 @@ export default class TextInputPlugin implements EditingStateWatcher{
 class TextInputMethodHandlerImpl implements TextInputMethodHandler {
   private static TAG = "TextInputMethodHandlerImpl";
   private textConfig: inputMethod.TextConfig;
-  private inputMethodController: inputMethod.InputMethodController;
-  private inputTarget: InputTarget;
-  private configuration: Configuration;
-  private mEditable: ListenableEditingState;
-  private mRestartInputPending: boolean;
+  inputMethodController: inputMethod.InputMethodController;
+  inputTarget: InputTarget;
+  private configuration: Configuration | null = null;
+  mEditable: ListenableEditingState;
+  private mRestartInputPending: boolean = false;
   private plugin: EditingStateWatcher;
 
   private imcFlag: boolean = false;
 
-  constructor(plugin: EditingStateWatcher) {
+  constructor(plugin: TextInputPlugin) {
     this.textConfig = {
       inputAttribute: {
         textInputType: 0,
         enterKeyType: 1
       }};
     this.plugin = plugin;
+    this.mEditable = new ListenableEditingState();
+    this.inputMethodController = inputMethod.getController();
+    this.inputTarget = new InputTarget(Type.NO_TARGET, 0);
   }
 
   show(): void {
@@ -95,7 +97,7 @@ class TextInputMethodHandlerImpl implements TextInputMethodHandler {
 
   }
 
-  setClient(textInputClientId: number, configuration: Configuration): void {
+  setClient(textInputClientId: number, configuration: Configuration | null): void {
     Log.d(TextInputMethodHandlerImpl.TAG,"textInputClientId: " + textInputClientId);
     this.setTextInputClient(textInputClientId, configuration);
   }
@@ -146,7 +148,7 @@ class TextInputMethodHandlerImpl implements TextInputMethodHandler {
     }
   }
   
-  setTextInputClient(client: number, configuration: Configuration): void {
+  setTextInputClient(client: number, configuration: Configuration | null): void {
     this.configuration = configuration;
     if(this.canShowTextInput()) {
       this.inputTarget = new InputTarget(Type.FRAMEWORK_CLIENT, client);

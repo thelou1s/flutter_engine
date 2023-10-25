@@ -53,14 +53,14 @@ export default class RestorationChannel {
    * itself to default values until the restoration data has been made available. Setting this flag
    * to true avoids that extra work.
    */
-  public waitForRestorationData: boolean;
+  public waitForRestorationData: boolean = false;
 
   // Holds the most current restoration data which may have been provided by the engine
   // via "setRestorationData" or by the framework via the method channel. This is the data the
   // framework should be restored to in case the app is terminated.
   private restorationData: Uint8Array = new Uint8Array();
-  private channel: MethodChannel;
-  private pendingFrameworkRestorationChannelRequest: MethodResult;
+  private channel: MethodChannel | null = null;
+  private pendingFrameworkRestorationChannelRequest: MethodResult | null = null;
   private engineHasProvidedData: boolean = false;
   private frameworkHasRequestedData: boolean = false;
   private handler: MethodCallHandler = new RestorationChannelMethodCallHandler(this.restorationData);
@@ -94,7 +94,7 @@ export default class RestorationChannel {
       // framework retrieved the restoration state before it was set via this method.
       // Experimentally, this can also be used to restore a previously used engine to another state,
       // e.g. when the engine is attached to a new activity.
-      this.channel.invokeMethod("push", RestorationChannelMethodCallHandler.packageData(data), {
+      this.channel?.invokeMethod("push", RestorationChannelMethodCallHandler.packageData(data), {
         success: (result: ESObject) :void => {
           this.restorationData = data;
         },
@@ -121,17 +121,17 @@ export default class RestorationChannel {
    * state prior to the hot restart will get restored.
    */
   clearData() {
-    this.restorationData = null;
+    this.restorationData = new Uint8Array();
   }
 }
 
 class RestorationChannelMethodCallHandler implements MethodCallHandler {
-  public waitForRestorationData: boolean;
+  public waitForRestorationData: boolean = false;
   private restorationData: Uint8Array;
   private engineHasProvidedData: boolean = false;
   private frameworkHasRequestedData: boolean = false;
-  private channel: MethodChannel;
-  private pendingFrameworkRestorationChannelRequest: MethodResult;
+  private channel: MethodChannel | null = null;
+  private pendingFrameworkRestorationChannelRequest: MethodResult | null = null;
 
   constructor(restorationData: Uint8Array) {
     this.restorationData = restorationData;

@@ -35,13 +35,13 @@ export default class FlutterEngineCache {
   /**
    * 返回engineId对应的FlutterEngine
    */
-  get(engineId: String) : FlutterEngine {
-    return this.cachedEngines.get(engineId);
+  get(engineId: String) : FlutterEngine | null {
+    return this.cachedEngines.get(engineId) || null;
   }
   /**
    * 将传入的FlutterEngine与engineId放在缓存中
    */
-  put(engineId :String, engine: FlutterEngine): void {
+  put(engineId :String, engine: FlutterEngine | null): void {
     if(engine != null) {
       this.cachedEngines.set(engineId, engine);
     } else {

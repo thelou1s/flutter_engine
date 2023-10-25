@@ -20,13 +20,13 @@ import OhosTouchProcessor from '../../ohos/OhosTouchProcessor';
 import { FlutterMutator, FlutterMutatorsStack } from './FlutterMutatorsStack'
 
 export class FlutterMutatorView {
-  private mutatorsStack: FlutterMutatorsStack;
-  private screenDensity: number;
-  private left: number;
-  private top: number;
-  private prevLeft: number;
-  private prevTop: number;
-  private ohosTouchProcessor: OhosTouchProcessor;
+  private mutatorsStack: FlutterMutatorsStack | null = null;
+  private screenDensity: number = 0;
+  private left: number = 0;
+  private top: number = 0;
+  private prevLeft: number = 0;
+  private prevTop: number = 0;
+
   private onTouch = (touchEvent: ESObject) => {
     let params = this.model.params as Record<string, number>;
     switch (touchEvent.type) {
@@ -76,7 +76,7 @@ export class FlutterMutatorView {
   }
 
   public addDvModel(model: DVModel): void {
-    this.model.children.push(model);
+    this.model?.children.push(model);
   }
 
   public readyToDisplay(mutatorsStack: FlutterMutatorsStack, left: number, top: number, width: number, height: number) {
@@ -93,6 +93,9 @@ export class FlutterMutatorView {
   }
 
   private dealMutators() {
+    if (this.mutatorsStack == null) {
+      return;
+    }
     let paths = this.mutatorsStack.getFinalClippingPaths();
     let rects = this.mutatorsStack.getFinalClippingRects();
     let matrix = this.mutatorsStack.getFinalMatrix();
@@ -112,7 +115,7 @@ export class FlutterMutatorView {
     params.matrix = matrix;
   }
 
-  public getDvModel(): DVModel {
+  public getDvModel(): DVModel | undefined {
     return this.model;
   }
 }

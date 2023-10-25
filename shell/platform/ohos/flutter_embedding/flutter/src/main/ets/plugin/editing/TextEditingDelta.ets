@@ -17,10 +17,10 @@ import Log from '../../util/Log';
 
 export class TextEditingDelta {
   private static TAG = "TextEditingDelta";
-  private oldText: string;
-  private deltaText: string;
-  private deltaStart: number;
-  private deltaEnd: number;
+  private oldText: string = "";
+  private deltaText: string = "";
+  private deltaStart: number = 0;
+  private deltaEnd: number = 0;
   private newSelectionStart: number;
   private newSelectionEnd: number;
   private newComposingStart: number;

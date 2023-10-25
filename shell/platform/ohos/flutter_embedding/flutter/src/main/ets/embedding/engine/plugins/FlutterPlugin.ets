@@ -15,6 +15,7 @@
 
 import common from '@ohos.app.ability.common';
 import { BinaryMessenger } from '../../../plugin/common/BinaryMessenger';
+import PlatformViewFactory from '../../../plugin/platform/PlatformViewFactory';
 import PlatformViewRegistry from '../../../plugin/platform/PlatformViewRegistry';
 import FlutterEngineGroup from '../FlutterEngineGroup';
 
@@ -58,7 +59,7 @@ export class FlutterPluginBinding {
     this.binaryMessenger = binaryMessenger;
     this.flutterAssets = flutterAssets;
     this.group = group;
-    this.platformViewRegistry = platformViewRegistry;
+    this.platformViewRegistry = platformViewRegistry ?? new EmptyPlatformViewRegistry();
   }
 
   getApplicationContext(): common.Context {
@@ -115,4 +116,10 @@ export interface FlutterAssets {
    * Ohos {@code bundleName}.
    */
   getAssetFilePathBySubpath(assetSubpath: string, bundleName: string): string;
+}
+
+class EmptyPlatformViewRegistry implements PlatformViewRegistry {
+  registerViewFactory(viewTypeId: string, factory: PlatformViewFactory): boolean {
+    return false;
+  }
 }

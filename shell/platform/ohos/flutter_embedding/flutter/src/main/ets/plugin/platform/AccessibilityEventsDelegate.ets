@@ -16,7 +16,7 @@
 import AccessibilityBridge from '../../view/AccessibilityBridge';
 
 export class AccessibilityEventsDelegate {
-  private  accessibilityBridge: AccessibilityBridge;
+  private accessibilityBridge: AccessibilityBridge | null = null;
 
   requestSendAccessibilityEvent(accessibilityBridge: AccessibilityBridge): boolean {
     if (accessibilityBridge == null) {

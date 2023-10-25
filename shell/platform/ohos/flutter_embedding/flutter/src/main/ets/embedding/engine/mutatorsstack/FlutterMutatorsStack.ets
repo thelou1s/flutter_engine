@@ -26,31 +26,31 @@ export enum FlutterMutatorType {
 class Rect {
   width: number;
   height: number;
-  radius?: string | number | Array<string | number>;
+  radius: string | number | Array<string | number>;
 
   constructor(width:number, height:number, radius?:string | number | Array<string | number>) {
     this.width = width;
     this.height = height;
-    this.radius = radius;
+    this.radius = radius ?? 0;
   }
 }
 
 class Path {
   width: number | string;
   height: number | string;
-  commands?: string;
+  commands: string;
 
   constructor(width:number | string, height:number | string, commands?:string) {
     this.width = width;
     this.height = height;
-    this.commands = commands;
+    this.commands = commands ?? '';
   }
 }
 
 export class FlutterMutator {
-  private matrix: matrix4.Matrix4Transit;
-  private rect: Rect;
-  private path: Path;
+  private matrix: matrix4.Matrix4Transit | null = null;
+  private rect: Rect = new Rect(0, 0);
+  private path: Path = new Path(0, 0);
 
   constructor(args: matrix4.Matrix4Transit | Rect | Path) {
     if (args instanceof Rect) {
@@ -62,7 +62,7 @@ export class FlutterMutator {
     }
   }
 
-  public getMatrix() {
+  public getMatrix() : matrix4.Matrix4Transit | null {
     return this.matrix;
   }
 

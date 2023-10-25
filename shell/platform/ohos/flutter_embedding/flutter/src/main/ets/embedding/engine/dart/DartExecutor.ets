@@ -35,9 +35,9 @@ export default class DartExecutor implements  BinaryMessenger {
   assetManager: resourceManager.ResourceManager;
   private dartMessenger: DartMessenger;
   private binaryMessenger: BinaryMessenger;
-  private isApplicationRunning: boolean;
-  private isolateServiceId: String = null;
-  private isolateServiceIdListener: IsolateServiceIdListener = null;
+  private isApplicationRunning: boolean = false;
+  private isolateServiceId: String = "";
+  private isolateServiceIdListener: IsolateServiceIdListener | null = null;
 
   private isolateChannelMessageHandler: BinaryMessageHandler =
     new IsolateChannelMessageHandler(this.isolateServiceId, this.isolateServiceIdListener);
@@ -117,7 +117,7 @@ export default class DartExecutor implements  BinaryMessenger {
         dartEntrypoint.dartEntrypointFunctionName,
         dartEntrypoint.dartEntrypointLibrary,
         this.assetManager,
-        dartEntrypointArgs);
+        dartEntrypointArgs ?? []);
 
       this.isApplicationRunning = true;
     } finally {
@@ -146,7 +146,7 @@ export default class DartExecutor implements  BinaryMessenger {
         dartCallback.callbackHandle.callbackName,
         dartCallback.callbackHandle.callbackLibraryPath,
         dartCallback.resourceManager,
-        null);
+        []);
 
       this.isApplicationRunning = true;
     } finally {
@@ -271,7 +271,7 @@ export class DartEntrypoint {
       throw new Error(
         "DartEntrypoints can only be created once a FlutterEngine is created.");
     }
-    return new DartEntrypoint(flutterLoader.findAppBundlePath(), null, "main");
+    return new DartEntrypoint(flutterLoader.findAppBundlePath(), "", "main");
   }
 }
 
@@ -363,9 +363,9 @@ export class DefaultBinaryMessenger implements BinaryMessenger {
 
 class IsolateChannelMessageHandler implements BinaryMessageHandler {
   private isolateServiceId: String;
-  private isolateServiceIdListener: IsolateServiceIdListener;
+  private isolateServiceIdListener: IsolateServiceIdListener | null = null;
 
-  constructor(isolateServiceId: String, isolateServiceIdListener: IsolateServiceIdListener) {
+  constructor(isolateServiceId: String, isolateServiceIdListener: IsolateServiceIdListener | null) {
     this.isolateServiceId = isolateServiceId;
     this.isolateServiceIdListener = isolateServiceIdListener;
   }

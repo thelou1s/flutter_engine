@@ -17,14 +17,14 @@ import SettingsChannel, { PlatformBrightness } from '../engine/systemchannels/Se
 import I18n from '@ohos.i18n'
 
 export default class Settings {
-  settingsChannel: SettingsChannel;
+  settingsChannel: SettingsChannel | null;
 
-  constructor(settingsChannel: SettingsChannel) {
+  constructor(settingsChannel: SettingsChannel | null) {
     this.settingsChannel = settingsChannel;
   }
 
   sendSettings(): void {
-    this.settingsChannel.startMessage()
+    this.settingsChannel?.startMessage()
       .setAlwaysUse24HourFormat(I18n.System.is24HourClock())
       .setTextScaleFactor(1.0)
       .setNativeSpellCheckServiceDefined(false)

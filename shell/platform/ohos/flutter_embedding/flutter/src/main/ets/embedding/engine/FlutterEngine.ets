@@ -52,22 +52,22 @@ export default class FlutterEngine implements EngineLifecycleListener{
   private flutterLoader: FlutterLoader;
   private assetManager: resourceManager.ResourceManager;
   //channel定义
-  private lifecycleChannel: LifecycleChannel;
-  private navigationChannel: NavigationChannel;
-  private textInputChannel: TextInputChannel;
-  private testChannel: TestChannel;
-  private platformChannel: PlatformChannel;
-  private systemChannel: SystemChannel;
-  private mouseCursorChannel: MouseCursorChannel;
-  private restorationChannel: RestorationChannel;
+  private lifecycleChannel: LifecycleChannel | null = null;
+  private navigationChannel: NavigationChannel | null = null;
+  private textInputChannel: TextInputChannel | null = null;
+  private testChannel: TestChannel | null = null;
+  private platformChannel: PlatformChannel | null = null;
+  private systemChannel: SystemChannel | null = null;
+  private mouseCursorChannel: MouseCursorChannel | null = null;
+  private restorationChannel: RestorationChannel | null = null;
 
-  private accessibilityChannel: AccessibilityChannel;
-  private localeChannel: LocalizationChannel;
+  private accessibilityChannel: AccessibilityChannel | null = null;
+  private localeChannel: LocalizationChannel | null = null;
   private flutterNapi: FlutterNapi;
-  private pluginRegistry: FlutterEngineConnectionRegistry;
-  private textInputPlugin: TextInputPlugin;
-  private localizationPlugin: LocalizationPlugin;
-  private settingsChannel: SettingsChannel;
+  private pluginRegistry: FlutterEngineConnectionRegistry | null = null;
+  private textInputPlugin: TextInputPlugin | null = null;
+  private localizationPlugin: LocalizationPlugin | null = null;
+  private settingsChannel: SettingsChannel | null = null;
   private platformViewsController: PlatformViewsController;
 
   /**
@@ -79,7 +79,7 @@ export default class FlutterEngine implements EngineLifecycleListener{
    * 5、初始化flutterNapi
    * 6、engineLifecycleListeners
    */
-  constructor(context: common.Context, flutterLoader: FlutterLoader, flutterNapi: FlutterNapi, platformViewsController: PlatformViewsController) {
+  constructor(context: common.Context, flutterLoader: FlutterLoader | null, flutterNapi: FlutterNapi | null, platformViewsController: PlatformViewsController) {
     const injector: FlutterInjector = FlutterInjector.getInstance();
 
     if(flutterNapi == null){
@@ -103,8 +103,8 @@ export default class FlutterEngine implements EngineLifecycleListener{
     this.platformViewsController.attach(context, null, this.dartExecutor);
   }
 
-  async init(context: common.Context, dartVmArgs: Array<string>, automaticallyRegisterPlugins: boolean,
-             waitForRestorationData: boolean, group: FlutterEngineGroup) {
+  async init(context: common.Context, dartVmArgs: Array<string> | null, automaticallyRegisterPlugins: boolean,
+             waitForRestorationData: boolean, group: FlutterEngineGroup | null) {
     if (!this.flutterNapi.isAttached()) {
       await this.flutterLoader.startInitialization(context)
       this.flutterLoader.ensureInitializationComplete(dartVmArgs);
@@ -132,7 +132,7 @@ export default class FlutterEngine implements EngineLifecycleListener{
       this.attachToNapi();
     }
 
-    this.pluginRegistry = new FlutterEngineConnectionRegistry(context.getApplicationContext(), this, this.flutterLoader, group);
+    this.pluginRegistry = new FlutterEngineConnectionRegistry(context.getApplicationContext(), this, this.flutterLoader, group!);
     this.localizationPlugin.sendLocaleToFlutter();
   }
 
@@ -177,31 +177,31 @@ export default class FlutterEngine implements EngineLifecycleListener{
     return this.flutterNapi.isAttached();
   }
 
-  getLifecycleChannel(): LifecycleChannel {
+  getLifecycleChannel(): LifecycleChannel | null {
     return this.lifecycleChannel;
   }
 
-  getNavigationChannel(): NavigationChannel {
+  getNavigationChannel(): NavigationChannel | null {
     return this.navigationChannel;
   }
 
-  getTextInputChannel(): TextInputChannel {
+  getTextInputChannel(): TextInputChannel | null {
     return this.textInputChannel;
   }
 
-  getPlatformChannel(): PlatformChannel {
+  getPlatformChannel(): PlatformChannel | null {
     return this.platformChannel;
   }
 
-  getSystemChannel(): SystemChannel {
+  getSystemChannel(): SystemChannel | null {
     return this.systemChannel;
   }
 
-  getLocaleChannel(): LocalizationChannel {
+  getLocaleChannel(): LocalizationChannel | null {
     return this.localeChannel;
   }
 
-  getMouseCursorChannel(): MouseCursorChannel {
+  getMouseCursorChannel(): MouseCursorChannel | null {
     return this.mouseCursorChannel;
   }
 
@@ -213,11 +213,11 @@ export default class FlutterEngine implements EngineLifecycleListener{
     return this.dartExecutor
   }
 
-  getPlugins(): PluginRegistry {
+  getPlugins(): PluginRegistry | null {
     return this.pluginRegistry;
   }
 
-  getAbilityControlSurface(): AbilityControlSurface {
+  getAbilityControlSurface(): AbilityControlSurface | null {
     return this.pluginRegistry;
   }
 
@@ -245,19 +245,19 @@ export default class FlutterEngine implements EngineLifecycleListener{
     Log.d(TAG, "Destroying.");
     this.engineLifecycleListeners.forEach(listener => listener.onEngineWillDestroy())
     this.flutterNapi.removeEngineLifecycleListener(this);
-    this.pluginRegistry.detachFromAbility();
-    this.platformViewsController.onDetachedFromNapi();
+    this.pluginRegistry?.detachFromAbility();
+    this.platformViewsController?.onDetachedFromNapi();
   }
 
-  getRestorationChannel(): RestorationChannel{
+  getRestorationChannel(): RestorationChannel | null {
     return this.restorationChannel;
   }
 
-  getAccessibilityChannel(): AccessibilityChannel {
+  getAccessibilityChannel(): AccessibilityChannel | null {
     return this.accessibilityChannel;
   }
 
-  getLocalizationPlugin(): LocalizationPlugin {
+  getLocalizationPlugin(): LocalizationPlugin | null {
     return this.localizationPlugin;
   }
 
@@ -265,7 +265,7 @@ export default class FlutterEngine implements EngineLifecycleListener{
     return this.flutterNapi.getSystemLanguages();
   }
 
-  getPlatformViewsController(): PlatformViewsController {
+  getPlatformViewsController(): PlatformViewsController | null {
     return this.platformViewsController;
   }
 }
