@@ -41,7 +41,7 @@ export default class MouseCursorChannel implements MethodCallHandler {
       // More methods are expected to be added here, hence the switch.
       switch (method) {
         case "activateSystemCursor":
-          let argument: HashMap<string, any> = call.args;
+          let argument: HashMap<string, string> = call.args;
           let kind: string = argument.get("kind");
           try {
             this.mouseCursorMethodHandler.activateSystemCursor(kind);

@@ -23,5 +23,5 @@ export default interface ActivityControlSurface {
   detachFromAbility(): void;
   onNewWant(want: Want, launchParams: AbilityConstant.LaunchParam): void;
   onWindowFocusChanged(hasFocus: boolean): void;
-  onSaveState(reason: AbilityConstant.StateType, wantParam: { [key: string]: Object; }): AbilityConstant.OnSaveResult;
+  onSaveState(reason: AbilityConstant.StateType, wantParam: Record<string, Object>): AbilityConstant.OnSaveResult;
 }

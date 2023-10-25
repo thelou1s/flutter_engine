@@ -44,7 +44,7 @@ export default class FlutterApplicationInfo {
     this.domainNetworkPolicy = domainNetworkPolicy == null ? "" : domainNetworkPolicy;
     this.nativeLibraryDir = nativeLibraryDir;
     this.automaticallyRegisterPlugins = automaticallyRegisterPlugins;
-    this.isDebugMode = true;
+    this.isDebugMode = false;
     this.isProfile = false;
   }
 }

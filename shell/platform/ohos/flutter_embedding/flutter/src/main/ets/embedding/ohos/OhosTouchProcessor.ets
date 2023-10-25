@@ -22,7 +22,7 @@ export default class OhosTouchProcessor {
 
   private static POINTER_DATA_FLAG_BATCHED: number = 1;
 
-  public onTouchEvent(event: TouchEvent, transformMatrix: any): void {
+  public onTouchEvent(event: TouchEvent, transformMatrix: ESObject): void {
 
   }
 }

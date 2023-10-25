@@ -18,10 +18,10 @@ import PlatformView from './PlatformView'
 import common from '@ohos.app.ability.common';
 
 export default abstract class PlatformViewFactory {
-  private createArgsCodec: MessageCodec<Object>;
+  private createArgsCodec: MessageCodec<ESObject>;
 
   /** @param createArgsCodec the codec used to decode the args parameter of {@link #create}. */
-  constructor(createArgsCodec: MessageCodec<Object>) {
+  constructor(createArgsCodec: MessageCodec<ESObject>) {
     this.createArgsCodec = createArgsCodec;
   }
 
@@ -35,10 +35,10 @@ export default abstract class PlatformViewFactory {
    *     createArgsCodec argument passed to the constructor. This is null if createArgsCodec was
    *     null, or no arguments were sent from the Flutter app.
    */
-  public abstract create(context: common.Context, viewId: number, args: any): PlatformView;
+  public abstract create(context: common.Context, viewId: number, args: ESObject): PlatformView;
 
   /** Returns the codec to be used for decoding the args parameter of {@link #create}. */
-  getCreateArgsCodec(): MessageCodec<Object> {
+  getCreateArgsCodec(): MessageCodec<ESObject> {
     return this.createArgsCodec;
   }
 }

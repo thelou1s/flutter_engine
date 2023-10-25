@@ -26,14 +26,12 @@ export default class SystemChannel {
   public channel: BasicMessageChannel<object>;
 
   constructor(dartExecutor: DartExecutor) {
-    this.channel = new BasicMessageChannel(dartExecutor, "flutter/system", JSONMessageCodec.INSTANCE);
+    this.channel = new BasicMessageChannel<ESObject>(dartExecutor, "flutter/system", JSONMessageCodec.INSTANCE);
   }
 
   public sendMemoryPressureWarning(): void {
     Log.i(TAG, "Sending memory pressure warning to Flutter");
-    let message: any = {
-      "type":"memoryPressure"
-    };
+    let message : Map<string,string> = new Map().set("type", "memoryPressure");
     this.channel.send(message);
   }
 }

@@ -26,10 +26,10 @@ export default class FlutterInjector {
   private flutterNapi: FlutterNapi;
 
   static getInstance(): FlutterInjector {
-    if (this.instance == null) {
-      this.instance = new FlutterInjector();
+    if (FlutterInjector.instance == null) {
+      FlutterInjector.instance = new FlutterInjector();
     }
-    return this.instance;
+    return FlutterInjector.instance;
   }
   /**
    * 初始化

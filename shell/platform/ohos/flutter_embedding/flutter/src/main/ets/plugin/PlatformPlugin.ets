@@ -34,126 +34,159 @@ import common from '@ohos.app.ability.common';
  */
 export default class PlatformPlugin {
   private static TAG = "PlatformPlugin";
-  private platformChannel: PlatformChannel;
-  private platformPluginDelegate: PlatformPluginDelegate;
-  private context: common.Context;
-  private windowClass: window.Window = null;
-  private currentTheme: SystemChromeStyle = null;
-  private showBarOrNavigation: ('status' | 'navigation')[] = ['status','navigation'];
-  private uiAbilityContext:common.UIAbilityContext = null;
-  private callbackId :number = null;
-  private applicationContext: common.ApplicationContext = null;
+  private callback = new PlatformPluginCallback();
 
   constructor(platformChannel: PlatformChannel, context: common.Context, platformPluginDelegate?: PlatformPluginDelegate) {
-    this.platformChannel = platformChannel;
-    this.context = context;
-    this.applicationContext = this.context.getApplicationContext();
+    this.callback.platformChannel = platformChannel;
+    this.callback.context = context;
+    this.callback.applicationContext = context.getApplicationContext();
+    this.callback.platform = this;
 
     try {
-      window.getLastWindow(this.context, (err,data) => {
-        if(err.code) {
+      window.getLastWindow(context, (err, data) => {
+        if (err.code) {
           Log.e(PlatformPlugin.TAG, "Failed to obtain the top window. Cause: " + JSON.stringify(err));
           return;
         }
-        this.windowClass = data;
+        this.callback.windowClass = data;
       });
     } catch (err) {
-      Log.e(PlatformPlugin.TAG,"Failed to obtain the top window. Cause: " + JSON.stringify(err));
+      Log.e(PlatformPlugin.TAG, "Failed to obtain the top window. Cause: " + JSON.stringify(err));
     }
-    this.platformPluginDelegate = platformPluginDelegate;
+    this.callback.platformPluginDelegate = platformPluginDelegate;
+    this.callback.platformChannel.setPlatformMessageHandler(this.callback);
+  }
 
-    this.platformChannel.setPlatformMessageHandler({
-      playSystemSound:(soundType: SoundType): void => {
 
-      },
+  updateSystemUiOverlays(): void {
+    this.callback.windowClass.setWindowSystemBarEnable(this.callback.showBarOrNavigation);
+    if (this.callback.currentTheme != null) {
+      this.callback.setSystemChromeSystemUIOverlayStyle(this.callback.currentTheme);
+    }
+  }
 
-      vibrateHapticFeedback: (feedbackType: HapticFeedbackType): void => {
-        switch (feedbackType) {
-          case HapticFeedbackType.STANDARD:
-            vibrator.startVibration({type:'time',duration:100},
-              {id:0, usage:'touch'});
-            break;
-          case HapticFeedbackType.LIGHT_IMPACT:
-            vibrator.startVibration({type:'time',duration:100},
-              {id:0, usage:'notification'}).then();
-            break;
-          case HapticFeedbackType.MEDIUM_IMPACT:
-            vibrator.startVibration({type:'time',duration:100},
-              {id:0, usage:'ring'});
-            break;
-          case HapticFeedbackType.HEAVY_IMPACT:
-            vibrator.startVibration({type:'time',duration:100},
-              {id:0, usage:'alarm'});
-            break;
-          case HapticFeedbackType.SELECTION_CLICK:
-            vibrator.startVibration({type:'time',duration:100},
-              {id:0, usage:'physicalFeedback'});
-            break;
+  setUIAbilityContext(context: common.UIAbilityContext): void {
+    this.callback.uiAbilityContext = context;
+  }
+
+  setSystemChromeChangeListener(): void {
+    if (this.callback.callbackId == null && this.callback.applicationContext != null) {
+      let that = this;
+      this.callback.callbackId = this.callback.applicationContext.on('environment', {
+        onConfigurationUpdated(config) {
+          Log.d(PlatformPlugin.TAG, "onConfigurationUpdated: " + that.callback.showBarOrNavigation);
+          that.callback.platformChannel.systemChromeChanged(that.callback.showBarOrNavigation.includes('status'));
+        },
+        onMemoryLevel(level) {
         }
-      },
+      })
+    }
+  }
+}
 
-      setPreferredOrientations:(ohosOrientation: number): void => {
-        Log.d(PlatformPlugin.TAG,"ohosOrientation: " + ohosOrientation);
-        this.windowClass.setPreferredOrientation(ohosOrientation);
-      },
+export interface PlatformPluginDelegate {
+  popSystemNavigator(): boolean;
+}
 
-      setApplicationSwitcherDescription:(description: AppSwitcherDescription): void => {
-        //   representation described in the given {@code description}.
-      },
+class PlatformPluginCallback implements PlatformMessageHandler {
+  private static TAG = "PlatformPluginCallback";
+  platform: PlatformPlugin;
+  windowClass: window.Window = null;
+  platformChannel: PlatformChannel;
+  platformPluginDelegate: PlatformPluginDelegate;
+  context: common.Context;
+  showBarOrNavigation: ('status' | 'navigation')[] = ['status', 'navigation'];
+  uiAbilityContext: common.UIAbilityContext = null;
+  callbackId: number = null;
+  applicationContext: common.ApplicationContext = null;
+  currentTheme: SystemChromeStyle = null;
 
-      showSystemOverlays:(overlays: SystemUiOverlay[]): void => {
-        this.setSystemChromeEnabledSystemUIOverlays(overlays);
-      },
-
-      showSystemUiMode:(mode: SystemUiMode): void => {
-        this.setSystemChromeEnabledSystemUIMode(mode);
-      },
-
-      setSystemUiChangeListener:(): void => {
-        this.setSystemChromeChangeListener();
-      },
-
-      restoreSystemUiOverlays:(): void => {
-        this.updateSystemUiOverlays();
-      },
-
-      setSystemUiOverlayStyle:(systemUiOverlayStyle: SystemChromeStyle): void => {
-        Log.d(PlatformPlugin.TAG, "systemUiOverlayStyle:" + JSON.stringify(systemUiOverlayStyle));
-        this.setSystemChromeSystemUIOverlayStyle(systemUiOverlayStyle);
-      },
-
-      popSystemNavigator:(): void => {
-        this.popSystemNavigator();
-      },
-
-      getClipboardData:(format: ClipboardContentFormat): string => {
-        return this.getClipboardData(format);
-      },
-
-      setClipboardData:(text: string): void => {
-        this.setClipboardData(text);
-      },
-
-      clipboardHasStrings:(): boolean => {
-        return;
-      }
-    });
+  playSystemSound(soundType: SoundType) {
   }
 
-  private getClipboardData(format: ClipboardContentFormat): string {
-    return;
+  vibrateHapticFeedback(feedbackType: HapticFeedbackType) {
+    switch (feedbackType) {
+      case HapticFeedbackType.STANDARD:
+        vibrator.startVibration({ type: 'time', duration: 100 },
+          { id: 0, usage: 'touch' });
+        break;
+      case HapticFeedbackType.LIGHT_IMPACT:
+        vibrator.startVibration({ type: 'time', duration: 100 },
+          { id: 0, usage: 'notification' }).then();
+        break;
+      case HapticFeedbackType.MEDIUM_IMPACT:
+        vibrator.startVibration({ type: 'time', duration: 100 },
+          { id: 0, usage: 'ring' });
+        break;
+      case HapticFeedbackType.HEAVY_IMPACT:
+        vibrator.startVibration({ type: 'time', duration: 100 },
+          { id: 0, usage: 'alarm' });
+        break;
+      case HapticFeedbackType.SELECTION_CLICK:
+        vibrator.startVibration({ type: 'time', duration: 100 },
+          { id: 0, usage: 'physicalFeedback' });
+        break;
+    }
   }
 
-   private setClipboardData(text: string): void {
-    let pasteData = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN,text);
+  setPreferredOrientations(ohosOrientation: number) {
+    Log.d(PlatformPluginCallback.TAG, "ohosOrientation: " + ohosOrientation);
+    this.windowClass.setPreferredOrientation(ohosOrientation);
+  }
+
+  setApplicationSwitcherDescription(description: AppSwitcherDescription) {
+    //   representation described in the given {@code description}.
+  }
+
+  showSystemOverlays(overlays: SystemUiOverlay[]) {
+    this.setSystemChromeEnabledSystemUIOverlays(overlays);
+  }
+
+  showSystemUiMode(mode: SystemUiMode) {
+    this.setSystemChromeEnabledSystemUIMode(mode);
+  }
+
+  setSystemUiChangeListener() {
+    this.platform.setSystemChromeChangeListener();
+  }
+
+  restoreSystemUiOverlays() {
+    this.platform.updateSystemUiOverlays();
+  }
+
+  setSystemUiOverlayStyle(systemUiOverlayStyle: SystemChromeStyle) {
+    Log.d(PlatformPluginCallback.TAG, "systemUiOverlayStyle:" + JSON.stringify(systemUiOverlayStyle));
+    this.setSystemChromeSystemUIOverlayStyle(systemUiOverlayStyle);
+  }
+
+  popSystemNavigator() {
+    if (this.platformPluginDelegate != null && this.platformPluginDelegate.popSystemNavigator()) {
+      return;
+    }
+    if (this.uiAbilityContext != null) {
+      this.uiAbilityContext.terminateSelf();
+    }
+  }
+
+  getClipboardData(format: ClipboardContentFormat): string {
+    // todo
+    return "";
+  }
+
+  setClipboardData(text: string) {
+    let pasteData = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, text);
     let clipboard = pasteboard.getSystemPasteboard();
     clipboard.setData(pasteData);
   }
 
-  private setSystemChromeEnabledSystemUIMode(mode: SystemUiMode): void {
-    Log.d(PlatformPlugin.TAG,"mode: " + mode);
+  clipboardHasStrings(): boolean {
+    return false;
+  }
+
+  setSystemChromeEnabledSystemUIMode(mode: SystemUiMode): void {
+    Log.d(PlatformPluginCallback.TAG, "mode: " + mode);
     let uiConfig: ('status' | 'navigation')[] = [];
-    if(mode == SystemUiMode.LEAN_BACK) {
+    if (mode == SystemUiMode.LEAN_BACK) {
       //全屏显示，通过点击显示器上的任何位置都可以显示状态和导航栏
       this.windowClass.setWindowLayoutFullScreen(false);
 
@@ -165,47 +198,26 @@ export default class PlatformPlugin {
       //全屏显示，通过在显示器边缘的滑动手势可以显示状态和导航栏,此手势由应用程序接收
       this.windowClass.setWindowLayoutFullScreen(true);
 
-    }else if (mode == SystemUiMode.EDGE_TO_EDGE) {
+    } else if (mode == SystemUiMode.EDGE_TO_EDGE) {
       //全屏显示，在应用程序上呈现状态和导航元素
       this.windowClass.setWindowLayoutFullScreen(false);
-      uiConfig = ['status','navigation'];
+      uiConfig = ['status', 'navigation'];
 
     } else {
       return;
     }
     this.showBarOrNavigation = uiConfig;
-    this.updateSystemUiOverlays();
+    this.platform.updateSystemUiOverlays();
   }
 
-  private setSystemChromeEnabledSystemUIOverlays(overlays: SystemUiOverlay[]): void {
-    let uiConfig:('status' | 'navigation')[] = [];
-    if(overlays.length == 0) {
-
-    }
-    for(let index = 0; index < overlays.length; ++index) {
-      let overlayToShow = overlays[index];
-      switch (overlayToShow) {
-        case SystemUiOverlay.TOP_OVERLAYS:
-          uiConfig.push('status');//hide navigation
-          break;
-        case SystemUiOverlay.BOTTOM_OVERLAYS:
-          uiConfig.push('navigation');//hide bar
-          break;
-      }
-    }
-    this.showBarOrNavigation = uiConfig;
-    this.updateSystemUiOverlays();
-
-  }
-
-  private setSystemChromeSystemUIOverlayStyle(systemChromeStyle: SystemChromeStyle): void {
+  setSystemChromeSystemUIOverlayStyle(systemChromeStyle: SystemChromeStyle): void {
     let isStatusBarLightIconValue: boolean = false;
-    let statusBarColorValue:string = null;
+    let statusBarColorValue: string = null;
     let statusBarContentColorValue: string = null;
     let navigationBarColorValue: string = null;
     let isNavigationBarLightIconValue: boolean = false;
     let navigationBarContentColorValue: string = null;
-    if(systemChromeStyle.statusBarIconBrightness != null) {
+    if (systemChromeStyle.statusBarIconBrightness != null) {
       switch (systemChromeStyle.statusBarIconBrightness) {
         case Brightness.DARK:
           isStatusBarLightIconValue = false;
@@ -216,15 +228,15 @@ export default class PlatformPlugin {
       }
     }
 
-    if(systemChromeStyle.statusBarColor != null) {
+    if (systemChromeStyle.statusBarColor != null) {
       statusBarColorValue = "#" + systemChromeStyle.statusBarColor.toString(16);
     }
 
-    if(systemChromeStyle.systemStatusBarContrastEnforced != null) {
+    if (systemChromeStyle.systemStatusBarContrastEnforced != null) {
 
     }
 
-    if(systemChromeStyle.systemNavigationBarIconBrightness != null) {
+    if (systemChromeStyle.systemNavigationBarIconBrightness != null) {
       switch (systemChromeStyle.systemNavigationBarIconBrightness) {
         case Brightness.DARK:
           isNavigationBarLightIconValue = true;
@@ -234,62 +246,56 @@ export default class PlatformPlugin {
       }
     }
 
-    if(systemChromeStyle.systemNavigationBarColor != null) {
+    if (systemChromeStyle.systemNavigationBarColor != null) {
       navigationBarColorValue = "#" + systemChromeStyle.systemNavigationBarColor.toString(16);
     }
 
-    if(systemChromeStyle.systemNavigationBarContrastEnforced != null) {
+    if (systemChromeStyle.systemNavigationBarContrastEnforced != null) {
 
     }
     this.currentTheme = systemChromeStyle;
-    let systemBarProperties = {
-      statusBarColor: statusBarColorValue,
-      isStatusBarLightIcon: isStatusBarLightIconValue,
-      statusBarContentColor: statusBarContentColorValue,
-      navigationBarColor: navigationBarColorValue,
-      isNavigationBarLightIcon: isNavigationBarLightIconValue,
-      navigationBarContentColor: navigationBarContentColorValue,
-    }
-    Log.d(PlatformPlugin.TAG, "systemBarProperties: "+JSON.stringify(systemBarProperties));
+    let systemBarProperties = new SystemBarProperties();
+    systemBarProperties.statusBarColor = statusBarColorValue;
+    systemBarProperties.isStatusBarLightIcon = isStatusBarLightIconValue;
+    systemBarProperties.statusBarContentColor = statusBarContentColorValue;
+    systemBarProperties.navigationBarColor = navigationBarColorValue;
+    systemBarProperties.isNavigationBarLightIcon = isNavigationBarLightIconValue;
+    systemBarProperties.navigationBarContentColor = navigationBarContentColorValue;
+    Log.d(PlatformPluginCallback.TAG, "systemBarProperties: " + JSON.stringify(systemBarProperties));
     this.windowClass.setWindowSystemBarProperties(systemBarProperties);
   }
 
-  private popSystemNavigator(): void {
-    if(this.platformPluginDelegate != null && this.platformPluginDelegate.popSystemNavigator()) {
-      return;
-    }
-    if(this.uiAbilityContext != null) {
-      this.uiAbilityContext.terminateSelf();
-    }
-  }
+  setSystemChromeEnabledSystemUIOverlays(overlays: SystemUiOverlay[]): void {
+    let uiConfig: ('status' | 'navigation')[] = [];
+    if (overlays.length == 0) {
 
-  updateSystemUiOverlays(): void {
-    this.windowClass.setWindowSystemBarEnable(this.showBarOrNavigation);
-    if(this.currentTheme != null) {
-      this.setSystemChromeSystemUIOverlayStyle(this.currentTheme);
     }
-  }
-
-  setUIAbilityContext(context: common.UIAbilityContext): void {
-    this.uiAbilityContext = context;
-  }
-
-  setSystemChromeChangeListener(): void {
-    if(this.callbackId == null && this.applicationContext != null) {
-      let that = this;
-      this.callbackId = this.applicationContext.on('environment',{
-        onConfigurationUpdated(config) {
-          Log.d(PlatformPlugin.TAG, "onConfigurationUpdated: " + that.showBarOrNavigation);
-          that.platformChannel.systemChromeChanged(that.showBarOrNavigation.includes('status'));
-        },
-        onMemoryLevel(level) {
-        }
-      })
+    for (let index = 0; index < overlays.length; ++index) {
+      let overlayToShow = overlays[index];
+      switch (overlayToShow) {
+        case SystemUiOverlay.TOP_OVERLAYS:
+          uiConfig.push('status'); //hide navigation
+          break;
+        case SystemUiOverlay.BOTTOM_OVERLAYS:
+          uiConfig.push('navigation'); //hide bar
+          break;
+      }
     }
+    this.showBarOrNavigation = uiConfig;
+    this.platform.updateSystemUiOverlays();
   }
-
 }
 
-export interface PlatformPluginDelegate {
-  popSystemNavigator(): boolean;
+class SystemBarProperties {
+  statusBarColor?: string;
+
+  isStatusBarLightIcon?: boolean;
+
+  statusBarContentColor?: string;
+
+  navigationBarColor?: string;
+
+  isNavigationBarLightIcon?: boolean;
+
+  navigationBarContentColor?: string;
 }

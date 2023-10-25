@@ -21,10 +21,11 @@ import Log from '../../../util/Log';
 import DartExecutor from '../dart/DartExecutor';
 
 const TAG = "PlatformViewsChannel";
-
+const NON_TEXTURE_FALLBACK = -2;
 export default class PlatformViewsChannel {
   private channel: MethodChannel;
   private handler: PlatformViewsHandler;
+  private parsingHandler = new ParsingCallback();
 
   /**
    * Constructs a {@code PlatformViewsChannel} that connects Android to the Dart code running in
@@ -36,6 +37,7 @@ export default class PlatformViewsChannel {
    */
   constructor(dartExecutor: DartExecutor) {
     this.channel = new MethodChannel(dartExecutor, "flutter/platform_views", StandardMethodCodec.INSTANCE);
+    this.parsingHandler.platformChannel = this;
     this.channel.setMethodCallHandler(this.parsingHandler);
   }
 
@@ -45,6 +47,7 @@ export default class PlatformViewsChannel {
    */
   public setPlatformViewsHandler(handler: PlatformViewsHandler): void {
     this.handler = handler;
+    this.parsingHandler.handler = handler;
   }
 
   public invokeViewFocused(viewId: number): void {
@@ -54,54 +57,8 @@ export default class PlatformViewsChannel {
     this.channel.invokeMethod("viewFocused", viewId);
   }
 
-  private parsingHandler: MethodCallHandler = {
-    onMethodCall: (call: MethodCall, result: MethodResult): void => {
-      if (this.handler == null) {
-        return;
-      }
-
-      Log.i(TAG, "Received '" + call.method + "' message.");
-      switch (call.method) {
-        case "create": {
-          this.create(call, result);
-          break;
-        }
-        case "dispose": {
-          this.dispose(call, result);
-          break;
-        }
-        case "resize": {
-          this.resize(call, result);
-          break;
-        }
-        case "offset": {
-          this.offset(call, result);
-          break;
-        }
-        case "touch": {
-          this.touch(call, result);
-          break;
-        }
-        case "setDirection": {
-          this.setDirection(call, result);
-          break;
-        }
-        case "clearFocus": {
-          this.clearFocus(call, result);
-          break;
-        }
-        case "synchronizeToNativeViewHierarchy": {
-          this.synchronizeToNativeViewHierarchy(call, result);
-          break;
-        }
-        default:
-          result.notImplemented();
-      }
-    }
-  }
-
   create(call: MethodCall, result: MethodResult): void {
-    const createArgs: Map<string, any> = call.args;
+    const createArgs: Map<string, ESObject> = call.args;
     const usesPlatformViewLayer: boolean = createArgs.has("hybrid") && createArgs.get("hybrid") as boolean;
     const additionalParams: ByteBuffer = createArgs.has("params") ? createArgs.get("params") : null;
 
@@ -153,7 +110,7 @@ export default class PlatformViewsChannel {
           d:${request.direction}`);
 
         const textureId = this.handler.createForTextureLayer(request);
-        if (textureId == PlatformViewsHandler.NON_TEXTURE_FALLBACK) {
+        if (textureId == NON_TEXTURE_FALLBACK) {
           if (!hybridFallback) {
             throw new Error(
               "Platform view attempted to fall back to hybrid mode when not requested.");
@@ -172,7 +129,7 @@ export default class PlatformViewsChannel {
   }
 
   dispose(call: MethodCall, result: MethodResult): void {
-    const disposeArgs: Map<string, any> = call.args;
+    const disposeArgs: Map<string, ESObject> = call.args;
     const viewId: number = disposeArgs.get("id");
     try {
       this.handler.dispose(viewId);
@@ -184,25 +141,16 @@ export default class PlatformViewsChannel {
   }
 
   resize(call: MethodCall, result: MethodResult): void {
-    const resizeArgs: Map<string, any> = call.args;
+    const resizeArgs: Map<string, ESObject> = call.args;
     const resizeRequest: PlatformViewResizeRequest = new PlatformViewResizeRequest(
       resizeArgs.get("id"),
       resizeArgs.get("width"),
       resizeArgs.get("height")
     );
     try {
-      this.handler.resize(resizeRequest, {
-        run: (bufferSize: PlatformViewBufferSize) => {
-          if (bufferSize == null) {
-            result.error("error", "Failed to resize the platform view", null);
-          } else {
-            const response: Map<string, any> = new Map();
-            response.set("width", bufferSize.width);
-            response.set("height", bufferSize.height);
-            result.success(response);
-          }
-        }
-      })
+      let resizeCallback = new ResizeCallback();
+      resizeCallback.result = result;
+      this.handler.resize(resizeRequest, resizeCallback);
     } catch (err) {
       Log.e(TAG, "resize failed", err);
       result.error("error", err, null);
@@ -210,7 +158,7 @@ export default class PlatformViewsChannel {
   }
 
   offset(call: MethodCall, result: MethodResult): void {
-    const offsetArgs: Map<string, any> = call.args;
+    const offsetArgs: Map<string, ESObject> = call.args;
     try {
       this.handler.offset(
         offsetArgs.get("id"),
@@ -224,7 +172,7 @@ export default class PlatformViewsChannel {
   }
 
   touch(call: MethodCall, result: MethodResult): void {
-    const args: Array<any> = call.args;
+    const args: Array<ESObject> = call.args;
     let index = 0;
     const touch: PlatformViewTouch = new PlatformViewTouch(
       args[index++],
@@ -255,7 +203,7 @@ export default class PlatformViewsChannel {
   }
 
   setDirection(call: MethodCall, result: MethodResult): void {
-    const setDirectionArgs: Map<string, any> = call.args;
+    const setDirectionArgs: Map<string, ESObject> = call.args;
     const newDirectionViewId: number = setDirectionArgs.get("id");
     const direction: number = setDirectionArgs.get("direction");
 
@@ -298,7 +246,7 @@ export default class PlatformViewsChannel {
  * <p>To register a {@code PlatformViewsHandler} with a {@link PlatformViewsChannel}, see {@link
  * PlatformViewsChannel#setPlatformViewsHandler(PlatformViewsHandler)}.
  */
-export abstract class PlatformViewsHandler {
+export interface  PlatformViewsHandler {
   /*
   * The ID returned by {@code createForTextureLayer} to indicate that the requested texture mode
   * was not available and the view creation fell back to {@code PlatformViewLayer} mode.
@@ -306,7 +254,6 @@ export abstract class PlatformViewsHandler {
   * This can only be returned if the {@link PlatformViewCreationRequest} sets
   * {@code TEXTURE_WITH_HYBRID_FALLBACK} as the requested display mode.
   */
-  public static NON_TEXTURE_FALLBACK = -2;
 
   /**
    * The Flutter application would like to display a new Ohos {@code View}, i.e., platform
@@ -317,7 +264,7 @@ export abstract class PlatformViewsHandler {
    *
    * @param request The metadata sent from the framework.
    */
-  abstract createForPlatformViewLayer(request: PlatformViewCreationRequest): void;
+  createForPlatformViewLayer(request: PlatformViewCreationRequest): void;
 
   /**
    * The Flutter application would like to display a new Android {@code View}, i.e., platform
@@ -329,10 +276,10 @@ export abstract class PlatformViewsHandler {
    * @param request The metadata sent from the framework.
    * @return The texture ID.
    */
-  abstract createForTextureLayer(request: PlatformViewCreationRequest): number;
+  createForTextureLayer(request: PlatformViewCreationRequest): number;
 
   /** The Flutter application would like to dispose of an existing Android {@code View}. */
-  abstract dispose(viewId: number): void;
+  dispose(viewId: number): void;
 
   /**
    * The Flutter application would like to resize an existing Android {@code View}.
@@ -341,28 +288,28 @@ export abstract class PlatformViewsHandler {
    * @param onComplete Once the resize is completed, this is the handler to notify the size of the
    *     platform view buffer.
    */
-  abstract resize(request: PlatformViewResizeRequest, onComplete: PlatformViewBufferResized): void;
+  resize(request: PlatformViewResizeRequest, onComplete: PlatformViewBufferResized): void;
 
   /**
    * The Flutter application would like to change the offset of an existing Android {@code View}.
    */
-  abstract offset(viewId: number, top: number, left: number): void;
+  offset(viewId: number, top: number, left: number): void;
 
   /**
    * The user touched a platform view within Flutter.
    *
    * <p>Touch data is reported in {@code touch}.
    */
-  abstract onTouch(touch: PlatformViewTouch): void;
+  onTouch(touch: PlatformViewTouch): void;
 
   /**
    * The Flutter application would like to change the layout direction of an existing Android
    * {@code View}, i.e., platform view.
    */
-  abstract setDirection(viewId: number, direction: number): void;
+  setDirection(viewId: number, direction: number): void;
 
   /** Clears the focus from the platform view with a give id if it is currently focused. */
-  abstract clearFocus(viewId: number): void;
+  clearFocus(viewId: number): void;
 
   /**
    * Whether the render surface of {@code FlutterView} should be converted to a {@code
@@ -371,7 +318,7 @@ export abstract class PlatformViewsHandler {
    * <p>This is done to syncronize the rendering of the PlatformView and the FlutterView. Defaults
    * to true.
    */
-  abstract synchronizeToNativeViewHierarchy(yes: boolean): void;
+  synchronizeToNativeViewHierarchy(yes: boolean): void;
 }
 
 /** Platform view display modes that can be requested at creation time. */
@@ -480,10 +427,10 @@ export class PlatformViewTouch {
   public pointerCount: number;
 
   /** Properties for each pointer, encoded in a raw format. */
-  public rawPointerPropertiesList: any;
+  public rawPointerPropertiesList: ESObject;
 
   /** Coordinates for each pointer, encoded in a raw format. */
-  public rawPointerCoords: any;
+  public rawPointerCoords: ESObject;
 
   public metaState: number;
 
@@ -510,8 +457,8 @@ export class PlatformViewTouch {
               eventTime: number,
               action: number,
               pointerCount: number,
-              rawPointerPropertiesList: any,
-              rawPointerCoords: any,
+              rawPointerPropertiesList: ESObject,
+              rawPointerCoords: ESObject,
               metaState: number,
               buttonState: number,
               xPrecision: number,
@@ -537,5 +484,68 @@ export class PlatformViewTouch {
     this.source = source;
     this.flags = flags;
     this.motionEventId = motionEventId;
+  }
+}
+
+class ParsingCallback implements MethodCallHandler {
+  platformChannel : PlatformViewsChannel;
+  handler: PlatformViewsHandler;
+
+  onMethodCall(call: MethodCall, result: MethodResult) {
+    if (this.handler == null) {
+      return;
+    }
+
+    Log.i(TAG, "Received '" + call.method + "' message.");
+    switch (call.method) {
+      case "create": {
+        this.platformChannel.create(call, result);
+        break;
+      }
+      case "dispose": {
+        this.platformChannel.dispose(call, result);
+        break;
+      }
+      case "resize": {
+        this.platformChannel.resize(call, result);
+        break;
+      }
+      case "offset": {
+        this.platformChannel.offset(call, result);
+        break;
+      }
+      case "touch": {
+        this.platformChannel.touch(call, result);
+        break;
+      }
+      case "setDirection": {
+        this.platformChannel.setDirection(call, result);
+        break;
+      }
+      case "clearFocus": {
+        this.platformChannel.clearFocus(call, result);
+        break;
+      }
+      case "synchronizeToNativeViewHierarchy": {
+        this.platformChannel.synchronizeToNativeViewHierarchy(call, result);
+        break;
+      }
+      default:
+        result.notImplemented();
+    }
+  }
+}
+
+class ResizeCallback extends PlatformViewBufferResized {
+  result : MethodResult;
+  run(bufferSize: PlatformViewBufferSize) {
+    if (bufferSize == null) {
+      this.result.error("error", "Failed to resize the platform view", null);
+    } else {
+      const response: Map<string, ESObject> = new Map();
+      response.set("width", bufferSize.width);
+      response.set("height", bufferSize.height);
+      this.result.success(response);
+    }
   }
 }

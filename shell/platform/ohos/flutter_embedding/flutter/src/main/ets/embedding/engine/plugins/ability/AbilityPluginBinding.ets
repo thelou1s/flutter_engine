@@ -72,7 +72,7 @@ export interface NewWantListener {
  * ohos.app.ability.UIAbility}.
  */
 export interface WindowFocusChangedListener {
-  onWindowFocusChanged(hasFocus): void;
+  onWindowFocusChanged(hasFocus: boolean): void;
 }
 
 export interface OnSaveStateListener {
@@ -80,5 +80,5 @@ export interface OnSaveStateListener {
    * Invoked when the associated {@code UIAbility} or {@code Fragment} executes {@link
    * Activity#onSaveState(Bundle)}.
    */
-  onSaveState(reason: AbilityConstant.StateType, wantParam: { [key: string]: Object; }): AbilityConstant.OnSaveResult;
+  onSaveState(reason: AbilityConstant.StateType, wantParam: Record<string, Object>): AbilityConstant.OnSaveResult;
 }

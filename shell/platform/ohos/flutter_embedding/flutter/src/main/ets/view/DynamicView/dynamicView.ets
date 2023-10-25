@@ -12,6 +12,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import matrix4 from '@ohos.matrix4';
+import Log from '../../util/Log';
 
 /**
  * Dynamic View creation
@@ -67,9 +69,9 @@ export class DVModel {
   params: DVModelParameters;
   events: DVModelEvents;
   children: DVModelChildren;
-  builder: any;
+  builder: ESObject;
 
-  constructor(compType: string, params: DVModelParameters, events: DVModelEvents, children: DVModelChildren, builder?: any) {
+  constructor(compType: string, params: DVModelParameters, events: DVModelEvents, children: DVModelChildren, builder?: ESObject) {
     this.id_ = nextId++;
     this.compType = compType;
     this.params = params ?? new DVModelParameters;
@@ -127,52 +129,61 @@ export struct DynamicView {
   @ObjectLink children: DVModelChildren;
   @ObjectLink params: DVModelParameters;
   @ObjectLink events: DVModelEvents;
-  @BuilderParam customBuilder?: ($$: { params: DVModelParameters }) => void;
+  @BuilderParam customBuilder?: ($$: BuilderParams) => void;
 
 
+  getParams: (params: DVModelParameters, element: string) => string | ESObject = (params: DVModelParameters, element: string): string | ESObject => {
+    let params2 = params as Record<string, ESObject>;
+    return params2[element];
+  }
+
+  getEvents: (events: DVModelEvents, element: string) => ESObject = (events: DVModelEvents, element: string): ESObject => {
+    let events2 = events as Record<string, ESObject>;
+    return events2[element];
+  }
   /*
     we use this @Styles member function to set all common attributes and event handlers
     and set component specific attribute and event handler functions in the @Builder function
   */
   @Styles common_attrs() {
-    .width(this.params["width"])
-    .height(this.params["height"])
-    .backgroundColor(this.params["backgroundColor"])
-    .onClick(this.events["onClick"])
+    .width(this.getParams(this.params, "width"))
+    .height(this.getParams(this.params, "height"))
+    .backgroundColor(this.getParams(this.params, "backgroundColor"))
+    .onClick(this.getEvents(this.events, "onClick"))
     .margin({
-      left: this.params["marginLeft"],
-      right: this.params["marginRight"],
-      top: this.params["marginTop"],
-      bottom: this.params["marginBottom"]
+      left: this.getParams(this.params, "marginLeft"),
+      right: this.getParams(this.params, "marginRight"),
+      top: this.getParams(this.params, "marginTop"),
+      bottom: this.getParams(this.params, "marginBottom")
     })
-    .onTouch(this.events["onTouch"])
-    .onFocus(this.events['onFocus'])
-    .onBlur(this.events["onBlur"])
+    .onTouch(this.getEvents(this.events, "onTouch"))
+    .onFocus(this.getEvents(this.events, "onFocus"))
+    .onBlur(this.getEvents(this.events, "onBlur"))
     .translate({
-      x: this.params["translateX"],
-      y: this.params["translateY"],
-      z: this.params["translateZ"]
+      x: this.getParams(this.params, "translateX"),
+      y: this.getParams(this.params, "translateY"),
+      z: this.getParams(this.params, "translateZ")
     })
-    .transform(this.params["matrix"])
-    .direction(this.params["direction"])
+    .transform(this.getParams(this.params, "matrix"))
+    .direction(this.getParams(this.params, "direction"))
   }
 
   @Styles clip_attrs() {
-    .clip(this.params["rectWidth"] ? new Rect({
-      width: this.params["rectWidth"],
-      height: this.params["rectHeight"],
-      radius: this.params["rectRadius"]
+    .clip(this.getParams(this.params, "rectWidth") ? new Rect({
+      width: this.getParams(this.params, "rectWidth"),
+      height: this.getParams(this.params, "rectHeight"),
+      radius: this.getParams(this.params, "rectRadius")
     }) : null)
-    .clip(this.params["pathWidth"] ? new Path({
-      width: this.params["pathWidth"],
-      height: this.params["pathHeight"],
-      commands: this.params["pathCommands"]
+    .clip(this.getParams(this.params, "pathWidth") ? new Path({
+      width: this.getParams(this.params, "pathWidth"),
+      height: this.getParams(this.params, "pathHeight"),
+      commands: this.getParams(this.params, "pathCommands")
     }) : null)
   }
 
   @Builder buildChildren() {
     ForEach(this.children,
-      child => {
+      (child: ESObject) => {
         DynamicView({
           model: child as DVModel,
           params: child.params,
@@ -181,7 +192,7 @@ export struct DynamicView {
           customBuilder: child.builder
         })
       },
-      child => `${child.id_}`
+      (child: ESObject) => `${child.id_}`
     )
   }
 
@@ -207,29 +218,29 @@ export struct DynamicView {
     }
     .common_attrs()
     .clip_attrs()
-    .alignContent(this.params["alignContent"])
+    .alignContent(this.getParams(this.params, "alignContent"))
   }
 
   @Builder buildText() {
-    Text(`${this.params["value"]}`)
+    Text(`${this.getParams(this.params, "value")}`)
       .common_attrs()
-      .fontColor(this.params["fontColor"])
+      .fontColor(this.getParams(this.params, "fontColor"))
   }
 
   @Builder buildImage() {
-    Image(this.params["src"])
+    Image(this.getParams(this.params, "src"))
       .common_attrs()
   }
 
   // Button with label
   @Builder buildButton() {
-    Button(this.params["value"])
+    Button(this.getParams(this.params, "value"))
       .common_attrs()
   }
 
   @Builder buildCustom() {
     if (this.customBuilder) {
-      this.customBuilder({ params: this.params });
+      this.customBuilder(new BuilderParams(this.params));
     }
   }
 
@@ -249,5 +260,13 @@ export struct DynamicView {
     } else {
       this.buildCustom()
     }
+  }
+}
+
+export class BuilderParams {
+  params: DVModelParameters;
+
+  constructor(params: DVModelParameters) {
+    this.params = params;
   }
 }

@@ -101,7 +101,7 @@ export interface Reply<T> {
    *
    * @param reply the reply, possibly null.
    */
-  reply(reply: T): void;
+  reply: (reply: T) => void;
 }
 
 export interface MessageHandler<T> {

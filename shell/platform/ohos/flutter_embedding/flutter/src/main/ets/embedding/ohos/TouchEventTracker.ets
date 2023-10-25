@@ -12,7 +12,6 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
-
 /** Tracks the motion events received by the FlutterView. */
 import PlainArray from '@ohos.util.PlainArray';
 import { TouchEvent } from '@ohos.multimodalInput.touchEvent';
@@ -23,11 +22,11 @@ export class TouchEventTracker {
   private unusedEvents : Queue<number>;
   private static INSTANCE:TouchEventTracker;
 
-  public static getInstance() : TouchEventTracker {
-    if (this.INSTANCE == null) {
-      this.INSTANCE = new TouchEventTracker();
+  public static getInstance(): TouchEventTracker {
+    if (TouchEventTracker.INSTANCE == null) {
+      TouchEventTracker.INSTANCE = new TouchEventTracker();
     }
-    return this.INSTANCE;
+    return TouchEventTracker.INSTANCE;
   }
 
   constructor() {
@@ -79,7 +78,7 @@ export class TouchEventId {
   }
 
   public static createUnique() : TouchEventId {
-    return new TouchEventId(this.ID_COUNTER++);
+    return new TouchEventId(TouchEventId.ID_COUNTER++);
   }
 
   public getId() : number {

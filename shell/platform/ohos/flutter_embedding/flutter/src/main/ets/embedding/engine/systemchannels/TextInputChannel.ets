@@ -25,72 +25,14 @@ const TAG = "TextInputChannel";
 export default class TextInputChannel {
   private static CHANNEL_NAME = "flutter/textinput";
   public channel: MethodChannel;
-  private textInputMethodHandler: TextInputMethodHandler;
+  textInputMethodHandler: TextInputMethodHandler;
 
   constructor(dartExecutor: DartExecutor) {
     this.channel = new MethodChannel(dartExecutor, TextInputChannel.CHANNEL_NAME, JSONMethodCodec.INSTANCE);
-    this.channel.setMethodCallHandler({
-      onMethodCall: (call: MethodCall, result: MethodResult): void => {
-        if(this.textInputMethodHandler == null) {
-          return;
-        }
-        let method: string = call.method;
-        let args: any = call.args;
-        Log.d(TAG, "Received '" + method + "' message.");
-        switch (method) {
-          case "TextInput.show":
-            this.textInputMethodHandler.show();
-            Log.d(TAG, "textInputMethodHandler.show()");
-            result.success(null);
-            break;
-          case "TextInput.hide":
-            this.textInputMethodHandler.hide();
-            result.success(null);
-            break;
-          case "TextInput.setClient":
-            const textInputClientId: number = args[0] as number;
-            //TODO: parse configuration
-            const config: Configuration = null;
-            this.textInputMethodHandler.setClient(textInputClientId, config);
-            result.success(null);
-            break;
-          case "TextInput.requestAutofill":
-            //TODO: requestAutofill
-            result.notImplemented();
-            break;
-          case "TextInput.setPlatformViewClient":
-            //TODO:
-            result.notImplemented();
-            break;
-          case "TextInput.setEditingState":
-            this.textInputMethodHandler.setEditingState(TextEditState.fromJson(args));
-            result.success(null);
-            break;
-          case "TextInput.setEditableSizeAndTransform":
-            //TODO:
-            result.notImplemented();
-            break;
-          case "TextInput.clearClient":
-            this.textInputMethodHandler.clearClient();
-            result.success(null);
-            break;
-          case "TextInput.sendAppPrivateCommand":
-            //TODO:
-            result.notImplemented();
-            break;
-          case "TextInput.finishAutofillContext":
-            //TODO:
-            result.notImplemented();
-            break;
-          default:
-            result.notImplemented();
-            break;
-        }
-      }
-    });
+    let callback = new TextInputCallback();
+    callback.textInputMethodHandler = this.textInputMethodHandler;
+    this.channel.setMethodCallHandler(callback);
   }
-
-
 
   setTextInputMethodHandler(textInputMethodHandler: TextInputMethodHandler): void {
     this.textInputMethodHandler = textInputMethodHandler;
@@ -104,15 +46,13 @@ export default class TextInputChannel {
                          selectionStart: number,
                          selectionEnd: number,
                          composingStart: number,
-                         composingEnd: number): any {
-    let state = {
-      "text": text,
-      "selectionBase": selectionStart,
-      "selectionExtent": selectionEnd,
-      "composingBase": composingStart,
-      "composingExtent": composingEnd
-    }
-    return state;
+                         composingEnd: number): ESObject {
+    return new Map()
+      .set("text", text)
+      .set("selectionBase", selectionStart)
+      .set("selectionExtent", selectionEnd)
+      .set("composingBase", composingStart)
+      .set("composingExtent", composingEnd);
   }
 
   /**
@@ -127,7 +67,7 @@ export default class TextInputChannel {
     Log.d(TAG, "updateEditingState:"
       + "Text: " + text + " Selection start: " + selectionStart + " Selection end: "
       + selectionEnd + " Composing start: " + composingStart + " Composing end: " + composingEnd);
-    const state: any = this.createEditingStateJSON(text, selectionStart, selectionEnd, composingStart, composingEnd);
+    const state: ESObject = this.createEditingStateJSON(text, selectionStart, selectionEnd, composingStart, composingEnd);
     this.channel.invokeMethod('TextInputClient.updateEditingState', [inputClientId, state]);
     Log.d(TAG,"updateEditingState end");
 
@@ -178,7 +118,7 @@ export default class TextInputChannel {
     this.channel.invokeMethod("TextInputClient.performAction", [inputClientId, "TextInputAction.commitContent"]);
   }
 
-  performPrivateCommand(inputClientId: number, action: string, data: any) {
+  performPrivateCommand(inputClientId: number, action: string, data: ESObject) {
 
   }
 
@@ -231,9 +171,14 @@ export class Configuration {
               actionLabel: String, ) {
   }
   getTextCapitalizationFromValue(encodedName: string): TextCapitalization {
-    for (const key in TextCapitalization) {
+    let textKeys = [
+      TextCapitalization.CHARACTERS, TextCapitalization.WORDS,
+      TextCapitalization.SENTENCES, TextCapitalization.NONE
+    ];
+    for (let i = 0; i < textKeys.length; i++) {
+      let key = textKeys[i];
       if (TextCapitalization[key] === encodedName) {
-        return <TextCapitalization>key;
+        return key;
       }
     }
     throw new Error("No such TextCapitalization: " + encodedName);
@@ -272,15 +217,22 @@ export class InputType {
     this.isDecimal = isDecimal;
   }
 
-  static fromJson(json: any): InputType {
-    return new InputType(this.getTextInputTypeFromValue(json.name as string),
+  static fromJson(json: ESObject): InputType {
+    return new InputType(InputType.getTextInputTypeFromValue(json.name as string),
       json.signed as boolean, json.decimal as boolean)
   }
 
-  static getTextInputTypeFromValue(encodedName: string): TextInputType{
-    for(const key in TextInputType) {
-      if(TextInputType[key] == encodedName) {
-        return <TextInputType>key;
+  static getTextInputTypeFromValue(encodedName: string): TextInputType {
+    let textKeys = [
+      TextInputType.TEXT, TextInputType.DATETIME, TextInputType.NAME,
+      TextInputType.POSTAL_ADDRESS, TextInputType.NUMBER, TextInputType.PHONE,
+      TextInputType.MULTILINE, TextInputType.EMAIL_ADDRESS, TextInputType.URL,
+      TextInputType.VISIBLE_PASSWORD, TextInputType.NONE
+    ];
+    for (let i = 0; i < textKeys.length; i++) {
+      let key = textKeys[i];
+      if (TextInputType[key] == encodedName) {
+        return key;
       }
     }
     throw new Error("No such TextInputType: " + encodedName);
@@ -339,7 +291,7 @@ export class TextEditState {
     return this.composingStart >= 0 && this.composingEnd > this.composingStart;
   }
 
-  static fromJson(textEditState: any): TextEditState {
+  static fromJson(textEditState: ESObject): TextEditState {
     return new TextEditState(
       textEditState.text,
       textEditState.selectionBase,
@@ -348,5 +300,66 @@ export class TextEditState {
       textEditState.composingExtent
     )
   }
+}
 
+class TextInputCallback implements MethodCallHandler {
+  textInputMethodHandler: TextInputMethodHandler;
+
+  onMethodCall(call: MethodCall, result: MethodResult) {
+    if (this.textInputMethodHandler == null) {
+      return;
+    }
+    let method: string = call.method;
+    let args: ESObject = call.args;
+    Log.d(TAG, "Received '" + method + "' message.");
+    switch (method) {
+      case "TextInput.show":
+        this.textInputMethodHandler.show();
+        Log.d(TAG, "textInputMethodHandler.show()");
+        result.success(null);
+        break;
+      case "TextInput.hide":
+        this.textInputMethodHandler.hide();
+        result.success(null);
+        break;
+      case "TextInput.setClient":
+        const textInputClientId: number = args[0] as number;
+      //TODO: parse configuration
+        const config: Configuration = null;
+        this.textInputMethodHandler.setClient(textInputClientId, config);
+        result.success(null);
+        break;
+      case "TextInput.requestAutofill":
+      //TODO: requestAutofill
+        result.notImplemented();
+        break;
+      case "TextInput.setPlatformViewClient":
+      //TODO:
+        result.notImplemented();
+        break;
+      case "TextInput.setEditingState":
+        this.textInputMethodHandler.setEditingState(TextEditState.fromJson(args));
+        result.success(null);
+        break;
+      case "TextInput.setEditableSizeAndTransform":
+      //TODO:
+        result.notImplemented();
+        break;
+      case "TextInput.clearClient":
+        this.textInputMethodHandler.clearClient();
+        result.success(null);
+        break;
+      case "TextInput.sendAppPrivateCommand":
+      //TODO:
+        result.notImplemented();
+        break;
+      case "TextInput.finishAutofillContext":
+      //TODO:
+        result.notImplemented();
+        break;
+      default:
+        result.notImplemented();
+        break;
+    }
+  }
 }
