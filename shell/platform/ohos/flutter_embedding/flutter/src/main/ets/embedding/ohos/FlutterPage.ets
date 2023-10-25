@@ -36,7 +36,8 @@ export struct FlutterPage {
       params: this.rootDvModel.model.params as DVModelParameters,
       events: this.rootDvModel.model.events as DVModelEvents,
       children: this.rootDvModel.model.children as DVModelChildren,
-      customBuilder: this.rootDvModel.model.builder as ($$: { params: DVModelParameters }) => void
+      customBuilder: this.rootDvModel.model.builder as ($$: Record<"params",DVModelParameters >) => void
+      //customBuilder: this.rootDvModel.model.builder as ($$: { params: DVModelParameters }) => void
     })
   }
 }

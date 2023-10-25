@@ -17,7 +17,7 @@ import { AccessibilityEventsDelegate } from './AccessibilityEventsDelegate';
 
 export class PlatformOverlayView {
   private accessibilityEventsDelegate: AccessibilityEventsDelegate;
-  // @ts-ignore
+
   constructor(context: Context, width: Number, height: Number, accessibilityEventsDelegate: AccessibilityEventsDelegate) {
     this.accessibilityEventsDelegate= accessibilityEventsDelegate;
   }

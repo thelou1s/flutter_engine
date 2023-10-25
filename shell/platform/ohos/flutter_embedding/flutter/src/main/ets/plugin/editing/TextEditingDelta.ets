@@ -58,22 +58,4 @@ export class TextEditingDelta {
     this.deltaStart = newStart;
     this.deltaEnd = newExtent;
   }
-
-  toJSON(): any {
-    let delta;
-    try {
-      delta.oldText = this.oldText;
-      delta.deltaText = this.deltaText;
-      delta.deltaStart = this.deltaStart;
-      delta.deltaEnd = this.deltaEnd;
-      delta.selectionBase = this.newSelectionStart;
-      delta.selectionExtent = this.newSelectionEnd;
-      delta.composingBase = this.newComposingStart;
-      delta.composingExtent = this.newComposingEnd;
-    } catch (err) {
-      Log.e(TextEditingDelta.TAG,"unable to create JSONObject: " + JSON.stringify(err));
-    }
-
-
-  }
 }

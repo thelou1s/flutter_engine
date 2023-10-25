@@ -56,7 +56,7 @@ export default class MethodChannel {
    * @param arguments the arguments for the invocation, possibly null.
    * @param callback a {@link Result} callback for the invocation result, or null.
    */
-  invokeMethod(method: string, args: any, callback?: MethodResult): void {
+  invokeMethod(method: string, args: ESObject, callback?: MethodResult): void {
     this.messenger.send(this.name, this.codec.encodeMethodCall(new MethodCall(method, args)), callback == null ? null : new IncomingResultHandler(callback, this.codec));
   }
 
@@ -138,7 +138,7 @@ export interface MethodResult {
    *     codec. For instance, if you are using {@link StandardMessageCodec} (default), please see
    *     its documentation on what types are supported.
    */
-  success(result: any): void;
+  success: (result: ESObject) => void;
 
   /**
    * Handles an error result.
@@ -149,10 +149,10 @@ export interface MethodResult {
    *     supported by the codec. For instance, if you are using {@link StandardMessageCodec}
    *     (default), please see its documentation on what types are supported.
    */
-  error(errorCode: string, errorMessage: string, errorDetails: any): void;
+  error: (errorCode: string, errorMessage: string, errorDetails: ESObject) => void;
 
   /** Handles a call to an unimplemented method. */
-  notImplemented(): void;
+  notImplemented: () => void;
 }
 
 class IncomingResultHandler implements BinaryReply {
@@ -195,11 +195,11 @@ class IncomingMethodCallHandler implements BinaryMessageHandler {
     try {
       this.handler.onMethodCall(
         call, {
-        success: (result: any): void => {
+        success: (result: ESObject): void => {
           reply.reply(this.codec.encodeSuccessEnvelope(result));
         },
 
-        error: (errorCode: string, errorMessage: string, errorDetails: any): void => {
+        error: (errorCode: string, errorMessage: string, errorDetails: ESObject): void => {
           reply.reply(this.codec.encodeErrorEnvelope(errorCode, errorMessage, errorDetails));
         },
 

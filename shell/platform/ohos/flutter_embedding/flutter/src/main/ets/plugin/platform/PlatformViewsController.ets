@@ -76,7 +76,8 @@ export default class PlatformViewsController implements PlatformViewsAccessibili
     this.platformViewParent = new Map();
   }
 
-  getPlatformViewById(viewId: number) {
+
+  getPlatformViewById(viewId: number): Object {
     throw new Error('Method not implemented.');
   }
 
@@ -126,6 +127,11 @@ export default class PlatformViewsController implements PlatformViewsAccessibili
     }
   }
 
+  setParams: (params: DVModelParameters, key: string, element: ESObject ) => void = (params: DVModelParameters, key: string, element: ESObject): void => {
+    let params2 = params as Record<string, ESObject>;
+    params2[key] =element;
+  }
+
   resize(request: PlatformViewResizeRequest, onComplete: PlatformViewBufferResized): void {
     let physicalWidth: number = this.toPhysicalPixels(request.newLogicalWidth);
     let physicalHeight: number = this.toPhysicalPixels(request.newLogicalHeight);
@@ -141,22 +147,26 @@ export default class PlatformViewsController implements PlatformViewsAccessibili
 
     let viewWrapperLayoutParams: DVModelParameters = viewWrapper.getDvModel().getLayoutParams();
     if (physicalWidth) {
-      viewWrapperLayoutParams["width"] = physicalWidth;
+      this.setParams(viewWrapperLayoutParams, "width", physicalWidth);
+      // viewWrapperLayoutParams.width = physicalWidth;
     }
 
     if (physicalHeight) {
-      viewWrapperLayoutParams["height"] = physicalHeight;
+      this.setParams(viewWrapperLayoutParams, "height", physicalHeight);
+      // viewWrapperLayoutParams.height = physicalHeight;
     }
 
     let embeddedView: DVModel = platformView.getView();
     if (embeddedView != null) {
       let embeddedViewLayoutParams = embeddedView.getLayoutParams();
       if (physicalWidth) {
-        embeddedViewLayoutParams["width"] = physicalWidth;
+        this.setParams(embeddedViewLayoutParams, "width", physicalWidth);
+        // embeddedViewLayoutParams.width = physicalWidth;
       }
 
       if (physicalHeight) {
-        embeddedViewLayoutParams["height"] = physicalHeight;
+        this.setParams(embeddedViewLayoutParams, "height", physicalHeight);
+        // embeddedViewLayoutParams.height = physicalHeight;
       }
     }
 
@@ -174,8 +184,8 @@ export default class PlatformViewsController implements PlatformViewsAccessibili
     let physicalTop = this.toPhysicalPixels(top);
     let physicalLeft = this.toPhysicalPixels(left);
     let params = viewWrapper.getDvModel().params;
-    params["marginTop"] = physicalTop;
-    params["marginLeft"] = physicalLeft;
+    this.setParams(params, "marginTop", physicalTop);
+    this.setParams(params, "marginLeft", physicalLeft);
     viewWrapper.setLayoutParams(params);
   }
 
@@ -215,7 +225,8 @@ export default class PlatformViewsController implements PlatformViewsAccessibili
       Log.e(TAG, "Setting direction to a null view with id: " + viewId);
       return;
     }
-    embeddedView.params["direction"] = direction;
+    this.setParams(embeddedView.params, "direction", direction);
+    // embeddedView.params.direction = direction;
   }
 
   validateDirection(direction:number):boolean {
@@ -271,7 +282,7 @@ export default class PlatformViewsController implements PlatformViewsAccessibili
       throw new Error("Trying to create a platform view of unregistered type: " + request.viewType)
     }
 
-    let createParams: any = null;
+    let createParams: ESObject = null;
     if (request.params != null) {
       let byteParas : ByteBuffer = request.params as ByteBuffer;
       createParams = viewFactory.getCreateArgsCodec().decodeMessage(byteParas.buffer);
@@ -285,7 +296,8 @@ export default class PlatformViewsController implements PlatformViewsAccessibili
       throw new Error("PlatformView#getView() returned null, but an dynamic view reference was expected.");
     }
 
-    embeddedView.params['direction'] = request.direction;
+    this.setParams(embeddedView.params, "direction", request.direction);
+    // embeddedView.params.direction = request.direction;
 
     this.platformViews.set(request.viewId, platformView);
     return platformView;
@@ -308,20 +320,27 @@ export default class PlatformViewsController implements PlatformViewsAccessibili
     Log.i(TAG, `View pW:${request.logicalWidth}, pH:${request.logicalHeight}, pT:${physicalTop}, pL:${physicalLeft}`);
 
     let param: DVModelParameters = new DVModelParameters();
-    param['marginLeft'] = physicalLeft;
-    param['marginTop'] = physicalTop;
+
+    this.setParams(param, "marginLeft", physicalLeft);
+    this.setParams(param, "marginTop", physicalTop);
+    // param.marginLeft = physicalLeft;
+    // param.marginTop = physicalTop;
 
     let model = platformView.getView();
     if (request.logicalWidth != null) {
       let physicalWidth: number = this.toPhysicalPixels(request.logicalWidth);
-      model.params['width'] = physicalWidth;
-      param['width'] = physicalWidth;
+      this.setParams(model.params, "width", physicalWidth);
+      this.setParams(param, "width", physicalWidth);
+      // model.params.width = physicalWidth;
+      // param.width = physicalWidth;
     }
 
     if (request.logicalHeight != null) {
       let physicalHeight: number = this.toPhysicalPixels(request.logicalHeight);
-      model.params['height'] = physicalHeight;
-      param['height'] = physicalHeight;
+      this.setParams(model.params, "height", physicalHeight);
+      this.setParams(param, "height", physicalHeight);
+      // model.params.height = physicalHeight;
+      // param.height = physicalHeight;
     }
 
     viewWrapper.setLayoutParams(param);

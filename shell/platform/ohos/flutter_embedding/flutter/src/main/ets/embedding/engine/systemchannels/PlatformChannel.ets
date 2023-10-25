@@ -15,7 +15,7 @@
 
 import JSONMethodCodec from '../../../plugin/common/JSONMethodCodec';
 import MethodCall from '../../../plugin/common/MethodCall';
-import MethodChannel, { MethodResult } from '../../../plugin/common/MethodChannel';
+import MethodChannel, { MethodCallHandler, MethodResult } from '../../../plugin/common/MethodChannel';
 import Log from '../../../util/Log';
 import DartExecutor from '../dart/DartExecutor';
 import pasteboard from '@ohos.pasteboard';
@@ -30,145 +30,9 @@ export default class PlatformChannel {
 
   constructor(dartExecutor: DartExecutor) {
     this.channel = new MethodChannel(dartExecutor, PlatformChannel.CHANNEL_NAME, JSONMethodCodec.INSTANCE);
-    this.channel.setMethodCallHandler({
-      onMethodCall: (call: MethodCall, result: MethodResult): void => {
-        if (this.platformMessageHandler == null) {
-          Log.w(PlatformChannel.TAG,"platformMessageHandler is null");
-          return;
-        }
-
-        let method: string = call.method;
-        let args: any = call.args;
-        Log.d(PlatformChannel.TAG, "Received '" + method + "' message.");
-        try {
-          switch (method) {
-            case "SystemSound.play":
-              break;
-            case "HapticFeedback.vibrate":
-              try {
-                Log.d(PlatformChannel.TAG, "HapticFeedback: "+args as string);
-                let feedbackType: HapticFeedbackType = this.getFeedbackTypeFromValue(args as string);
-                this.platformMessageHandler.vibrateHapticFeedback(feedbackType);
-                result.success(null);
-              } catch(e) {
-                Log.e(PlatformChannel.TAG, "HapticFeedback.vibrate error:" + JSON.stringify(e));
-              }
-              break;
-            case "SystemChrome.setPreferredOrientations":
-              Log.d(PlatformChannel.TAG, "setPreferredOrientations: "+JSON.stringify(args));
-              try {
-                let ohosOrientation = this.decodeOrientations(args as string[]);
-                this.platformMessageHandler.setPreferredOrientations(ohosOrientation);
-                result.success(null);
-              } catch (err) {
-                Log.e(PlatformChannel.TAG, "setPreferredOrientations err:" + JSON.stringify(err));
-                result.error("error", JSON.stringify(err), null);
-              }
-
-              break;
-            case "SystemChrome.setApplicationSwitcherDescription":
-              Log.d(PlatformChannel.TAG, "setApplicationSwitcherDescription: "+JSON.stringify(args));
-              break;
-            case "SystemChrome.setEnabledSystemUIOverlays":
-              try {
-                let overlays: SystemUiOverlay[] = this.decodeSystemUiOverlays(args);
-                Log.d(PlatformChannel.TAG,"overlays: " + overlays);
-                this.platformMessageHandler.showSystemOverlays(overlays);
-                result.success(null);
-              } catch (err) {
-                Log.e(PlatformChannel.TAG, "setEnabledSystemUIOverlays err:" + JSON.stringify(err));
-                result.error("error", JSON.stringify(err), null);
-              }
-              break;
-            case "SystemChrome.setEnabledSystemUIMode":
-              try{
-                Log.d(PlatformChannel.TAG,"setEnabledSystemUIMode args:" + args as string);
-                let mode: SystemUiMode = this.decodeSystemUiMode(args as string)
-                this.platformMessageHandler.showSystemUiMode(mode);
-              } catch (err) {
-                Log.e(PlatformChannel.TAG, "setEnabledSystemUIMode err:" + JSON.stringify(err));
-                result.error("error", JSON.stringify(err), null);
-              }
-              break;
-            case "SystemChrome.setSystemUIChangeListener":
-              this.platformMessageHandler.setSystemUiChangeListener();
-              result.success(null);
-              break;
-            case "SystemChrome.restoreSystemUIOverlays":
-              this.platformMessageHandler.restoreSystemUiOverlays();
-              result.success(null);
-              break;
-            case "SystemChrome.setSystemUIOverlayStyle":
-              try {
-                Log.d(PlatformChannel.TAG, "setSystemUIOverlayStyle asrgs: " + JSON.stringify(args));
-                let systemChromeStyle: SystemChromeStyle = this.decodeSystemChromeStyle(args);
-                this.platformMessageHandler.setSystemUiOverlayStyle(systemChromeStyle);
-                result.success(null);
-              } catch (err) {
-                Log.e(PlatformChannel.TAG, "setSystemUIOverlayStyle err:" + JSON.stringify(err));
-                result.error("error", JSON.stringify(err), null);
-              }
-              break;
-            case "SystemNavigator.pop":
-              this.platformMessageHandler.popSystemNavigator();
-              result.success(null);
-              break;
-            case "Clipboard.getData":
-              let contentFormatName: string = args as string;
-              let clipboardFormat: ClipboardContentFormat = null;
-              if(contentFormatName != null) {
-                try{
-                  clipboardFormat = this.getClipboardContentFormatFromValue(contentFormatName);
-                } catch (err) {
-                  Log.d(PlatformChannel.TAG, "No such clipboard content format: " + contentFormatName);
-                  result.error("error", "No such clipboard content format: " + contentFormatName, null);
-                }
-              }
-
-              let pasteBoard = pasteboard.getSystemPasteboard();
-              pasteBoard.getData().then((pasteData) => {
-                let text = pasteData.getPrimaryText();
-                let response = {text: ""};
-                response.text = text;
-                result.success(response);
-              }).catch((err) => {
-                Log.e(PlatformChannel.TAG,"Failed to get PasteData. Cause: " + JSON.stringify(err));
-              });
-              break;
-            case "Clipboard.setData":
-              let clipboardContent = args.text;
-              this.platformMessageHandler.setClipboardData(clipboardContent);
-              result.success(null);
-              break;
-            case "Clipboard.hasStrings":
-              let hasStrings: boolean = false;
-              let response = {value: false};
-              let systemPasteboard = pasteboard.getSystemPasteboard();
-              systemPasteboard.hasData().then((hasData) => {
-                if(!hasData) {
-                  response.value = hasData;
-                  result.success(response);
-                }
-              }).catch((err) => {
-                  Log.e(PlatformChannel.TAG, "systemPasteboard.hasData err: " + JSON.stringify(err));
-              })
-              systemPasteboard.getData().then((pasteData) => {
-                hasStrings = pasteData.hasType(pasteboard.MIMETYPE_TEXT_PLAIN);
-                response.value = hasStrings;
-                result.success(response);
-              }).catch((err) => {
-                Log.e(PlatformChannel.TAG, "getData err: " + JSON.stringify(err));
-              })
-              break;
-            default:
-              result.notImplemented();
-              break;
-          }
-        } catch (e) {
-          result.error("error", JSON.stringify(e), null);
-          }
-        }
-      });
+    let callback = new PlatformMethodCallback();
+    callback.platform = this;
+    this.channel.setMethodCallHandler(callback);
   }
 
   setPlatformMessageHandler(platformMessageHandler: PlatformMessageHandler): void {
@@ -246,10 +110,18 @@ export default class PlatformChannel {
   }
 
   getFeedbackTypeFromValue(encodedName: string): HapticFeedbackType {
-    if(encodedName == null) {
+    if (encodedName == null) {
       return HapticFeedbackType.STANDARD;
     }
-    for (const feedbackType in HapticFeedbackType) {
+    let feedbackTypes: string[] = [
+      HapticFeedbackType.STANDARD,
+      HapticFeedbackType.LIGHT_IMPACT,
+      HapticFeedbackType.MEDIUM_IMPACT,
+      HapticFeedbackType.HEAVY_IMPACT,
+      HapticFeedbackType.SELECTION_CLICK
+    ];
+    for (let i = 0; i < feedbackTypes.length; i++) {
+      let feedbackType: string = feedbackTypes[i];
       if (
         (HapticFeedbackType[feedbackType] == encodedName) ||
           (HapticFeedbackType[feedbackType] == null && encodedName == null)
@@ -257,18 +129,22 @@ export default class PlatformChannel {
         return HapticFeedbackType[feedbackType];
       }
     }
-    Log.e(PlatformChannel.TAG,"No such HapticFeedbackType:" + encodedName);
+    Log.e(PlatformChannel.TAG, "No such HapticFeedbackType:" + encodedName);
   }
 
   getClipboardContentFormatFromValue(encodedName: string): ClipboardContentFormat {
-    for (const format in ClipboardContentFormat) {
+    let clipboardFormats : string[]= [ClipboardContentFormat.PLAIN_TEXT];
+    for (let i = 0; i < clipboardFormats.length; i++) {
+      let format = clipboardFormats[i];
       if (ClipboardContentFormat[format] === encodedName) {
         return ClipboardContentFormat[format];
       }
     }
   }
   getSystemUiOverlayFromValue(encodedName: string): SystemUiOverlay {
-    for (const overlay in SystemUiOverlay) {
+    let systemUiOverlays : string[] = [SystemUiOverlay.TOP_OVERLAYS, SystemUiOverlay.BOTTOM_OVERLAYS];
+    for (let i = 0; i < systemUiOverlays.length; i++) {
+      let overlay = systemUiOverlays[i];
       if (SystemUiOverlay[overlay] === encodedName) {
         return SystemUiOverlay[overlay];
       }
@@ -276,41 +152,38 @@ export default class PlatformChannel {
     throw new Error("No such SystemUiOverlay: " + encodedName);
   }
 
-  private decodeSystemUiOverlays(encodedSystemUiOverlay: any): SystemUiOverlay[] {
-    let overlays: SystemUiOverlay[] = [];
-    for(let i = 0; i < encodedSystemUiOverlay.length; i++) {
-      const encodedOverlay = encodedSystemUiOverlay[i];
-      const overlay = this.getSystemUiOverlayFromValue(encodedOverlay);
-      switch (overlay) {
-        case SystemUiOverlay.TOP_OVERLAYS:
-          overlays.push(SystemUiOverlay.TOP_OVERLAYS);
-          break;
-        case SystemUiOverlay.BOTTOM_OVERLAYS:
-          overlays.push(SystemUiOverlay.BOTTOM_OVERLAYS);
-          break;
-      }
-    }
-    return overlays;
-  }
-
   getSystemUiModeFromValue(encodedName: string): SystemUiMode {
-    for (const mode in SystemUiMode) {
+    let systemUiModes : string[] = [
+      SystemUiMode.LEAN_BACK, SystemUiMode.IMMERSIVE,
+      SystemUiMode.IMMERSIVE_STICKY, SystemUiMode.EDGE_TO_EDGE
+    ];
+    for (let i = 0; i < systemUiModes.length; i++) {
+      let mode = systemUiModes[i];
       if (SystemUiMode[mode] === encodedName) {
         return SystemUiMode[mode];
       }
     }
     throw new Error("No such SystemUiOverlay: " + encodedName);
   }
+
   getBrightnessFromValue(encodedName: string): Brightness {
-    for (const brightness in Brightness) {
+    let brightnesses : string[] = [Brightness.LIGHT, Brightness.DARK];
+    for (let i = 0; i < brightnesses.length; i++) {
+      let brightness = brightnesses[i];
       if (Brightness[brightness] === encodedName) {
         return Brightness[brightness];
       }
     }
     throw new Error("No such Brightness: " + encodedName);
   }
+
   getDeviceOrientationFromValue(encodedName: string): DeviceOrientation {
-    for (const orientation in DeviceOrientation) {
+    let deviceOrientations: string[] = [
+      DeviceOrientation.PORTRAIT_UP, DeviceOrientation.PORTRAIT_DOWN,
+      DeviceOrientation.LANDSCAPE_LEFT, DeviceOrientation.LANDSCAPE_RIGHT
+    ];
+    for (let i = 0; i < deviceOrientations.length; i++) {
+      let orientation = deviceOrientations[i];
       if (DeviceOrientation[orientation] === encodedName) {
         return DeviceOrientation[orientation];
       }
@@ -318,65 +191,8 @@ export default class PlatformChannel {
     throw new Error("No such DeviceOrientation: " + encodedName);
   }
 
-  private decodeSystemUiMode(encodedSystemUiMode: string): SystemUiMode {
-    let mode: SystemUiMode = this.getSystemUiModeFromValue(encodedSystemUiMode);
-    switch (mode) {
-      case SystemUiMode.LEAN_BACK:
-        return SystemUiMode.LEAN_BACK;
-      case SystemUiMode.IMMERSIVE:
-        return SystemUiMode.IMMERSIVE;
-      case SystemUiMode.IMMERSIVE_STICKY:
-        return SystemUiMode.IMMERSIVE_STICKY;
-      case SystemUiMode.EDGE_TO_EDGE:
-        return SystemUiMode.EDGE_TO_EDGE;
-    }
-    return SystemUiMode.EDGE_TO_EDGE;
-
-  }
-
-  private decodeSystemChromeStyle(encodedStyle: any): SystemChromeStyle {
-    let statusBarColor: number = null;
-    let statusBarIconBrightness: Brightness = null;
-    let systemStatusBarContrastEnforced: boolean = null;
-    let systemNavigationBarColor: number = null;
-    let systemNavigationBarIconBrightness: Brightness = null;
-    let systemNavigationBarDividerColor: number = null;
-    let systemNavigationBarContrastEnforced: boolean = null;
-    if(encodedStyle.statusBarColor != null) {
-      statusBarColor = encodedStyle.statusBarColor as number;
-    }
-    if(encodedStyle.statusBarIconBrightness != null) {
-      statusBarIconBrightness =
-        this.getBrightnessFromValue(encodedStyle.statusBarIconBrightness as string);
-    }
-    if(encodedStyle.systemStatusBarContrastEnforced != null) {
-      systemStatusBarContrastEnforced = encodedStyle.systemStatusBarContrastEnforced as boolean;
-    }
-    if(encodedStyle.systemNavigationBarColor != null) {
-      systemNavigationBarColor = encodedStyle.systemNavigationBarColor as number;
-    }
-    if(encodedStyle.systemNavigationBarIconBrightness != null) {
-      systemNavigationBarIconBrightness =
-        this.getBrightnessFromValue(encodedStyle.systemNavigationBarIconBrightness as string);
-    }
-    if(encodedStyle.systemNavigationBarDividerColor != null) {
-      systemNavigationBarDividerColor = encodedStyle.systemNavigationBarDividerColor as number;
-    }
-    if(encodedStyle.systemNavigationBarContrastEnforced != null) {
-      systemNavigationBarContrastEnforced = encodedStyle.systemNavigationBarContrastEnforced as boolean;
-    }
-    return new SystemChromeStyle(
-      statusBarColor,
-      statusBarIconBrightness,
-      systemStatusBarContrastEnforced,
-      systemNavigationBarColor,
-      systemNavigationBarIconBrightness,
-      systemNavigationBarDividerColor,
-      systemNavigationBarContrastEnforced
-    );
-  }
-
 }
+
 export enum HapticFeedbackType {
   STANDARD = "STANDARD",
   LIGHT_IMPACT = "HapticFeedbackType.lightImpact",
@@ -411,7 +227,6 @@ export interface PlatformMessageHandler {
   setClipboardData(text: string): void;
 
   clipboardHasStrings(): boolean;
-
 }
 
 export enum ClipboardContentFormat {
@@ -481,4 +296,210 @@ enum DeviceOrientation {
   PORTRAIT_DOWN = "DeviceOrientation.portraitDown",
   LANDSCAPE_LEFT = "DeviceOrientation.landscapeLeft",
   LANDSCAPE_RIGHT = "DeviceOrientation.landscapeRight",
+}
+
+class PlatformMethodCallback implements MethodCallHandler {
+  private static TAG = "PlatformMethodCallback"
+  platform: PlatformChannel;
+
+  onMethodCall(call: MethodCall, result: MethodResult) {
+    if (this.platform.platformMessageHandler == null) {
+      Log.w(PlatformMethodCallback.TAG, "platformMessageHandler is null");
+      return;
+    }
+
+    let method: string = call.method;
+    let args: ESObject = call.args;
+    Log.d(PlatformMethodCallback.TAG, "Received '" + method + "' message.");
+    try {
+      switch (method) {
+        case "SystemSound.play":
+          break;
+        case "HapticFeedback.vibrate":
+          try {
+            Log.d(PlatformMethodCallback.TAG, "HapticFeedback: " + args as string);
+            let feedbackType: HapticFeedbackType = this.platform.getFeedbackTypeFromValue(args as string);
+            this.platform.platformMessageHandler.vibrateHapticFeedback(feedbackType);
+            result.success(null);
+          } catch (e) {
+            Log.e(PlatformMethodCallback.TAG, "HapticFeedback.vibrate error:" + JSON.stringify(e));
+          }
+          break;
+        case "SystemChrome.setPreferredOrientations":
+          Log.d(PlatformMethodCallback.TAG, "setPreferredOrientations: " + JSON.stringify(args));
+          try {
+            let ohosOrientation = this.platform.decodeOrientations(args as string[]);
+            this.platform.platformMessageHandler.setPreferredOrientations(ohosOrientation);
+            result.success(null);
+          } catch (err) {
+            Log.e(PlatformMethodCallback.TAG, "setPreferredOrientations err:" + JSON.stringify(err));
+            result.error("error", JSON.stringify(err), null);
+          }
+
+          break;
+        case "SystemChrome.setApplicationSwitcherDescription":
+          Log.d(PlatformMethodCallback.TAG, "setApplicationSwitcherDescription: " + JSON.stringify(args));
+          break;
+        case "SystemChrome.setEnabledSystemUIOverlays":
+          try {
+            let overlays: SystemUiOverlay[] = this.decodeSystemUiOverlays(args);
+            Log.d(PlatformMethodCallback.TAG, "overlays: " + overlays);
+            this.platform.platformMessageHandler.showSystemOverlays(overlays);
+            result.success(null);
+          } catch (err) {
+            Log.e(PlatformMethodCallback.TAG, "setEnabledSystemUIOverlays err:" + JSON.stringify(err));
+            result.error("error", JSON.stringify(err), null);
+          }
+          break;
+        case "SystemChrome.setEnabledSystemUIMode":
+          try {
+            Log.d(PlatformMethodCallback.TAG, "setEnabledSystemUIMode args:" + args as string);
+            let mode: SystemUiMode = this.decodeSystemUiMode(args as string)
+            this.platform.platformMessageHandler.showSystemUiMode(mode);
+          } catch (err) {
+            Log.e(PlatformMethodCallback.TAG, "setEnabledSystemUIMode err:" + JSON.stringify(err));
+            result.error("error", JSON.stringify(err), null);
+          }
+          break;
+        case "SystemChrome.setSystemUIChangeListener":
+          this.platform.platformMessageHandler.setSystemUiChangeListener();
+          result.success(null);
+          break;
+        case "SystemChrome.restoreSystemUIOverlays":
+          this.platform.platformMessageHandler.restoreSystemUiOverlays();
+          result.success(null);
+          break;
+        case "SystemChrome.setSystemUIOverlayStyle":
+          try {
+            Log.d(PlatformMethodCallback.TAG, "setSystemUIOverlayStyle asrgs: " + JSON.stringify(args));
+            let systemChromeStyle: SystemChromeStyle = this.decodeSystemChromeStyle(args);
+            this.platform.platformMessageHandler.setSystemUiOverlayStyle(systemChromeStyle);
+            result.success(null);
+          } catch (err) {
+            Log.e(PlatformMethodCallback.TAG, "setSystemUIOverlayStyle err:" + JSON.stringify(err));
+            result.error("error", JSON.stringify(err), null);
+          }
+          break;
+        case "SystemNavigator.pop":
+          this.platform.platformMessageHandler.popSystemNavigator();
+          result.success(null);
+          break;
+        case "Clipboard.getData":
+          let pasteBoard = pasteboard.getSystemPasteboard();
+          pasteBoard.getData().then((pasteData) => {
+            let text = pasteData.getPrimaryText();
+            let response: ESObject = new Map().set("text", "");
+            response.text = text;
+            result.success(response);
+          }).catch((err: ESObject) => {
+            Log.e(PlatformMethodCallback.TAG, "Failed to get PasteData. Cause: " + JSON.stringify(err));
+          });
+          break;
+        case "Clipboard.setData":
+          let clipboardContent: string = args.text;
+          this.platform.platformMessageHandler.setClipboardData(clipboardContent);
+          result.success(null);
+          break;
+        case "Clipboard.hasStrings":
+          let hasStrings: boolean = false;
+          let response: ESObject = new Map().set("value", false);
+          let systemPasteboard = pasteboard.getSystemPasteboard();
+          systemPasteboard.hasData().then((hasData) => {
+            if (!hasData) {
+              response.value = hasData;
+              result.success(response);
+            }
+          }).catch((err: ESObject) => {
+            Log.e(PlatformMethodCallback.TAG, "systemPasteboard.hasData err: " + JSON.stringify(err));
+          })
+          systemPasteboard.getData().then((pasteData) => {
+            hasStrings = pasteData.hasType(pasteboard.MIMETYPE_TEXT_PLAIN);
+            response.value = hasStrings;
+            result.success(response);
+          }).catch((err: ESObject) => {
+            Log.e(PlatformMethodCallback.TAG, "getData err: " + JSON.stringify(err));
+          })
+          break;
+        default:
+          result.notImplemented();
+          break;
+      }
+    } catch (e) {
+      result.error("error", JSON.stringify(e), null);
+    }
+  }
+
+  private decodeSystemUiOverlays(encodedSystemUiOverlay: string[]): SystemUiOverlay[] {
+    let overlays: SystemUiOverlay[] = [];
+    for(let i = 0; i < encodedSystemUiOverlay.length; i++) {
+      const encodedOverlay = encodedSystemUiOverlay[i];
+      const overlay = this.platform.getSystemUiOverlayFromValue(encodedOverlay);
+      switch (overlay) {
+        case SystemUiOverlay.TOP_OVERLAYS:
+          overlays.push(SystemUiOverlay.TOP_OVERLAYS);
+          break;
+        case SystemUiOverlay.BOTTOM_OVERLAYS:
+          overlays.push(SystemUiOverlay.BOTTOM_OVERLAYS);
+          break;
+      }
+    }
+    return overlays;
+  }
+
+  private decodeSystemUiMode(encodedSystemUiMode: string): SystemUiMode {
+    let mode: SystemUiMode = this.platform.getSystemUiModeFromValue(encodedSystemUiMode);
+    switch (mode) {
+      case SystemUiMode.LEAN_BACK:
+        return SystemUiMode.LEAN_BACK;
+      case SystemUiMode.IMMERSIVE:
+        return SystemUiMode.IMMERSIVE;
+      case SystemUiMode.IMMERSIVE_STICKY:
+        return SystemUiMode.IMMERSIVE_STICKY;
+      case SystemUiMode.EDGE_TO_EDGE:
+      default:
+        return SystemUiMode.EDGE_TO_EDGE;
+    }
+  }
+
+  private decodeSystemChromeStyle(encodedStyle: ESObject): SystemChromeStyle {
+    let statusBarColor: number = null;
+    let statusBarIconBrightness: Brightness = null;
+    let systemStatusBarContrastEnforced: boolean = null;
+    let systemNavigationBarColor: number = null;
+    let systemNavigationBarIconBrightness: Brightness = null;
+    let systemNavigationBarDividerColor: number = null;
+    let systemNavigationBarContrastEnforced: boolean = null;
+    if(encodedStyle.statusBarColor != null) {
+      statusBarColor = encodedStyle.statusBarColor as number;
+    }
+    if(encodedStyle.statusBarIconBrightness != null) {
+      statusBarIconBrightness =
+      this.platform.getBrightnessFromValue(encodedStyle.statusBarIconBrightness as string);
+    }
+    if(encodedStyle.systemStatusBarContrastEnforced != null) {
+      systemStatusBarContrastEnforced = encodedStyle.systemStatusBarContrastEnforced as boolean;
+    }
+    if(encodedStyle.systemNavigationBarColor != null) {
+      systemNavigationBarColor = encodedStyle.systemNavigationBarColor as number;
+    }
+    if(encodedStyle.systemNavigationBarIconBrightness != null) {
+      systemNavigationBarIconBrightness =
+      this.platform.getBrightnessFromValue(encodedStyle.systemNavigationBarIconBrightness as string);
+    }
+    if(encodedStyle.systemNavigationBarDividerColor != null) {
+      systemNavigationBarDividerColor = encodedStyle.systemNavigationBarDividerColor as number;
+    }
+    if(encodedStyle.systemNavigationBarContrastEnforced != null) {
+      systemNavigationBarContrastEnforced = encodedStyle.systemNavigationBarContrastEnforced as boolean;
+    }
+    return new SystemChromeStyle(
+      statusBarColor,
+      statusBarIconBrightness,
+      systemStatusBarContrastEnforced,
+      systemNavigationBarColor,
+      systemNavigationBarIconBrightness,
+      systemNavigationBarDividerColor,
+      systemNavigationBarContrastEnforced
+    );
+  }
 }

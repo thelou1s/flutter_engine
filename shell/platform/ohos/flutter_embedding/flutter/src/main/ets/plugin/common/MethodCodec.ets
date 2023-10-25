@@ -49,7 +49,7 @@ export default interface MethodCodec {
    * @return a {@link ByteBuffer} containing the encoding between position 0 and the current
    *     position.
    */
-  encodeSuccessEnvelope(result: any): ArrayBuffer;
+  encodeSuccessEnvelope(result: ESObject): ArrayBuffer;
 
   /**
    * Encodes an error result into a binary envelope message.
@@ -61,7 +61,7 @@ export default interface MethodCodec {
    * @return a {@link ByteBuffer} containing the encoding between position 0 and the current
    *     position.
    */
-  encodeErrorEnvelope(errorCode: string, errorMessage: string, errorDetails: any): ArrayBuffer;
+  encodeErrorEnvelope(errorCode: string, errorMessage: string, errorDetails: ESObject): ArrayBuffer;
 
   /**
    * Encodes an error result into a binary envelope message with the native stacktrace.
@@ -74,7 +74,7 @@ export default interface MethodCodec {
    * @return a {@link ByteBuffer} containing the encoding between position 0 and the current
    *     position.
    */
-  encodeErrorEnvelopeWithStacktrace(errorCode: string, errorMessage: string, errorDetails: any, errorStacktrace: string): ArrayBuffer
+  encodeErrorEnvelopeWithStacktrace(errorCode: string, errorMessage: string, errorDetails: ESObject, errorStacktrace: string): ArrayBuffer
 
   /**
    * Decodes a result envelope from binary.
@@ -83,5 +83,5 @@ export default interface MethodCodec {
    * @return the enveloped result Object.
    * @throws FlutterException if the envelope was an error envelope.
    */
-  decodeEnvelope(envelope: ArrayBuffer): any
+  decodeEnvelope(envelope: ArrayBuffer): ESObject
 }

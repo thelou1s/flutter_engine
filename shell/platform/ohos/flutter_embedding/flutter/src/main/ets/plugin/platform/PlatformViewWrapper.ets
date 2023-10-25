@@ -30,33 +30,8 @@ export class PlatformViewWrapper {
   private bufferHeight: number;
   private touchProcessor: OhosTouchProcessor;
 
-  private onTouch = (touchEvent) => {
-    switch (touchEvent.type) {
-      case TouchType.Down:
-        this.prevLeft = this.left;
-        this.prevTop = this.top;
-        this.model.params["translateX"] = this.left;
-        this.model.params["translateY"] = this.top;
-        break;
-      case TouchType.Move:
-        this.model.params["translateX"] = this.prevLeft;
-        this.model.params["translateY"] = this.prevTop;
-        this.prevLeft = this.left;
-        this.prevTop = this.top;
-        break;
-      case TouchType.Up:
-      case TouchType.Cancel:
-      default:
-        break;
-    }
-  }
 
-  private model : DVModel = createDVModelFromJson(
-    {
-      compType: "Column",
-      children: [],
-    }
-  );
+  private model : DVModel = createDVModelFromJson( new DVModelParam("Column", []));
 
   public setTouchProcessor(newTouchProcessor: OhosTouchProcessor): void {
     this.touchProcessor = newTouchProcessor;
@@ -69,25 +44,48 @@ export class PlatformViewWrapper {
     return this.model;
   }
 
+  setParams: (params: DVModelParameters, key: string, element: ESObject ) => void = (params: DVModelParameters, key: string, element: ESObject): void => {
+    let params2 = params as Record<string, ESObject>;
+    params2[key] =element;
+  }
+
+  getParams: (params: DVModelParameters, element: string) => string | ESObject = (params: DVModelParameters, element: string): string | ESObject => {
+    let params2 = params as Record<string, ESObject>;
+    return params2[element];
+  }
+
   public setLayoutParams(parameters : DVModelParameters): void {
     if (this.model.params == null) {
       this.model.params = new DVModelParameters();
     }
-    this.model.params['marginLeft'] = parameters['marginLeft'];
-    this.model.params['marginTop'] = parameters['marginTop'];
-    this.left = parameters['marginLeft'];
-    this.top = parameters['marginTop'];
+    this.setParams(this.model.params, "marginLeft", this.getParams(parameters, "marginLeft"));
+    this.setParams(this.model.params, "marginTop", this.getParams(parameters, "marginTop"));
+    this.left =  this.getParams(parameters, "marginLeft");
+    this.top = this.getParams(parameters, "marginTop");
 
-    if (parameters.hasOwnProperty('width')) {
-      this.model.params['width'] = parameters['width'];
-    }
+    this.setParams(this.model.params, "width", this.getParams(parameters, "width"));
+    this.setParams(this.model.params, "height", this.getParams(parameters, "height"));
 
-    if (parameters.hasOwnProperty('height')) {
-      this.model.params['height'] = parameters['height'];
-    }
+    // this.model.params.marginLeft = parameters.marginLeft;
+    // this.model.params.marginTop = parameters.marginTop;
+    // this.left = parameters.marginLeft;
+    // this.top = parameters.marginTop;;
+
+    // this.model.params.width = parameters.width;
+    // this.model.params.height = parameters.height;
   }
 
   public addDvModel(model: DVModel): void {
     this.model.children.push(model);
   }
 }
+
+class DVModelParam {
+  compType: string
+  children: []
+
+  constructor(compType: string, children: []) {
+    this.compType = compType;
+    this.children = children;
+  }
+};

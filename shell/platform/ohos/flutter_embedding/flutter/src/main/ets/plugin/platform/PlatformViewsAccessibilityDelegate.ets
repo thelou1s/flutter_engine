@@ -20,7 +20,7 @@ export interface PlatformViewsAccessibilityDelegate {
    * Returns the root of the view hierarchy for the platform view with the requested id, or null if
    * there is no corresponding view.
    */
-  getPlatformViewById(viewId: number): any;
+  getPlatformViewById(viewId: number): Object;
 
   /** Returns true if the platform view uses virtual displays. */
   usesVirtualDisplay(id: number): boolean;

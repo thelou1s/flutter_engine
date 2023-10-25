@@ -26,18 +26,18 @@ export default class MethodCall {
    * Consider using {@link #argument(String)} when that run-time type is {@link Map} or {@link
    * JSONObject}.
    */
-  args: any;
+  args: ESObject;
 
-  constructor(method: string, args: any) {
+  constructor(method: string, args: ESObject) {
     this.method = method
     this.args = args
   }
 
-  argument(key: string): any {
+  argument(key: string): ESObject {
     if (this.args == null) {
       return null;
     } else if (this.args instanceof Map) {
-      return (this.args as Map<any, any>).get(key);
+      return (this.args as Map<ESObject, ESObject>).get(key);
     } else if (ToolUtils.isObj(this.args)) {
       return this.args[key]
     } else {
@@ -49,9 +49,9 @@ export default class MethodCall {
     if (arguments == null) {
       return false;
     } else if (arguments instanceof Map) {
-      return (this.args as Map<any, any>).has(key);
+      return (this.args as Map<ESObject, ESObject>).has(key);
     } else if (ToolUtils.isObj(this.args)) {
-      return Object.prototype.hasOwnProperty.call(this.args, key);
+      return this.args.hasOwnProperty(key);
     } else {
       throw new Error("ClassCastException");
     }

@@ -14,11 +14,11 @@
 */
 
 export default class ToolUtils {
-  static isObj(object: any): boolean {
-    return object && typeof (object) == 'object' && Object.prototype.toString.call(object).toLowerCase() == "[object object]";
+  static isObj(object: Object): boolean {
+    return object && typeof (object) == 'object';
   }
 
-  static implementsInterface(obj: any, method: string): boolean {
+  static implementsInterface(obj: ESObject, method: string): boolean {
     return Reflect.has(obj, method) && typeof obj[method] === 'function'
   }
 }

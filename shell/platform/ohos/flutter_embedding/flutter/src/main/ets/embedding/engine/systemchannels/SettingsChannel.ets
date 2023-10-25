@@ -35,7 +35,7 @@ export default class SettingsChannel {
   private channel: BasicMessageChannel<Object>;
 
   constructor(dartExecutor: DartExecutor) {
-    this.channel = new BasicMessageChannel(dartExecutor, SettingsChannel.CHANNEL_NAME, JSONMessageCodec.INSTANCE);
+    this.channel = new BasicMessageChannel<Object>(dartExecutor, SettingsChannel.CHANNEL_NAME, JSONMessageCodec.INSTANCE);
   }
 
   startMessage(): MessageBuilder {
@@ -84,6 +84,6 @@ class MessageBuilder {
       + this.message.get(ALWAYS_USE_24_HOUR_FORMAT)
       + "platformBrightness: "
       + this.message.get(PLATFORM_BRIGHTNESS))
-    this.channel.send(Object.fromEntries(this.message))
+    this.channel.send(this.message)
   }
 }

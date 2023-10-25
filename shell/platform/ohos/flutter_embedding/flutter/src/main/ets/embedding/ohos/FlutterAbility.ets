@@ -31,6 +31,7 @@ import { PlatformBrightness } from '../engine/systemchannels/SettingsChannel';
 import ConfigurationConstant from '@ohos.app.ability.ConfigurationConstant';
 import { DVModelContainer } from '../../view/DynamicView/dynamicView';
 import { RootDvModeManager } from '../../plugin/platform/RootDvModelManager';
+import { Configuration } from '@ohos.app.ability.Configuration';
 
 const TAG = "FlutterAbility";
 /**
@@ -53,10 +54,10 @@ export class FlutterAbility extends UIAbility implements Host {
    * 3、lifecycle.onCreate
    * 4. setContentView()  noNeed
    */
-  async onCreate(want, launchParam) {
+  async onCreate(want: Want, launchParam: AbilityConstant.LaunchParam) {
     Log.i(TAG, "bundleCodeDir=" + this.context.bundleCodeDir);
-    globalThis.flutterAbility = this
-    this.displayInfo = display.getDefaultDisplaySync()
+    // globalThis.flutterAbility = this
+    this.displayInfo = display.getDefaultDisplaySync();
     this.viewportMetrics.devicePixelRatio = this.displayInfo.densityPixels
 
     this.delegate = new FlutterAbilityDelegate(this);
@@ -71,7 +72,7 @@ export class FlutterAbility extends UIAbility implements Host {
     }
 
     console.log('MyAbility onCreate');
-    globalThis.applicationContext = this.context.getApplicationContext();
+    // globalThis.applicationContext = this.context.getApplicationContext();
   }
 
   onDestroy() {
@@ -365,7 +366,7 @@ export class FlutterAbility extends UIAbility implements Host {
     }
   }
 
-  onConfigurationUpdated(config){
+  onConfigurationUpdated(config: Configuration){
     Log.i(TAG, 'onConfigurationUpdated config:' + JSON.stringify(config));
     this.delegate.flutterEngine.getSettingsChannel().startMessage()
       .setAlwaysUse24HourFormat(I18n.System.is24HourClock())

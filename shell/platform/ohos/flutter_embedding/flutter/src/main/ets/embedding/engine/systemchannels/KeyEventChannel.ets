@@ -26,7 +26,7 @@ export default class KeyEventChannel {
   private channel : BasicMessageChannel<Map<String, Object>>;
 
   constructor(binaryMessenger: BinaryMessenger) {
-    this.channel = new BasicMessageChannel(binaryMessenger, KeyEventChannel.CHANNEL_NAME, JSONMessageCodec.INSTANCE);
+    this.channel = new BasicMessageChannel<Map<String, Object>>(binaryMessenger, KeyEventChannel.CHANNEL_NAME, JSONMessageCodec.INSTANCE);
   }
 
   sendFlutterKeyEvent(keyEvent: FlutterKeyEvent,

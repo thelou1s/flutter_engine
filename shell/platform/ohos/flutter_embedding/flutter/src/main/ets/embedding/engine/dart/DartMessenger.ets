@@ -129,7 +129,8 @@ export class DartMessenger implements BinaryMessenger, PlatformMessageHandler {
       messageDeferred = (this.enableBufferingIncomingMessagesFlag && handlerInfo == null);
       if (messageDeferred) {
         if (!this.bufferedMessages.has(channel)) {
-          this.bufferedMessages.set(channel, new BufferedMessageInfo[0]);
+          // this.bufferedMessages.set(channel, new BufferedMessageInfo[0]);
+          this.bufferedMessages.set(channel, null);
         }
       let buffer: BufferedMessageInfo[] = this.bufferedMessages.get(channel);
       buffer.push(new BufferedMessageInfo(message, replyId, messageData));

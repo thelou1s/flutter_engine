@@ -12,8 +12,7 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
-
-import FlutterView from '../embedding/ohos/FlutterView';
+import { FlutterView } from '../view/FlutterView';
 import common from '@ohos.app.ability.common';
 import PlatformViewController from '../plugin/platform/PlatformViewsController'
 import Log from '../util/Log';

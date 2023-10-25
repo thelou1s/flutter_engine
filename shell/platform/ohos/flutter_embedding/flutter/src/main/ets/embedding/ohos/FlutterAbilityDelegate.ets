@@ -353,14 +353,14 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
     }
   }
 
-  onSaveState(reason: AbilityConstant.StateType, wantParam: { [key: string]: Object; }): AbilityConstant.OnSaveResult {
+  onSaveState(reason: AbilityConstant.StateType, wantParam: Record<string, Object>): AbilityConstant.OnSaveResult {
     Log.i(TAG, "onSaveInstanceState. Giving framework and plugins an opportunity to save state.");
     this.ensureAlive();
     if (this.host.shouldRestoreAndSaveState()) {
       wantParam[FRAMEWORK_RESTORATION_BUNDLE_KEY] = this.flutterEngine.getRestorationChannel().getRestorationData();
     }
     if (this.host.shouldAttachEngineToActivity()) {
-      const plugins = {}
+      const plugins:Record<string, Object> = {}
       const result = this.flutterEngine.getAbilityControlSurface().onSaveState(reason, plugins);
       wantParam[PLUGINS_RESTORATION_BUNDLE_KEY] = plugins;
       return result
