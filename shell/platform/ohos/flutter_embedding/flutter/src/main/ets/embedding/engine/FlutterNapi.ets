@@ -266,7 +266,7 @@ export default class FlutterNapi {
   decodeImage(buffer: ArrayBuffer, imageGeneratorAddress: number): void {
     Log.d(TAG, "called decodeImage=" + buffer.byteLength)
     const imageSourceApi = image.createImageSource(buffer);
-    let tempPixelMap = null;
+    let tempPixelMap: image.PixelMap = null;
     imageSourceApi.createPixelMap({
       desiredPixelFormat: image.PixelMapFormat.RGBA_8888
     }).then(pixelMap => {
@@ -276,7 +276,7 @@ export default class FlutterNapi {
     }).then(imageInfo => {
       Log.d(TAG, `nativeImageHeaderCallback width=${imageInfo.size.width}  height=${imageInfo.size.height} imageGeneratorAddress=${imageGeneratorAddress}`)
       flutter.nativeImageDecodeCallback(imageInfo.size.width, imageInfo.size.height, imageGeneratorAddress, tempPixelMap)
-    }).catch(error => {
+    }).catch((error: ESObject) => {
       Log.d(TAG, "decodeImage error=" + JSON.stringify(error))
       flutter.nativeImageDecodeCallback(0, 0, imageGeneratorAddress, null);
     })

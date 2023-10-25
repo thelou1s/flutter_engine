@@ -44,12 +44,10 @@ export default class LocalizationPlugin {
     return new intl.Locale(languageCode+'-'+ countryCode +'-' + scriptCode);
   }
 
-  private localizationMessageHandler: LocalizationMessageHandler = {
-    getStringResource(key: string, localeString: string): string {
-      Log.i(TAG, "getResource enter");
-      return ""
-    }
-  }
+  private localizationMessageHandler: LocalizationMessageHandler =new enterGetStringResource(()=>{
+    Log.i(TAG, "getResource enter");
+    return ""
+  })
   constructor(context: common.Context, localizationChannel: LocalizationChannel) {
     this.context = context;
     this.localizationChannel = localizationChannel;
@@ -59,5 +57,12 @@ export default class LocalizationPlugin {
   sendLocaleToFlutter(): void {
     let systemLanguages = i18n.System.getSystemLanguages();
     this.localizationChannel.sendLocales(systemLanguages);
-    }
+  }
+}
+class enterGetStringResource{
+  getStringResource : (key: string, localeString: string)=>string
+
+  constructor(getStringResource: (key: string, localeString: string)=>string) {
+    this.getStringResource = getStringResource
+  }
 }

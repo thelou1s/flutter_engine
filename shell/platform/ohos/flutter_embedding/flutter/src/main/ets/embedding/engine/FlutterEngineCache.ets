@@ -20,10 +20,10 @@ export default class FlutterEngineCache {
   private cachedEngines: Map<String, FlutterEngine> = new Map();
 
   static getInstance(): FlutterEngineCache {
-    if (this.instance == null) {
-      this.instance = new FlutterEngineCache();
+    if (FlutterEngineCache.instance == null) {
+      FlutterEngineCache.instance = new FlutterEngineCache();
     }
-    return this.instance;
+    return FlutterEngineCache.instance;
   }
   /**
    * 返回engineId对应的FlutterEngine是否存在

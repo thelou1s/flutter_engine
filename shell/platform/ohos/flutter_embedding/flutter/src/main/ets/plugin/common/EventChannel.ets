@@ -93,7 +93,7 @@ export interface StreamHandler {
    * @param arguments stream configuration arguments, possibly null.
    * @param events an {@link EventSink} for emitting events to the Flutter receiver.
    */
-  onListen(args: any, events: EventSink): void;
+  onListen(args: ESObject, events: EventSink): void;
 
   /**
    * Handles a request to tear down the most recently created event stream.
@@ -107,7 +107,7 @@ export interface StreamHandler {
    *
    * @param arguments stream configuration arguments, possibly null.
    */
-  onCancel(args: any): void;
+  onCancel(args: ESObject): void;
 }
 
 /**
@@ -121,7 +121,7 @@ export interface EventSink {
    *
    * @param event the event, possibly null.
    */
-  success(event: any): void;
+  success(event: ESObject): void;
 
   /**
    * Consumes an error event.
@@ -130,7 +130,7 @@ export interface EventSink {
    * @param errorMessage a human-readable error message String, possibly null.
    * @param errorDetails error details, possibly null
    */
-  error(errorCode: string, errorMessage: string, errorDetails: any): void;
+  error(errorCode: string, errorMessage: string, errorDetails: ESObject): void;
 
   /**
    * Consumes end of stream. Ensuing calls to {@link #success(Object)} or {@link #error(String,
@@ -164,7 +164,7 @@ class IncomingStreamRequestHandler implements BinaryMessageHandler {
     }
   }
 
-  onListen(args: any, callback: BinaryReply): void {
+  onListen(args: ESObject, callback: BinaryReply): void {
     const eventSink = new EventSinkImplementation(this.activeSink, this.name, this.codec, this.messenger);
     const oldSink = this.activeSink.getAndSet(eventSink);
     if (oldSink != null) {
@@ -186,7 +186,7 @@ class IncomingStreamRequestHandler implements BinaryMessageHandler {
     }
   }
 
-  onCancel(args: any, callback: BinaryReply): void {
+  onCancel(args: ESObject, callback: BinaryReply): void {
     const oldSink = this.activeSink.getAndSet(null);
     if (oldSink != null) {
       try {
@@ -216,14 +216,14 @@ class EventSinkImplementation implements EventSink {
     this.messenger = messenger;
   }
 
-  success(event: any): void {
+  success(event: ESObject): void {
     if (this.hasEnded || this.activeSink.get() != this) {
       return;
     }
     this.messenger.send(this.name, this.codec.encodeSuccessEnvelope(event));
   }
 
-  error(errorCode: string, errorMessage: string, errorDetails: any) {
+  error(errorCode: string, errorMessage: string, errorDetails: ESObject) {
     if (this.hasEnded || this.activeSink.get() != this) {
       return;
     }

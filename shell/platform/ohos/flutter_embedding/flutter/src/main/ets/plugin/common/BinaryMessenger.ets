@@ -86,10 +86,8 @@ export interface BinaryMessageHandler {
  * @see MethodChannel , which supports communication using asynchronous method invocation.
  * @see EventChannel , which supports communication using event streams.
  */
-export abstract class BinaryMessenger {
-    makeBackgroundTaskQueue(options?: TaskQueueOptions): TaskQueue {
-        throw new Error("makeBackgroundTaskQueue not implemented.")
-    }
+export interface BinaryMessenger {
+    makeBackgroundTaskQueue(options?: TaskQueueOptions): TaskQueue;
 
     /**
      * Sends a binary message to the Flutter application.
@@ -98,7 +96,7 @@ export abstract class BinaryMessenger {
      * @param message the message payload, a direct-allocated {@link ByteBuffer} with the message
      *     bytes between position zero and current position, or null.
      */
-    abstract send(channel: String, message: ArrayBuffer): void;
+    send(channel: String, message: ArrayBuffer): void;
 
     /**
      * Sends a binary message to the Flutter application, optionally expecting a reply.
@@ -111,7 +109,7 @@ export abstract class BinaryMessenger {
      * @param callback a {@link BinaryReply} callback invoked when the Flutter application responds to
      *     the message, possibly null.
      */
-    abstract send(channel: String, message: ArrayBuffer, callback?: BinaryReply): void;
+    send(channel: String, message: ArrayBuffer, callback?: BinaryReply): void;
 
     /**
      * Registers a handler to be invoked when the Flutter application sends a message to its host
@@ -129,11 +127,12 @@ export abstract class BinaryMessenger {
      *     the handler. Specifying null means execute on the platform thread.
      */
     //setMessageHandler(channel: String, handler: BinaryMessageHandler)
-    setMessageHandler(channel: String, handler: BinaryMessageHandler, taskQueue?: TaskQueue): void {
-        if (taskQueue != null) {
-            throw new Error("setMessageHandler called with nonnull taskQueue is not supported.")
-        }
-    }
+    setMessageHandler(channel: String, handler: BinaryMessageHandler, taskQueue?: TaskQueue): void;
+    // {
+    //     if (taskQueue != null) {
+    //         throw new Error("setMessageHandler called with nonnull taskQueue is not supported.")
+    //     }
+    // }
 
     /**
      * Enables the ability to queue messages received from Dart.
@@ -142,16 +141,18 @@ export abstract class BinaryMessenger {
      * be initialized concurrently, and prior to the registration of the channel handlers. This
      * implies that Dart may start sending messages while plugins are being registered.
      */
-    enableBufferingIncomingMessages(): void {
-        throw new Error("enableBufferingIncomingMessages not implemented.");
-    }
+    enableBufferingIncomingMessages(): void;
+    // {
+    //     throw new Error("enableBufferingIncomingMessages not implemented.");
+    // }
 
     /**
      * Disables the ability to queue messages received from Dart.
      *
      * <p>This can be used after all pending channel handlers have been registered.
      */
-    disableBufferingIncomingMessages(): void {
-        throw new Error("disableBufferingIncomingMessages not implemented.");
-    }
+    disableBufferingIncomingMessages(): void;
+    // {
+    //     throw new Error("disableBufferingIncomingMessages not implemented.");
+    // }
 }

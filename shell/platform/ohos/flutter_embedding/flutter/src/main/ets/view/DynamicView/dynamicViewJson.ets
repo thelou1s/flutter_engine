@@ -18,8 +18,7 @@ import { DVModel, DVModelParameters, DVModelEvents, DVModelChildren } from "./dy
 export function createDVModelFromJson(json: Object): DVModel {
 
   /* private use helper functions */
-
-  function createChildrenFrom(children: Array<Object>): DVModelChildren {
+  let createChildrenFrom: (children: Array<Object>) =>  DVModelChildren = (children: Array<Object>): DVModelChildren => {
     let result = new DVModelChildren();
     if (Array.isArray(children)) {
       (children as Array<Object>).forEach(child => {
@@ -32,18 +31,23 @@ export function createDVModelFromJson(json: Object): DVModel {
     return result;
   }
 
-  function createAttributesFrom(attributes: Object): DVModelParameters {
+  let setParams: (result: DVModelParameters | DVModelEvents, key: ESObject, element: Object ) => void = (result: DVModelParameters,  key: ESObject, element: ESObject): void => {
+    let newResult = result as Record<string, ESObject>;
+    newResult[key] = element[key];
+  }
+
+  let createAttributesFrom: (attributes: Object) =>  DVModelParameters = (attributes: Object): DVModelParameters => {
     let result = new DVModelParameters();
     if ((typeof attributes == "object") && (!Array.isArray(attributes))) {
-      Object.keys(attributes).forEach(k => result[k] = attributes[k]);
+      Object.keys(attributes).forEach(k => {setParams(result, k, attributes)});
     }
     return result;
   }
 
-  function createEventsFrom(events: Object): DVModelEvents {
+  let createEventsFrom: (events: Object) =>  DVModelEvents = (events: Object): DVModelEvents => {
     let result = new DVModelEvents();
     if ((typeof events == "object") && (!Array.isArray(events))) {
-      Object.keys(events).forEach(k => result[k] = events[k]);
+      Object.keys(events).forEach(k => {setParams(result, k, events)});
     }
     return result;
   }
@@ -53,11 +57,12 @@ export function createDVModelFromJson(json: Object): DVModel {
     return undefined;
   }
 
+  let jsonObject = json as Record<string, string | ESObject>;
   return new DVModel(
-    json["compType"],
-    createAttributesFrom(json["attributes"]),
-    createEventsFrom(json["events"]),
-    createChildrenFrom(json["children"]),
-    json["build"]
+    jsonObject["compType"],
+    createAttributesFrom(jsonObject["attributes"]),
+    createEventsFrom(jsonObject["events"]),
+    createChildrenFrom(jsonObject["children"]),
+    jsonObject["build"]
   );
 }

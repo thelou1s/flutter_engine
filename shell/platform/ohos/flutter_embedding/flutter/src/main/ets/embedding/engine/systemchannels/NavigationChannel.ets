@@ -27,11 +27,7 @@ export default class NavigationChannel {
     this.channel = new MethodChannel(dartExecutor, "flutter/navigation", JSONMethodCodec.INSTANCE);
     // Provide a default handler that returns an empty response to any messages
     // on this channel.
-    this.channel.setMethodCallHandler({
-      onMethodCall(call: MethodCall, result: MethodResult): void {
-        result.success(null);
-      }
-    });
+    this.channel.setMethodCallHandler(new NavigationCallback());
   }
 
   setInitialRoute(initialRoute: string): void {
@@ -46,9 +42,7 @@ export default class NavigationChannel {
 
   pushRouteInformation(route: string): void {
     Log.i(NavigationChannel.TAG, "Sending message to push route information '" + route + "'");
-    this.channel.invokeMethod("pushRouteInformation", {
-      "location": route
-    });
+    this.channel.invokeMethod("pushRouteInformation", new Map().set("location", route) );
   }
 
   popRoute(): void {
@@ -58,5 +52,11 @@ export default class NavigationChannel {
 
   setMethodCallHandler(handler: MethodCallHandler) {
     this.channel.setMethodCallHandler(handler);
+  }
+}
+
+class NavigationCallback implements MethodCallHandler {
+  onMethodCall(call: MethodCall, result: MethodResult) {
+    result.success(null);
   }
 }

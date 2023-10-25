@@ -37,12 +37,12 @@ export class ByteBuffer {
    * @returns A byte buffer.
    */
   static from(source: ArrayBuffer, byteOffset?: number, byteLength?: number): ByteBuffer {
-    if (ArrayBuffer.isView(source)) {
-      byteOffset = source.byteOffset + (byteOffset || 0)
-    }
+    // if (ArrayBuffer.isView(source)) {
+    //   byteOffset = source.byteOffset + (byteOffset || 0)
+    // }
     const byteBuffer = new ByteBuffer()
     byteBuffer.dataView = byteLength === undefined ? new DataView(source, byteOffset) : new DataView(source, byteOffset, Math.min(source.byteLength, byteLength))
-    byteBuffer.#byteOffset = byteBuffer.dataView.byteOffset
+    byteBuffer.mByteOffset = byteBuffer.dataView.byteOffset
     return byteBuffer
   }
 
@@ -54,14 +54,14 @@ export class ByteBuffer {
   /**
    * The byte offset.
    */
-  #byteOffset: number = 0
+  mByteOffset: number = 0
 
   /**
    * The byte offset.
    * @returns The byte offset.
    */
   get byteOffset(): number {
-    return this.#byteOffset
+    return this.mByteOffset
   }
 
   /**
@@ -77,16 +77,16 @@ export class ByteBuffer {
    * @returns The number of bytes remaining.
    */
   get bytesRemaining(): number {
-    return this.dataView.byteLength - this.#byteOffset
+    return this.dataView.byteLength - this.mByteOffset
   }
 
   hasRemaining(): boolean {
-    return this.#byteOffset < this.dataView.byteLength;
+    return this.mByteOffset < this.dataView.byteLength;
   }
 
   get buffer(): ArrayBuffer {
-    const dataBuffer = new DataView(new ArrayBuffer(this.#byteOffset));
-    for (var i = 0; i < this.#byteOffset; i++) {
+    const dataBuffer = new DataView(new ArrayBuffer(this.mByteOffset));
+    for (let i = 0; i < this.mByteOffset; i++) {
       dataBuffer.setUint8(i, this.dataView.getUint8(i));
     }
     return dataBuffer.buffer
@@ -97,14 +97,14 @@ export class ByteBuffer {
    * @param byteLength The byte length.
    */
   skip(byteLength: number): void {
-    this.#byteOffset += byteLength
+    this.mByteOffset += byteLength
   }
 
   /**
    * Resets the byte offset.
    */
   reset(): void {
-    this.#byteOffset = this.dataView.byteOffset
+    this.mByteOffset = this.dataView.byteOffset
   }
 
   /**
@@ -118,9 +118,9 @@ export class ByteBuffer {
    * check buffer capacity.
    */
   checkWriteCapacity(slen: number): void {
-    if (this.#byteOffset + slen > this.dataView.byteLength) {
-      var checkBuffer = new DataView(new ArrayBuffer(this.dataView.byteLength + slen + 512));
-      for (var i = 0; i < this.#byteOffset; i++) {
+    if (this.mByteOffset + slen > this.dataView.byteLength) {
+      let checkBuffer = new DataView(new ArrayBuffer(this.dataView.byteLength + slen + 512));
+      for (let i = 0; i < this.mByteOffset; i++) {
         checkBuffer.setUint8(i, this.dataView.getUint8(i));
       }
       this.dataView = checkBuffer;
@@ -139,7 +139,7 @@ export class ByteBuffer {
    * Reads the next boolean.
    */
   readBool(): boolean {
-    return this.getInt8(this.#byteOffset++) !== 0
+    return this.getInt8(this.mByteOffset++) !== 0
   }
 
   /**
@@ -157,7 +157,7 @@ export class ByteBuffer {
    */
   writeBool(value: boolean): void {
     this.checkWriteCapacity(1)
-    this.setInt8(this.#byteOffset++, value ? 1 : 0)
+    this.setInt8(this.mByteOffset++, value ? 1 : 0)
   }
 
   /**
@@ -174,7 +174,7 @@ export class ByteBuffer {
    * @returns The value.
    */
   readInt8(): number {
-    return this.getInt8(this.#byteOffset++)
+    return this.getInt8(this.mByteOffset++)
   }
 
   /**
@@ -192,7 +192,7 @@ export class ByteBuffer {
    */
   writeInt8(value: number): void {
     this.checkWriteCapacity(1)
-    this.setInt8(this.#byteOffset++, value)
+    this.setInt8(this.mByteOffset++, value)
   }
 
   /**
@@ -209,7 +209,7 @@ export class ByteBuffer {
    * @returns The value.
    */
   readUint8(): number {
-    return this.getUint8(this.#byteOffset++)
+    return this.getUint8(this.mByteOffset++)
   }
 
   /**
@@ -227,7 +227,7 @@ export class ByteBuffer {
    */
   writeUint8(value: number): void {
     this.checkWriteCapacity(1)
-    this.setUint8(this.#byteOffset++, value)
+    this.setUint8(this.mByteOffset++, value)
   }
 
   /**
@@ -246,8 +246,8 @@ export class ByteBuffer {
    * @returns The value.
    */
   readInt16(littleEndian?: boolean): number {
-    const value = this.getInt16(this.#byteOffset, littleEndian)
-    this.#byteOffset += 2
+    const value = this.getInt16(this.mByteOffset, littleEndian)
+    this.mByteOffset += 2
     return value
   }
 
@@ -268,8 +268,8 @@ export class ByteBuffer {
    */
   writeInt16(value: number, littleEndian?: boolean): void {
     this.checkWriteCapacity(2)
-    this.setInt16(this.#byteOffset, value, littleEndian)
-    this.#byteOffset += 2
+    this.setInt16(this.mByteOffset, value, littleEndian)
+    this.mByteOffset += 2
   }
 
   /**
@@ -288,8 +288,8 @@ export class ByteBuffer {
    * @returns The value.
    */
   readUint16(littleEndian?: boolean): number {
-    const value = this.getUint16(this.#byteOffset, littleEndian)
-    this.#byteOffset += 2
+    const value = this.getUint16(this.mByteOffset, littleEndian)
+    this.mByteOffset += 2
     return value
   }
 
@@ -310,8 +310,8 @@ export class ByteBuffer {
    */
   writeUint16(value: number, littleEndian?: boolean): void {
     this.checkWriteCapacity(2)
-    this.setUint16(this.#byteOffset, value, littleEndian)
-    this.#byteOffset += 2
+    this.setUint16(this.mByteOffset, value, littleEndian)
+    this.mByteOffset += 2
   }
 
   /**
@@ -330,8 +330,8 @@ export class ByteBuffer {
    * @returns The value.
    */
   readInt32(littleEndian?: boolean): number {
-    const value = this.getInt32(this.#byteOffset, littleEndian)
-    this.#byteOffset += 4
+    const value = this.getInt32(this.mByteOffset, littleEndian)
+    this.mByteOffset += 4
     return value
   }
 
@@ -352,8 +352,8 @@ export class ByteBuffer {
    */
   writeInt32(value: number, littleEndian?: boolean): void {
     this.checkWriteCapacity(4)
-    this.setInt32(this.#byteOffset, value, littleEndian)
-    this.#byteOffset += 4
+    this.setInt32(this.mByteOffset, value, littleEndian)
+    this.mByteOffset += 4
   }
 
   /**
@@ -372,8 +372,8 @@ export class ByteBuffer {
    * @returns The value.
    */
   readUint32(littleEndian?: boolean): number {
-    const value = this.getUint32(this.#byteOffset, littleEndian)
-    this.#byteOffset += 4
+    const value = this.getUint32(this.mByteOffset, littleEndian)
+    this.mByteOffset += 4
     return value
   }
 
@@ -394,8 +394,8 @@ export class ByteBuffer {
    */
   writeUint32(value: number, littleEndian?: boolean): void {
     this.checkWriteCapacity(4)
-    this.setUint32(this.#byteOffset, value, littleEndian)
-    this.#byteOffset += 4
+    this.setUint32(this.mByteOffset, value, littleEndian)
+    this.mByteOffset += 4
   }
 
   /**
@@ -414,8 +414,8 @@ export class ByteBuffer {
    * @returns The value.
    */
   readFloat32(littleEndian?: boolean): number {
-    const value = this.getFloat32(this.#byteOffset, littleEndian)
-    this.#byteOffset += 4
+    const value = this.getFloat32(this.mByteOffset, littleEndian)
+    this.mByteOffset += 4
     return value
   }
 
@@ -436,8 +436,8 @@ export class ByteBuffer {
    */
   writeFloat32(value: number, littleEndian?: boolean): void {
     this.checkWriteCapacity(4)
-    this.setFloat32(this.#byteOffset, value, littleEndian)
-    this.#byteOffset += 4
+    this.setFloat32(this.mByteOffset, value, littleEndian)
+    this.mByteOffset += 4
   }
 
   /**
@@ -456,8 +456,8 @@ export class ByteBuffer {
    * @returns The value.
    */
   readFloat64(littleEndian?: boolean): number {
-    const value = this.getFloat64(this.#byteOffset, littleEndian)
-    this.#byteOffset += 8
+    const value = this.getFloat64(this.mByteOffset, littleEndian)
+    this.mByteOffset += 8
     return value
   }
 
@@ -478,8 +478,8 @@ export class ByteBuffer {
    */
   writeFloat64(value: number, littleEndian?: boolean): void {
     this.checkWriteCapacity(8)
-    this.setFloat64(this.#byteOffset, value, littleEndian)
-    this.#byteOffset += 8
+    this.setFloat64(this.mByteOffset, value, littleEndian)
+    this.mByteOffset += 8
   }
 
   /**
@@ -498,8 +498,8 @@ export class ByteBuffer {
    * @returns The value.
    */
   readBigInt64(littleEndian?: boolean): bigint {
-    const value = this.getBigInt64(this.#byteOffset, littleEndian)
-    this.#byteOffset += 8
+    const value = this.getBigInt64(this.mByteOffset, littleEndian)
+    this.mByteOffset += 8
     return value
   }
 
@@ -520,8 +520,8 @@ export class ByteBuffer {
    */
   writeBigInt64(value: bigint, littleEndian?: boolean): void {
     this.checkWriteCapacity(8)
-    this.setBigInt64(this.#byteOffset, value, littleEndian)
-    this.#byteOffset += 8
+    this.setBigInt64(this.mByteOffset, value, littleEndian)
+    this.mByteOffset += 8
   }
 
   /**
@@ -540,8 +540,8 @@ export class ByteBuffer {
    * @returns The value.
    */
   readBigUint64(littleEndian?: boolean): bigint {
-    const value = this.getBigUint64(this.#byteOffset, littleEndian)
-    this.#byteOffset += 8
+    const value = this.getBigUint64(this.mByteOffset, littleEndian)
+    this.mByteOffset += 8
     return value
   }
 
@@ -562,8 +562,8 @@ export class ByteBuffer {
    */
   writeBigUint64(value: bigint, littleEndian?: boolean): void {
     this.checkWriteCapacity(8)
-    this.setBigUint64(this.#byteOffset, value, littleEndian)
-    this.#byteOffset += 8
+    this.setBigUint64(this.mByteOffset, value, littleEndian)
+    this.mByteOffset += 8
   }
 
   /**
@@ -582,8 +582,8 @@ export class ByteBuffer {
    * @returns The value.
    */
   readInt64(littleEndian?: boolean): number {
-    const value = this.getInt64(this.#byteOffset, littleEndian)
-    this.#byteOffset += 8
+    const value = this.getInt64(this.mByteOffset, littleEndian)
+    this.mByteOffset += 8
     return value
   }
 
@@ -604,8 +604,8 @@ export class ByteBuffer {
    */
   writeInt64(value: number, littleEndian?: boolean): void {
     this.checkWriteCapacity(8)
-    this.setInt64(this.#byteOffset, value, littleEndian)
-    this.#byteOffset += 8
+    this.setInt64(this.mByteOffset, value, littleEndian)
+    this.mByteOffset += 8
   }
 
   /**
@@ -624,8 +624,8 @@ export class ByteBuffer {
    * @returns The value.
    */
   readUint64(littleEndian?: boolean): number {
-    const value = this.getUint64(this.#byteOffset, littleEndian)
-    this.#byteOffset += 8
+    const value = this.getUint64(this.mByteOffset, littleEndian)
+    this.mByteOffset += 8
     return value
   }
 
@@ -646,8 +646,8 @@ export class ByteBuffer {
    */
   writeUint64(value: number, littleEndian?: boolean): void {
     this.checkWriteCapacity(8)
-    this.setUint64(this.#byteOffset, value, littleEndian)
-    this.#byteOffset += 8
+    this.setUint64(this.mByteOffset, value, littleEndian)
+    this.mByteOffset += 8
   }
 
   /**
@@ -666,8 +666,8 @@ export class ByteBuffer {
    * @returns The value.
    */
   readUint8Array(byteLength?: number): Uint8Array {
-    const value = this.getUint8Array(this.#byteOffset, byteLength)
-    this.#byteOffset += value.byteLength
+    const value = this.getUint8Array(this.mByteOffset, byteLength)
+    this.mByteOffset += value.byteLength
     return value
   }
 
@@ -687,8 +687,8 @@ export class ByteBuffer {
    */
   writeUint8Array(value: Uint8Array): void {
     this.checkWriteCapacity(value.byteLength)
-    this.setUint8Array(this.#byteOffset, value)
-    this.#byteOffset += value.byteLength
+    this.setUint8Array(this.mByteOffset, value)
+    this.mByteOffset += value.byteLength
   }
 
   /**
@@ -710,8 +710,8 @@ export class ByteBuffer {
    * @returns The value.
    */
   readUint16Array(byteLength?: number): Uint16Array {
-    const value = this.getUint16Array(this.#byteOffset, byteLength)
-    this.#byteOffset += value.byteLength
+    const value = this.getUint16Array(this.mByteOffset, byteLength)
+    this.mByteOffset += value.byteLength
     return value
   }
 
@@ -731,8 +731,8 @@ export class ByteBuffer {
    */
   writeUint16Array(value: Uint16Array): void {
     this.checkWriteCapacity(value.byteLength)
-    this.setUint16Array(this.#byteOffset, value)
-    this.#byteOffset += value.byteLength
+    this.setUint16Array(this.mByteOffset, value)
+    this.mByteOffset += value.byteLength
   }
 
   /**
@@ -755,11 +755,11 @@ export class ByteBuffer {
    * @returns The value.
    */
   readString(byteLength?: number, byteEncoding?: string): string {
-    const value = this.getString(this.#byteOffset, byteLength, byteEncoding)
+    const value = this.getString(this.mByteOffset, byteLength, byteEncoding)
     if (byteLength === undefined) {
-      this.#byteOffset = this.dataView.byteLength
+      this.mByteOffset = this.dataView.byteLength
     } else {
-      this.#byteOffset += byteLength
+      this.mByteOffset += byteLength
     }
     return value
   }
@@ -781,7 +781,7 @@ export class ByteBuffer {
       this.checkWriteCapacity(byteLength)
     }
     const destination = this.getUint8Array(byteOffset, byteLength)
-    const { written } = encoder.encodeInto(value, destination)
+    const written  = encoder.encodeInto(value, destination).written
     return written || 0
   }
 
@@ -791,8 +791,8 @@ export class ByteBuffer {
    * @param byteEncoding The byte encoding.
    */
   writeString(value: string, byteEncoding?: string): void {
-    const byteLength = this.setString(this.#byteOffset, value, byteEncoding, true)
-    this.#byteOffset += byteLength
+    const byteLength = this.setString(this.mByteOffset, value, byteEncoding, true)
+    this.mByteOffset += byteLength
   }
 
   /**
@@ -801,7 +801,7 @@ export class ByteBuffer {
    * @returns The string.
    */
   toString(format?: string): string {
-    return Array.prototype.map.call(this.getUint8Array(0), function(byte: number): string {
+    return [...this.getUint8Array(0)].map((byte: number) => {
       switch(format) {
         case "hex":
           return ("00" + byte.toString(16)).slice(-2)

@@ -29,11 +29,11 @@ export class TraceSection {
    * @param sectionName The string to display as the section name in the trace.
    */
   public static begin(sectionName: string): void {
-    hiTraceMeter.startTrace(this.cropSectionName(sectionName), this.taskId++);
+    hiTraceMeter.startTrace(TraceSection.cropSectionName(sectionName), TraceSection.taskId++);
   }
 
   /** Wraps Trace.endSection. */
   public static end(sectionName: string): void {
-    hiTraceMeter.finishTrace(this.cropSectionName(sectionName), this.taskId);
+    hiTraceMeter.finishTrace(TraceSection.cropSectionName(sectionName), TraceSection.taskId);
   }
 }

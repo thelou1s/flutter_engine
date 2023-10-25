@@ -60,11 +60,11 @@ import MessageCodec from './MessageCodec';
  *
  * <p>To extend the codec, overwrite the writeValue and readValueOfType methods.
  */
-export default class StandardMessageCodec implements MessageCodec<any> {
+export default class StandardMessageCodec implements MessageCodec<ESObject> {
     private static TAG = "StandardMessageCodec#";
     static INSTANCE = new StandardMessageCodec();
 
-    encodeMessage(message: any): ArrayBuffer {
+    encodeMessage(message: ESObject): ArrayBuffer {
         if (message == null) {
             return null;
         }
@@ -73,7 +73,7 @@ export default class StandardMessageCodec implements MessageCodec<any> {
         return stream.buffer
     }
 
-    decodeMessage(message: ArrayBuffer): any {
+    decodeMessage(message: ArrayBuffer): ESObject {
         const buffer = ByteBuffer.from(message)
         return this.readValue(buffer)
     }
@@ -95,7 +95,7 @@ export default class StandardMessageCodec implements MessageCodec<any> {
     private static FLOAT32_ARRAY = 14;
 
 
-    writeValue(stream: ByteBuffer, value: any): any {
+    writeValue(stream: ByteBuffer, value: ESObject): ESObject {
         if (value == null || value == undefined) {
             stream.writeInt8(StandardMessageCodec.NULL)
         } else if (typeof value === "boolean") {
@@ -139,22 +139,22 @@ export default class StandardMessageCodec implements MessageCodec<any> {
         } else if (value instanceof Array) {
             stream.writeInt8(StandardMessageCodec.LIST)
             this.writeSize(stream, value.length);
-            value.forEach(item => this.writeValue(stream, item))
+            value.forEach((item: ESObject): void => this.writeValue(stream, item))
         } else if (value instanceof Map) {
             stream.writeInt8(StandardMessageCodec.MAP)
             this.writeSize(stream, value.size);
-            value.forEach((value, key) => {
+            value.forEach((value: ESObject, key: ESObject) => {
                 this.writeValue(stream, key);
                 this.writeValue(stream, value);
             })
         } else if (typeof value == 'object') {
-            this.writeValue(stream, new Map(Object.entries(value)))
+            this.writeValue(stream, new Map<string, ESObject>(value.entries()))
         }
         return stream
     }
 
     writeAlignment(stream: ByteBuffer, alignment: number) {
-        var mod = stream.byteOffset % alignment;
+        let mod: number = stream.byteOffset % alignment;
         if (mod != 0) {
             for (let i = 0; i < alignment - mod; i++) {
                 stream.writeInt8(0);
@@ -197,7 +197,7 @@ export default class StandardMessageCodec implements MessageCodec<any> {
         }
     }
 
-    readValue(buffer: ByteBuffer): any {
+    readValue(buffer: ByteBuffer): ESObject {
         let type = buffer.readInt8()
         return this.readValueOfType(type, buffer);
     }
@@ -211,8 +211,8 @@ export default class StandardMessageCodec implements MessageCodec<any> {
         return bytes;
     }
 
-    readValueOfType(type: number, buffer: ByteBuffer): any {
-        var result
+    readValueOfType(type: number, buffer: ByteBuffer): ESObject {
+        let result: ESObject;
         switch (type) {
             case StandardMessageCodec.NULL:
                 result = null;
@@ -256,7 +256,7 @@ export default class StandardMessageCodec implements MessageCodec<any> {
             }
             case StandardMessageCodec.INT64_ARRAY: { //这里是都城array 还是 bigint待定
                 let length = this.readSize(buffer);
-                let array = new Array(length)
+                let array: Array<ESObject> = new Array(length)
                 this.readAlignment(buffer, 8);
                 for (let i = 0; i < length; i++) {
                     array[i] = buffer.readInt64(true)
@@ -276,7 +276,7 @@ export default class StandardMessageCodec implements MessageCodec<any> {
             }
             case StandardMessageCodec.LIST: {
                 let length = this.readSize(buffer);
-                let array = new Array(length)
+                let array: Array<ESObject> = new Array(length)
                 for (let i = 0; i < length; i++) {
                     array[i] = this.readValue(buffer)
                 }
@@ -285,7 +285,7 @@ export default class StandardMessageCodec implements MessageCodec<any> {
             }
             case StandardMessageCodec.MAP: {
                 let size = this.readSize(buffer);
-                let map = new Map()
+                let map: Map<ESObject, ESObject> = new Map()
                 for (let i = 0; i < size; i++) {
                     map.set(this.readValue(buffer), this.readValue(buffer));
                 }

@@ -41,7 +41,7 @@ export default class MouseCursorPlugin implements MouseCursorMethodHandler{
       }
       let pointStyle: pointer.PointerStyle = this.resolveSystemCursor(kind);
       try {
-        pointer.setPointerStyle(windowId, pointStyle, (err) => {
+        pointer.setPointerStyle(windowId, pointStyle, (err: ESObject) => {
           Log.i(TAG, "set point style success kind : " + kind);
         })
       } catch (e) {

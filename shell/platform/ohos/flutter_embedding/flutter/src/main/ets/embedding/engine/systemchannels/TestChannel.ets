@@ -13,7 +13,7 @@
 * limitations under the License.
 */
 
-import BasicMessageChannel, { Reply } from '../../../plugin/common/BasicMessageChannel';
+import BasicMessageChannel, { MessageHandler, Reply } from '../../../plugin/common/BasicMessageChannel';
 import JSONMessageCodec from '../../../plugin/common/JSONMessageCodec';
 import DartExecutor from '../dart/DartExecutor';
 import Log from '../../../util/Log';
@@ -25,12 +25,14 @@ export default class TestChannel {
 
   constructor(dartExecutor: DartExecutor) {
     this.channel = new BasicMessageChannel<String>(dartExecutor, "flutter/test", JSONMessageCodec.INSTANCE);
+    let callback = new MessageCallback();
+    this.channel.setMessageHandler(callback);
+  }
+}
 
-    this.channel.setMessageHandler({
-      onMessage(call: String, reply: Reply<String>): void {
-        Log.d(TAG, "receive msg = " + call);
-        reply.reply("收到消息啦：" + call);
-      }
-    });
+class MessageCallback implements MessageHandler<string> {
+  onMessage(message: string, reply: Reply<string>) {
+    Log.d(TAG, "receive msg = " + message);
+    reply.reply("收到消息啦：" + message);
   }
 }

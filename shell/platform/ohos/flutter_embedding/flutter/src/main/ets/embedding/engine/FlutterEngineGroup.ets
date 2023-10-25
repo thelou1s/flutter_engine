@@ -13,22 +13,23 @@
 * limitations under the License.
 */
 
-import FlutterEngine from "./FlutterEngine"
+import FlutterEngine, { EngineLifecycleListener } from "./FlutterEngine"
 import common from '@ohos.app.ability.common'
 import FlutterLoader from './loader/FlutterLoader'
 import FlutterInjector from '../../FlutterInjector'
 import { DartEntrypoint } from './dart/DartExecutor'
 import PlatformViewsController from '../../plugin/platform/PlatformViewsController'
+import ArrayList from '@ohos.util.ArrayList'
 
 export default class FlutterEngineGroup {
-  private activeEngines: Array<FlutterEngine> = new Array();
+  private activeEngines: ArrayList<FlutterEngine> = new ArrayList<FlutterEngine>();
 
   constructor() {
 
   }
 
   async checkLoader(context: common.Context, args: Array<string>) {
-    var loader: FlutterLoader = FlutterInjector.getInstance().getFlutterLoader();
+    let loader: FlutterLoader = FlutterInjector.getInstance().getFlutterLoader();
     if (!loader.initialized) {
       await loader.startInitialization(context.getApplicationContext());
       loader.ensureInitializationComplete(args);
@@ -73,22 +74,40 @@ export default class FlutterEngineGroup {
           automaticallyRegisterPlugins,
           waitForRestorationData);
     }
-    this.activeEngines.push(engine);
+    this.activeEngines.add(engine);
 
     const engineToCleanUpOnDestroy = engine;
-    engine.addEngineLifecycleListener({
-      onPreEngineRestart(): void {
-        platformViewsController.onPreEngineRestart();
-      },
-      onEngineWillDestroy(): void {
-        this.activeEngines.remove(engineToCleanUpOnDestroy);
-      }
-    });
+    let listener: EngineLifecycleListener = new EngineLifecycleListenerImpl(
+      platformViewsController,
+      this.activeEngines,
+      engineToCleanUpOnDestroy);
+    engine.addEngineLifecycleListener(listener);
     return engine;
   }
 
   createEngine(context: common.Context, platformViewsController: PlatformViewsController): FlutterEngine {
     return new FlutterEngine(context, null, null, platformViewsController);
+  }
+}
+
+class EngineLifecycleListenerImpl implements EngineLifecycleListener {
+  private platformViewsController: PlatformViewsController;
+  private activeEngines: ArrayList<FlutterEngine> = new ArrayList();
+  private engine: FlutterEngine;
+
+  constructor(
+    platformViewsController: PlatformViewsController,
+    activeEngines: ArrayList<FlutterEngine>,
+    engine: FlutterEngine) {
+    this.platformViewsController = platformViewsController;
+    this.activeEngines = activeEngines;
+    this.engine = engine;
+  }
+  onPreEngineRestart(): void {
+    this.platformViewsController.onPreEngineRestart();
+  }
+  onEngineWillDestroy(): void {
+    this.activeEngines.remove(this.engine);
   }
 }
 
@@ -105,7 +124,7 @@ export class Options {
     this.context = context;
   }
 
-  getContext(): any {
+  getContext(): common.Context {
     return this.context;
   }
 

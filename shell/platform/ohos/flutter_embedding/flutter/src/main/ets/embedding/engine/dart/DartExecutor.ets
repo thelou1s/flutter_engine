@@ -30,7 +30,7 @@ const TAG = "DartExecutor";
 /**
  * dart代码执行器
  */
-export default class DartExecutor extends BinaryMessenger {
+export default class DartExecutor implements  BinaryMessenger {
   flutterNapi: FlutterNapi;
   assetManager: resourceManager.ResourceManager;
   private dartMessenger: DartMessenger;
@@ -43,7 +43,6 @@ export default class DartExecutor extends BinaryMessenger {
     new IsolateChannelMessageHandler(this.isolateServiceId, this.isolateServiceIdListener);
 
   constructor(flutterNapi: FlutterNapi, assetManager: resourceManager.ResourceManager) {
-    super();
     this.flutterNapi = flutterNapi;
     this.assetManager = assetManager;
     this.dartMessenger = new DartMessenger(flutterNapi);

@@ -35,9 +35,10 @@ export default class JSONMethodCodec implements MethodCodec {
 
   encodeMethodCall(methodCall: MethodCall): ArrayBuffer {
     try {
-      const map = {
+      const map: Record<string, ESObject> = {
         "method": methodCall.method, "args": methodCall.args
       }
+
       return JSONMessageCodec.INSTANCE.encodeMessage(map);
     } catch (e) {
       throw new Error("Invalid JSON");
@@ -46,10 +47,10 @@ export default class JSONMethodCodec implements MethodCodec {
 
   decodeMethodCall(message: ArrayBuffer): MethodCall {
     try {
-      const json = JSONMessageCodec.INSTANCE.decodeMessage(message);
+      const json: ESObject = JSONMessageCodec.INSTANCE.decodeMessage(message);
       if (ToolUtils.isObj(json)) {
-        const method = json["method"];
-        const args = json["args"];
+        const method: string = json["method"];
+        const args: ESObject = json["args"];
         if (typeof method == 'string') {
           return new MethodCall(method, args);
         }
@@ -60,29 +61,29 @@ export default class JSONMethodCodec implements MethodCodec {
     }
   }
 
-  encodeSuccessEnvelope(result: any): ArrayBuffer {
+  encodeSuccessEnvelope(result: ESObject): ArrayBuffer {
     return JSONMessageCodec.INSTANCE.encodeMessage([result]);
   }
 
-  encodeErrorEnvelope(errorCode: any, errorMessage: string, errorDetails: any) {
+  encodeErrorEnvelope(errorCode: ESObject, errorMessage: string, errorDetails: ESObject) {
     return JSONMessageCodec.INSTANCE.encodeMessage([errorCode, errorMessage, errorDetails]);
   }
 
-  encodeErrorEnvelopeWithStacktrace(errorCode: string, errorMessage: string, errorDetails: any, errorStacktrace: string): ArrayBuffer {
+  encodeErrorEnvelopeWithStacktrace(errorCode: string, errorMessage: string, errorDetails: ESObject, errorStacktrace: string): ArrayBuffer {
     return JSONMessageCodec.INSTANCE.encodeMessage([errorCode, errorMessage, errorDetails, errorStacktrace])
   }
 
-  decodeEnvelope(envelope: ArrayBuffer): any {
+  decodeEnvelope(envelope: ArrayBuffer): ESObject {
     try {
-      const json = JSONMessageCodec.INSTANCE.decodeMessage(envelope);
+      const json: ESObject = JSONMessageCodec.INSTANCE.decodeMessage(envelope);
       if (json instanceof Array) {
         if (json.length == 1) {
           return json[0];
         }
         if (json.length == 3) {
-          const code = json[0];
-          const message = json[1];
-          const details = json[2];
+          const code: string = json[0];
+          const message: string = json[1];
+          const details: ESObject = json[2];
           if (typeof code == 'string' && (message == null || typeof message == 'string')) {
             throw new FlutterException(code, message, details);
           }
