@@ -76,6 +76,6 @@ export const nativeSetViewportMetrics: (nativeShellHolderId: number, devicePixel
                                         , systemGestureInsetLeft: number, physicalTouchSlop: number, displayFeaturesBounds: Array<number>
                                         , displayFeaturesType: Array<number>, displayFeaturesState: Array<number>) => void;
 
-export const nativeImageDecodeCallback: (width: number, height: number, imageGeneratorPointer: number, pixelMap : image.PixelMap) => void;
+export const nativeImageDecodeCallback: (width: number, height: number, imageGeneratorPointer: number, pixelMap : image.PixelMap | null) => void;
 
 export const nativeGetSystemLanguages: (nativeShellHolderId: number, languages: Array<string>) => void;

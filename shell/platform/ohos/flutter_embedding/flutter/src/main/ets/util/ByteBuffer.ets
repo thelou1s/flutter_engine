@@ -14,6 +14,7 @@
 */
 
 import util from '@ohos.util'
+import StringUtils from './StringUtils'
 
 /**
  * A byte buffer.
@@ -49,7 +50,7 @@ export class ByteBuffer {
   /**
    * The dataView.
    */
-  private dataView: DataView
+  private dataView?: DataView
 
   /**
    * The byte offset.
@@ -69,7 +70,7 @@ export class ByteBuffer {
    * @returns The byte offset.
    */
   get byteLength(): number {
-    return this.dataView.byteLength
+    return this.dataView?.byteLength ?? 0
   }
 
   /**
@@ -77,17 +78,17 @@ export class ByteBuffer {
    * @returns The number of bytes remaining.
    */
   get bytesRemaining(): number {
-    return this.dataView.byteLength - this.mByteOffset
+    return this.dataView ? this.dataView.byteLength - this.mByteOffset : 0;
   }
 
   hasRemaining(): boolean {
-    return this.mByteOffset < this.dataView.byteLength;
+    return this.dataView != undefined && this.mByteOffset < this.dataView.byteLength;
   }
 
   get buffer(): ArrayBuffer {
     const dataBuffer = new DataView(new ArrayBuffer(this.mByteOffset));
     for (let i = 0; i < this.mByteOffset; i++) {
-      dataBuffer.setUint8(i, this.dataView.getUint8(i));
+      dataBuffer.setUint8(i, this.dataView!.getUint8(i));
     }
     return dataBuffer.buffer
   }
@@ -104,7 +105,7 @@ export class ByteBuffer {
    * Resets the byte offset.
    */
   reset(): void {
-    this.mByteOffset = this.dataView.byteOffset
+    this.mByteOffset = this.dataView?.byteOffset ?? 0
   }
 
   /**
@@ -118,10 +119,10 @@ export class ByteBuffer {
    * check buffer capacity.
    */
   checkWriteCapacity(slen: number): void {
-    if (this.mByteOffset + slen > this.dataView.byteLength) {
-      let checkBuffer = new DataView(new ArrayBuffer(this.dataView.byteLength + slen + 512));
+    if (this.mByteOffset + slen > this.dataView!.byteLength) {
+      let checkBuffer = new DataView(new ArrayBuffer(this.dataView!.byteLength + slen + 512));
       for (let i = 0; i < this.mByteOffset; i++) {
-        checkBuffer.setUint8(i, this.dataView.getUint8(i));
+        checkBuffer.setUint8(i, this.dataView!.getUint8(i));
       }
       this.dataView = checkBuffer;
     }
@@ -148,7 +149,7 @@ export class ByteBuffer {
    * @param value The value.
    */
   setBool(byteOffset: number, value: boolean): void {
-    this.dataView.setInt8(byteOffset, value ? 1 : 0)
+    this.dataView?.setInt8(byteOffset, value ? 1 : 0)
   }
 
   /**
@@ -166,7 +167,7 @@ export class ByteBuffer {
    * @returns The value.
    */
   getInt8(byteOffset: number): number {
-    return this.dataView.getInt8(byteOffset)
+    return this.dataView?.getInt8(byteOffset) || 0
   }
 
   /**
@@ -183,7 +184,7 @@ export class ByteBuffer {
    * @param value The value.
    */
   setInt8(byteOffset: number, value: number): void {
-    this.dataView.setInt8(byteOffset, value)
+    this.dataView?.setInt8(byteOffset, value)
   }
 
   /**
@@ -201,7 +202,7 @@ export class ByteBuffer {
    * @returns The value.
    */
   getUint8(byteOffset: number): number {
-    return this.dataView.getUint8(byteOffset)
+    return this.dataView?.getUint8(byteOffset) || 0
   }
 
   /**
@@ -218,7 +219,7 @@ export class ByteBuffer {
    * @param value The value.
    */
   setUint8(byteOffset: number, value: number): void {
-    this.dataView.setUint8(byteOffset, value)
+    this.dataView?.setUint8(byteOffset, value)
   }
 
   /**
@@ -237,7 +238,7 @@ export class ByteBuffer {
    * @returns The value.
    */
   getInt16(byteOffset: number, littleEndian?: boolean): number {
-    return this.dataView.getInt16(byteOffset, littleEndian)
+    return this.dataView?.getInt16(byteOffset, littleEndian) || 0
   }
 
   /**
@@ -258,7 +259,7 @@ export class ByteBuffer {
    * @param littleEndian If the value is little endian.
    */
   setInt16(byteOffset: number, value: number, littleEndian?: boolean): void {
-    this.dataView.setInt16(byteOffset, value, littleEndian)
+    this.dataView?.setInt16(byteOffset, value, littleEndian)
   }
 
   /**
@@ -279,7 +280,7 @@ export class ByteBuffer {
    * @returns The value.
    */
   getUint16(byteOffset: number, littleEndian?: boolean): number {
-    return this.dataView.getUint16(byteOffset, littleEndian)
+    return this.dataView?.getUint16(byteOffset, littleEndian) || 0
   }
 
   /**
@@ -300,7 +301,7 @@ export class ByteBuffer {
    * @param littleEndian If the value is little endian.
    */
   setUint16(byteOffset: number, value: number, littleEndian?: boolean): void {
-    this.dataView.setUint16(byteOffset, value, littleEndian)
+    this.dataView?.setUint16(byteOffset, value, littleEndian)
   }
 
   /**
@@ -321,7 +322,7 @@ export class ByteBuffer {
    * @returns The value.
    */
   getInt32(byteOffset: number, littleEndian?: boolean): number {
-    return this.dataView.getInt32(byteOffset, littleEndian)
+    return this.dataView?.getInt32(byteOffset, littleEndian) ?? 0
   }
 
   /**
@@ -342,7 +343,7 @@ export class ByteBuffer {
    * @param littleEndian If the value is little endian.
    */
   setInt32(byteOffset: number, value: number, littleEndian?: boolean): void {
-    this.dataView.setInt32(byteOffset, value, littleEndian)
+    this.dataView?.setInt32(byteOffset, value, littleEndian)
   }
 
   /**
@@ -363,7 +364,7 @@ export class ByteBuffer {
    * @returns The value.
    */
   getUint32(byteOffset: number, littleEndian?: boolean): number {
-    return this.dataView.getUint32(byteOffset, littleEndian)
+    return this.dataView?.getUint32(byteOffset, littleEndian) ?? 0
   }
 
   /**
@@ -384,7 +385,7 @@ export class ByteBuffer {
    * @param littleEndian If the value is little endian.
    */
   setUint32(byteOffset: number, value: number, littleEndian?: boolean): void {
-    this.dataView.setUint32(byteOffset, value, littleEndian)
+    this.dataView?.setUint32(byteOffset, value, littleEndian)
   }
 
   /**
@@ -405,7 +406,7 @@ export class ByteBuffer {
    * @returns The value.
    */
   getFloat32(byteOffset: number, littleEndian?: boolean): number {
-    return this.dataView.getFloat32(byteOffset, littleEndian)
+    return this.dataView?.getFloat32(byteOffset, littleEndian) ?? 0
   }
 
   /**
@@ -426,7 +427,7 @@ export class ByteBuffer {
    * @param littleEndian If the value is little endian.
    */
   setFloat32(byteOffset: number, value: number, littleEndian?: boolean): void {
-    this.dataView.setFloat32(byteOffset, value, littleEndian)
+    this.dataView?.setFloat32(byteOffset, value, littleEndian)
   }
 
   /**
@@ -447,7 +448,7 @@ export class ByteBuffer {
    * @returns The value.
    */
   getFloat64(byteOffset: number, littleEndian?: boolean): number {
-    return this.dataView.getFloat64(byteOffset, littleEndian)
+    return this.dataView?.getFloat64(byteOffset, littleEndian) ?? 0
   }
 
   /**
@@ -468,7 +469,7 @@ export class ByteBuffer {
    * @param littleEndian If the value is little endian.
    */
   setFloat64(byteOffset: number, value: number, littleEndian?: boolean): void {
-    this.dataView.setFloat64(byteOffset, value, littleEndian)
+    this.dataView?.setFloat64(byteOffset, value, littleEndian)
   }
 
   /**
@@ -489,7 +490,7 @@ export class ByteBuffer {
    * @returns The value.
    */
   getBigInt64(byteOffset: number, littleEndian?: boolean): bigint {
-    return this.dataView.getBigInt64(byteOffset, littleEndian)
+    return this.dataView?.getBigInt64(byteOffset, littleEndian) ?? BigInt(0)
   }
 
   /**
@@ -510,7 +511,7 @@ export class ByteBuffer {
    * @param littleEndian If the value is little endian.
    */
   setBigInt64(byteOffset: number, value: bigint, littleEndian?: boolean): void {
-    this.dataView.setBigInt64(byteOffset, value, littleEndian)
+    this.dataView?.setBigInt64(byteOffset, value, littleEndian)
   }
 
   /**
@@ -531,7 +532,7 @@ export class ByteBuffer {
    * @returns The value.
    */
   getBigUint64(byteOffset: number, littleEndian?: boolean): bigint {
-    return this.dataView.getBigUint64(byteOffset, littleEndian)
+    return this.dataView?.getBigUint64(byteOffset, littleEndian) ?? BigInt(0)
   }
 
   /**
@@ -552,7 +553,7 @@ export class ByteBuffer {
    * @param littleEndian If the value is little endian.
    */
   setBigUint64(byteOffset: number, value: bigint, littleEndian?: boolean): void {
-    this.dataView.setBigUint64(byteOffset, value, littleEndian)
+    this.dataView?.setBigUint64(byteOffset, value, littleEndian)
   }
 
   /**
@@ -657,7 +658,9 @@ export class ByteBuffer {
    * @returns The value.
    */
   getUint8Array(byteOffset: number, byteLength?: number): Uint8Array {
-    return new Uint8Array(this.dataView.buffer, this.dataView.byteOffset + byteOffset, byteLength)
+    return this.dataView == null
+      ? new Uint8Array(StringUtils.stringToArrayBuffer(""), byteOffset, byteLength)
+      : new Uint8Array(this.dataView?.buffer, this.dataView?.byteOffset + byteOffset, byteLength)
   }
 
   /**
@@ -701,7 +704,9 @@ export class ByteBuffer {
     if (byteLength !== undefined) {
       byteLength = Math.floor(byteLength / 2)
     }
-    return new Uint16Array(this.dataView.buffer, this.dataView.byteOffset + byteOffset, byteLength)
+    return this.dataView == null
+      ? new Uint16Array(StringUtils.stringToArrayBuffer(""), byteOffset, byteLength)
+      : new Uint16Array(this.dataView.buffer, this.dataView.byteOffset + byteOffset, byteLength)
   }
 
   /**
@@ -757,7 +762,7 @@ export class ByteBuffer {
   readString(byteLength?: number, byteEncoding?: string): string {
     const value = this.getString(this.mByteOffset, byteLength, byteEncoding)
     if (byteLength === undefined) {
-      this.mByteOffset = this.dataView.byteLength
+      this.mByteOffset = this.dataView?.byteLength ?? 0
     } else {
       this.mByteOffset += byteLength
     }
@@ -776,7 +781,7 @@ export class ByteBuffer {
       throw new TypeError("String encoding '" + byteEncoding + "' is not supported")
     }
     const encoder = new util.TextEncoder()
-    const byteLength = Math.min(this.dataView.byteLength - byteOffset, value.length * 4)
+    const byteLength = Math.min(this.dataView!.byteLength - byteOffset, value.length * 4)
     if (write) {
       this.checkWriteCapacity(byteLength)
     }

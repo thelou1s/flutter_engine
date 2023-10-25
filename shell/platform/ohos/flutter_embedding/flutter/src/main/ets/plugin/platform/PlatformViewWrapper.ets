@@ -22,13 +22,13 @@ import Log from '../../util/Log';
 
 const TAG: string = "PlatformViewWrapper";
 export class PlatformViewWrapper {
-  private prevLeft: number;
-  private prevTop: number;
-  private left: number;
-  private top: number;
-  private bufferWidth: number;
-  private bufferHeight: number;
-  private touchProcessor: OhosTouchProcessor;
+  private prevLeft: number = 0;
+  private prevTop: number = 0;
+  private left: number = 0;
+  private top: number = 0;
+  private bufferWidth: number = 0;
+  private bufferHeight: number = 0;
+  private touchProcessor: OhosTouchProcessor | null = null;
 
 
   private model : DVModel = createDVModelFromJson( new DVModelParam("Column", []));
@@ -55,6 +55,9 @@ export class PlatformViewWrapper {
   }
 
   public setLayoutParams(parameters : DVModelParameters): void {
+    if (!this.model) {
+      return;
+    }
     if (this.model.params == null) {
       this.model.params = new DVModelParameters();
     }
@@ -76,7 +79,7 @@ export class PlatformViewWrapper {
   }
 
   public addDvModel(model: DVModel): void {
-    this.model.children.push(model);
+    this.model?.children.push(model);
   }
 }
 

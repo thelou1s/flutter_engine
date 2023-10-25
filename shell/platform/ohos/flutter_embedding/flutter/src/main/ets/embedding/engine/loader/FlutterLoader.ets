@@ -54,12 +54,12 @@ const FILE_SEPARATOR = "/";
  */
 export default class FlutterLoader {
   flutterNapi: FlutterNapi;
-  initResult: InitResult;
-  flutterApplicationInfo: FlutterApplicationInfo;
-  context: common.Context;
-  initialized: boolean;
+  initResult: InitResult | null = null;
+  flutterApplicationInfo: FlutterApplicationInfo | null = null;
+  context: common.Context | null = null;
+  initialized: boolean = false;
   //初始化开始时间戳
-  initStartTimestampMillis: number;
+  initStartTimestampMillis: number = 0;
 
   constructor(flutterNapi: FlutterNapi) {
     this.flutterNapi = flutterNapi;
@@ -84,7 +84,7 @@ export default class FlutterLoader {
     Log.d(TAG, "context.filesDir=" + context.filesDir)
     Log.d(TAG, "context.cacheDir=" + context.cacheDir)
     Log.d(TAG, "context.bundleCodeDir=" + context.bundleCodeDir)
-    if (this.flutterApplicationInfo.isDebugMode) {
+    if (this.flutterApplicationInfo!.isDebugMode) {
       await this.copyResource(context)
     }
     this.initResult = new InitResult(
@@ -96,25 +96,25 @@ export default class FlutterLoader {
   }
 
   private async copyResource(context: common.Context) {
-    let filePath = context.filesDir + FILE_SEPARATOR + this.flutterApplicationInfo.flutterAssetsDir
-    if (!fs.accessSync(filePath + FILE_SEPARATOR + DEFAULT_KERNEL_BLOB)) {
+    let filePath = context.filesDir + FILE_SEPARATOR + this.flutterApplicationInfo!.flutterAssetsDir
+    if (!fs.accessSync(filePath + FILE_SEPARATOR + DEFAULT_KERNEL_BLOB) && this.context != null) {
       Log.d(TAG, "start copyResource")
       fs.mkdirSync(filePath)
 
-      let icudtlBuffer = await this.context.resourceManager.getRawFileContent(this.flutterApplicationInfo.flutterAssetsDir + "/icudtl.dat")
+      let icudtlBuffer = await this.context.resourceManager.getRawFileContent(this.flutterApplicationInfo!.flutterAssetsDir + "/icudtl.dat")
       let icudtlFile = fs.openSync(filePath + FILE_SEPARATOR + "/icudtl.dat", fs.OpenMode.READ_WRITE | fs.OpenMode.CREATE)
       fs.writeSync(icudtlFile.fd, icudtlBuffer.buffer)
 
-      let kernelBuffer = await this.context.resourceManager.getRawFileContent(this.flutterApplicationInfo.flutterAssetsDir + FILE_SEPARATOR + DEFAULT_KERNEL_BLOB)
+      let kernelBuffer = await this.context.resourceManager.getRawFileContent(this.flutterApplicationInfo!.flutterAssetsDir + FILE_SEPARATOR + DEFAULT_KERNEL_BLOB)
       let kernelFile = fs.openSync(filePath + FILE_SEPARATOR + DEFAULT_KERNEL_BLOB, fs.OpenMode.READ_WRITE | fs.OpenMode.CREATE)
       fs.writeSync(kernelFile.fd, kernelBuffer.buffer)
 
-      let vmBuffer = await this.context.resourceManager.getRawFileContent(this.flutterApplicationInfo.flutterAssetsDir + FILE_SEPARATOR + this.flutterApplicationInfo.vmSnapshotData)
-      let vmFile = fs.openSync(filePath + FILE_SEPARATOR + this.flutterApplicationInfo.vmSnapshotData, fs.OpenMode.READ_WRITE | fs.OpenMode.CREATE)
+      let vmBuffer = await this.context.resourceManager.getRawFileContent(this.flutterApplicationInfo!.flutterAssetsDir + FILE_SEPARATOR + this.flutterApplicationInfo!.vmSnapshotData)
+      let vmFile = fs.openSync(filePath + FILE_SEPARATOR + this.flutterApplicationInfo!.vmSnapshotData, fs.OpenMode.READ_WRITE | fs.OpenMode.CREATE)
       fs.writeSync(vmFile.fd, vmBuffer.buffer)
 
-      let isolateBuffer = await this.context.resourceManager.getRawFileContent(this.flutterApplicationInfo.flutterAssetsDir + FILE_SEPARATOR + this.flutterApplicationInfo.isolateSnapshotData)
-      let isolateFile = fs.openSync(filePath + FILE_SEPARATOR + this.flutterApplicationInfo.isolateSnapshotData, fs.OpenMode.READ_WRITE | fs.OpenMode.CREATE)
+      let isolateBuffer = await this.context.resourceManager.getRawFileContent(this.flutterApplicationInfo!.flutterAssetsDir + FILE_SEPARATOR + this.flutterApplicationInfo!.isolateSnapshotData)
+      let isolateFile = fs.openSync(filePath + FILE_SEPARATOR + this.flutterApplicationInfo!.isolateSnapshotData, fs.OpenMode.READ_WRITE | fs.OpenMode.CREATE)
       fs.writeSync(isolateFile.fd, isolateBuffer.buffer)
       Log.d(TAG, "copyResource end")
     } else {
@@ -126,7 +126,7 @@ export default class FlutterLoader {
    * 初始化dart虚拟机方法
    * @param flutterShellArgs
    */
-  ensureInitializationComplete(shellArgs: Array<string>) {
+  ensureInitializationComplete(shellArgs: Array<string> | null) {
     if (this.initialized) {
       return;
     }
@@ -136,37 +136,37 @@ export default class FlutterLoader {
     }
     shellArgs.push(
       "--icu-native-lib-path="
-        + this.flutterApplicationInfo.nativeLibraryDir
+        + this.flutterApplicationInfo!.nativeLibraryDir
         + FILE_SEPARATOR + DEFAULT_LIBRARY
     );
 
     let kernelPath: string = "";
-    if (this.flutterApplicationInfo.isDebugMode) {
-      Log.d(TAG, "this.initResult.dataDirPath=" + this.initResult.dataDirPath)
-      const snapshotAssetPath = this.initResult.dataDirPath + FILE_SEPARATOR + this.flutterApplicationInfo.flutterAssetsDir;
+    if (this.flutterApplicationInfo!.isDebugMode) {
+      Log.d(TAG, "this.initResult!.dataDirPath=" + this.initResult!.dataDirPath)
+      const snapshotAssetPath = this.initResult!.dataDirPath + FILE_SEPARATOR + this.flutterApplicationInfo!.flutterAssetsDir;
       kernelPath = snapshotAssetPath + FILE_SEPARATOR + DEFAULT_KERNEL_BLOB;
       shellArgs.push("--icu-data-file-path=" + snapshotAssetPath + "/icudtl.dat")
       shellArgs.push("--" + SNAPSHOT_ASSET_PATH_KEY + "=" + snapshotAssetPath);
-      shellArgs.push("--" + VM_SNAPSHOT_DATA_KEY + "=" + this.flutterApplicationInfo.vmSnapshotData);
+      shellArgs.push("--" + VM_SNAPSHOT_DATA_KEY + "=" + this.flutterApplicationInfo!.vmSnapshotData);
       shellArgs.push(
-        "--" + ISOLATE_SNAPSHOT_DATA_KEY + "=" + this.flutterApplicationInfo.isolateSnapshotData);
+        "--" + ISOLATE_SNAPSHOT_DATA_KEY + "=" + this.flutterApplicationInfo!.isolateSnapshotData);
     } else {
       shellArgs.push(
-        "--" + AOT_SHARED_LIBRARY_NAME + "=" + this.flutterApplicationInfo.aotSharedLibraryName);
+        "--" + AOT_SHARED_LIBRARY_NAME + "=" + this.flutterApplicationInfo!.aotSharedLibraryName);
       shellArgs.push(
         "--"
           + AOT_SHARED_LIBRARY_NAME
           + "="
-          + this.flutterApplicationInfo.nativeLibraryDir
+          + this.flutterApplicationInfo!.nativeLibraryDir
           + FILE_SEPARATOR
-          + this.flutterApplicationInfo.aotSharedLibraryName);
-      if (this.flutterApplicationInfo.isProfile) {
+          + this.flutterApplicationInfo!.aotSharedLibraryName);
+      if (this.flutterApplicationInfo!.isProfile) {
         shellArgs.push("--" + AOT_VMSERVICE_SHARED_LIBRARY_NAME + "=" + VMSERVICE_SNAPSHOT_LIBRARY);
       }
     }
-    shellArgs.push("--cache-dir-path=" + this.initResult.engineCachesPath);
-    if (StringUtils.isNotEmpty(this.flutterApplicationInfo.domainNetworkPolicy)) {
-      shellArgs.push("--domain-network-policy=" + this.flutterApplicationInfo.domainNetworkPolicy);
+    shellArgs.push("--cache-dir-path=" + this.initResult!.engineCachesPath);
+    if (StringUtils.isNotEmpty(this.flutterApplicationInfo!.domainNetworkPolicy)) {
+      shellArgs.push("--domain-network-policy=" + this.flutterApplicationInfo!.domainNetworkPolicy);
     }
 
     const resourceCacheMaxBytesThreshold = 1080 * 1920 * 12 * 4;
@@ -180,19 +180,19 @@ export default class FlutterLoader {
 
     // //最终初始化操作
     const costTime = Date.now() - this.initStartTimestampMillis;
-    this.flutterNapi.init(
-      this.context,
+    this.flutterNapi!.init(
+      this.context!,
       shellArgs,
       kernelPath,
-      this.initResult.appStoragePath,
-      this.initResult.engineCachesPath,
+      this.initResult!.appStoragePath,
+      this.initResult!.engineCachesPath!,
       costTime
     );
     this.initialized = true;
   }
 
   findAppBundlePath(): string {
-    return this.flutterApplicationInfo.flutterAssetsDir;
+    return this.flutterApplicationInfo == null ? "" : this.flutterApplicationInfo!.flutterAssetsDir;
   }
 
   getLookupKeyForAsset(asset: string, packageName?: string): string {
@@ -200,7 +200,7 @@ export default class FlutterLoader {
   }
 
   fullAssetPathFrom(filePath: string): string {
-    return this.flutterApplicationInfo.flutterAssetsDir + "/" + filePath;
+    return this.flutterApplicationInfo == null ? "" : this.flutterApplicationInfo!.flutterAssetsDir + "/" + filePath;
   }
 }
 

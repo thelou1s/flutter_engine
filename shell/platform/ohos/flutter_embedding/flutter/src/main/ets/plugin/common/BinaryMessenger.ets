@@ -109,7 +109,7 @@ export interface BinaryMessenger {
      * @param callback a {@link BinaryReply} callback invoked when the Flutter application responds to
      *     the message, possibly null.
      */
-    send(channel: String, message: ArrayBuffer, callback?: BinaryReply): void;
+    send(channel: String, message: ArrayBuffer, callback?: BinaryReply | null): void;
 
     /**
      * Registers a handler to be invoked when the Flutter application sends a message to its host

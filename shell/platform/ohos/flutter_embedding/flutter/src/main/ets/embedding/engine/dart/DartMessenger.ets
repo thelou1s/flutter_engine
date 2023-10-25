@@ -103,7 +103,7 @@ export class DartMessenger implements BinaryMessenger, PlatformMessageHandler {
     }
   }
 
-  invokeHandler(handlerInfo: HandlerInfo, message: ArrayBuffer, replyId: number): void {
+  invokeHandler(handlerInfo: HandlerInfo | null, message: ArrayBuffer, replyId: number): void {
       // Called from any thread.
       if (handlerInfo != null) {
         try {
@@ -123,16 +123,15 @@ export class DartMessenger implements BinaryMessenger, PlatformMessageHandler {
       // Called from any thread.
       Log.d(TAG, "Received message from Dart over channel '" + channel + "'");
 
-      let handlerInfo: HandlerInfo;
+      let handlerInfo: HandlerInfo | null  = this.messageHandlers.get(channel) ?? null;
       let messageDeferred: boolean;
-      handlerInfo = this.messageHandlers.get(channel);
+
       messageDeferred = (this.enableBufferingIncomingMessagesFlag && handlerInfo == null);
       if (messageDeferred) {
         if (!this.bufferedMessages.has(channel)) {
-          // this.bufferedMessages.set(channel, new BufferedMessageInfo[0]);
-          this.bufferedMessages.set(channel, null);
+          this.bufferedMessages.set(channel, []);
         }
-      let buffer: BufferedMessageInfo[] = this.bufferedMessages.get(channel);
+      let buffer: BufferedMessageInfo[] = this.bufferedMessages.get(channel) ?? [];
       buffer.push(new BufferedMessageInfo(message, replyId, messageData));
     }
     if (!messageDeferred) {
@@ -142,7 +141,7 @@ export class DartMessenger implements BinaryMessenger, PlatformMessageHandler {
 
   handlePlatformMessageResponse(replyId: number, reply: ArrayBuffer): void {
     Log.d(TAG, "Received message reply from Dart.");
-    let callback: BinaryReply = this.pendingReplies.get(replyId);
+    let callback: BinaryReply | null = this.pendingReplies.get(replyId) ?? null;
     this.pendingReplies.delete(replyId);
     if (callback != null) {
       try {

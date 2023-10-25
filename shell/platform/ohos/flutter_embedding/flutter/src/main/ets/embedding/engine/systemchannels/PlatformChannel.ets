@@ -26,12 +26,11 @@ export default class PlatformChannel {
   private static TAG = "PlatformChannel";
   private static CHANNEL_NAME = "flutter/platform";
   channel: MethodChannel;
-  platformMessageHandler: PlatformMessageHandler;
+  platformMessageHandler: PlatformMessageHandler | null = null;
 
   constructor(dartExecutor: DartExecutor) {
     this.channel = new MethodChannel(dartExecutor, PlatformChannel.CHANNEL_NAME, JSONMethodCodec.INSTANCE);
-    let callback = new PlatformMethodCallback();
-    callback.platform = this;
+    let callback = new PlatformMethodCallback(this);
     this.channel.setMethodCallHandler(callback);
   }
 
@@ -130,6 +129,7 @@ export default class PlatformChannel {
       }
     }
     Log.e(PlatformChannel.TAG, "No such HapticFeedbackType:" + encodedName);
+    return HapticFeedbackType.STANDARD;
   }
 
   getClipboardContentFormatFromValue(encodedName: string): ClipboardContentFormat {
@@ -140,6 +140,7 @@ export default class PlatformChannel {
         return ClipboardContentFormat[format];
       }
     }
+    return ClipboardContentFormat.PLAIN_TEXT;
   }
   getSystemUiOverlayFromValue(encodedName: string): SystemUiOverlay {
     let systemUiOverlays : string[] = [SystemUiOverlay.TOP_OVERLAYS, SystemUiOverlay.BOTTOM_OVERLAYS];
@@ -302,6 +303,10 @@ class PlatformMethodCallback implements MethodCallHandler {
   private static TAG = "PlatformMethodCallback"
   platform: PlatformChannel;
 
+  constructor(platform: PlatformChannel) {
+    this.platform = platform;
+  }
+
   onMethodCall(call: MethodCall, result: MethodResult) {
     if (this.platform.platformMessageHandler == null) {
       Log.w(PlatformMethodCallback.TAG, "platformMessageHandler is null");
@@ -318,7 +323,7 @@ class PlatformMethodCallback implements MethodCallHandler {
         case "HapticFeedback.vibrate":
           try {
             Log.d(PlatformMethodCallback.TAG, "HapticFeedback: " + args as string);
-            let feedbackType: HapticFeedbackType = this.platform.getFeedbackTypeFromValue(args as string);
+            let feedbackType = this.platform.getFeedbackTypeFromValue(args as string);
             this.platform.platformMessageHandler.vibrateHapticFeedback(feedbackType);
             result.success(null);
           } catch (e) {
@@ -462,13 +467,13 @@ class PlatformMethodCallback implements MethodCallHandler {
   }
 
   private decodeSystemChromeStyle(encodedStyle: ESObject): SystemChromeStyle {
-    let statusBarColor: number = null;
-    let statusBarIconBrightness: Brightness = null;
-    let systemStatusBarContrastEnforced: boolean = null;
-    let systemNavigationBarColor: number = null;
-    let systemNavigationBarIconBrightness: Brightness = null;
-    let systemNavigationBarDividerColor: number = null;
-    let systemNavigationBarContrastEnforced: boolean = null;
+    let statusBarColor: number | null = null;
+    let statusBarIconBrightness: Brightness | null = null;
+    let systemStatusBarContrastEnforced: boolean | null = null;
+    let systemNavigationBarColor: number | null = null;
+    let systemNavigationBarIconBrightness: Brightness | null = null;
+    let systemNavigationBarDividerColor: number | null = null;
+    let systemNavigationBarContrastEnforced: boolean | null = null;
     if(encodedStyle.statusBarColor != null) {
       statusBarColor = encodedStyle.statusBarColor as number;
     }

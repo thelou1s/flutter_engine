@@ -30,7 +30,7 @@ export default class StringUtils {
   }
 
   static isNotEmpty(str: string): boolean {
-    return str && str.length > 0;
+    return str != null && str.length > 0;
   }
 
   static isEmpty(str: string): boolean {

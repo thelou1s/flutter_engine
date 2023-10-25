@@ -26,7 +26,7 @@ export default class LocalizationChannel implements MethodCallHandler{
   private static TAG = "LocalizationChannel";
   private static CHANNEL_NAME = "flutter/localization";
   private channel: MethodChannel;
-  private localizationMessageHandler: LocalizationMessageHandler;
+  private localizationMessageHandler: LocalizationMessageHandler | null = null;
 
   onMethodCall(call: MethodCall, result: MethodResult) :void {
     if (this.localizationMessageHandler == null) {
@@ -38,11 +38,11 @@ export default class LocalizationChannel implements MethodCallHandler{
         case "Localization.getStringResource": {
           Log.i(TAG, "Localization.getStringResource enter");
           let key: string = call.argument("key");
-          let localeString: string = null;
+          let localeString: string = "";
           if (call.hasArgument("locale")) {
             localeString  = call.argument("locale");
           }
-          result.success(this.localizationMessageHandler.getStringResource(key, localeString));
+          result.success(this.localizationMessageHandler?.getStringResource(key, localeString));
           break;
         }
         default: {

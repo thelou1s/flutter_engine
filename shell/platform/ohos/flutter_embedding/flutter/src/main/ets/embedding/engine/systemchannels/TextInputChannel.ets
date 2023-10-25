@@ -25,17 +25,15 @@ const TAG = "TextInputChannel";
 export default class TextInputChannel {
   private static CHANNEL_NAME = "flutter/textinput";
   public channel: MethodChannel;
-  textInputMethodHandler: TextInputMethodHandler;
+  textInputMethodHandler: TextInputMethodHandler | null = null;
 
   constructor(dartExecutor: DartExecutor) {
     this.channel = new MethodChannel(dartExecutor, TextInputChannel.CHANNEL_NAME, JSONMethodCodec.INSTANCE);
-    let callback = new TextInputCallback();
-    callback.textInputMethodHandler = this.textInputMethodHandler;
-    this.channel.setMethodCallHandler(callback);
   }
 
   setTextInputMethodHandler(textInputMethodHandler: TextInputMethodHandler): void {
     this.textInputMethodHandler = textInputMethodHandler;
+    this.channel.setMethodCallHandler(new TextInputCallback(this.textInputMethodHandler));
   }
 
   requestExistingInputState(): void {
@@ -136,7 +134,7 @@ export interface TextInputMethodHandler {
 
   finishAutofillContext(shouldSave: boolean): void;
 
-  setClient(textInputClientId: number, configuration: Configuration): void;
+  setClient(textInputClientId: number, configuration: Configuration | null): void;
 
   setPlatformViewClient(id: number, usesVirtualDisplay: boolean): void;
 
@@ -149,17 +147,17 @@ export interface TextInputMethodHandler {
 }
 
 export class Configuration {
-  obscureText: boolean;
-  autocorrect: boolean;
-  enableSuggestions: boolean;
-  enableIMEPersonalizedLearning: boolean;
-  enableDeltaModel: boolean;
-  textCapitalization: TextCapitalization;
-  inputType:InputType;
-  inputAction: Number;
-  actionLabel: String;
-  contentCommitMimeTypes: String[];
-  fields: Configuration[];
+  obscureText: boolean = false;
+  autocorrect: boolean = false;
+  enableSuggestions: boolean = false;
+  enableIMEPersonalizedLearning: boolean = false;
+  enableDeltaModel: boolean = false;
+  textCapitalization: TextCapitalization | null = null;
+  inputType: InputType | null = null;
+  inputAction: Number = 0;
+  actionLabel: String = "";
+  contentCommitMimeTypes: String[] = [];
+  fields: Configuration[] = [];
 
   constructor(obscureText: boolean,
               autocorrect: boolean,
@@ -305,6 +303,10 @@ export class TextEditState {
 class TextInputCallback implements MethodCallHandler {
   textInputMethodHandler: TextInputMethodHandler;
 
+  constructor(handler: TextInputMethodHandler) {
+    this.textInputMethodHandler = handler;
+  }
+
   onMethodCall(call: MethodCall, result: MethodResult) {
     if (this.textInputMethodHandler == null) {
       return;
@@ -325,7 +327,7 @@ class TextInputCallback implements MethodCallHandler {
       case "TextInput.setClient":
         const textInputClientId: number = args[0] as number;
       //TODO: parse configuration
-        const config: Configuration = null;
+        const config: Configuration | null = null;
         this.textInputMethodHandler.setClient(textInputClientId, config);
         result.success(null);
         break;

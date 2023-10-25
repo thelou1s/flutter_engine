@@ -34,6 +34,7 @@ import FlutterEngineGroupCache from '../engine/FlutterEngineGroupCache';
 import FlutterEngineGroup, { Options } from '../engine/FlutterEngineGroup';
 import MouseCursorPlugin, { MouseCursorViewDelegate } from '../../plugin/mouse/MouseCursorPlugin';
 import Settings from './Settings';
+import FlutterNapi from '../engine/FlutterNapi';
 
 const TAG = "FlutterAbilityDelegate";
 const PLUGINS_RESTORATION_BUNDLE_KEY = "plugins";
@@ -45,15 +46,14 @@ const FRAMEWORK_RESTORATION_BUNDLE_KEY = "framework";
  * 2、处理ability生命周期回调
  */
 class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
-  private host: Host;
-  flutterEngine: FlutterEngine;
-  platformPlugin: PlatformPlugin;
-  private context: common.Context;
-  private textInputPlugin: TextInputPlugin;
-  private isFlutterEngineFromHost: boolean;
-  private engineGroup: FlutterEngineGroup;
-  private mouseCursorPlugin: MouseCursorPlugin;
-  private settings: Settings;
+  private host?: Host | null;
+  flutterEngine?: FlutterEngine | null;
+  platformPlugin?: PlatformPlugin;
+  private context?: common.Context;
+  private textInputPlugin?: TextInputPlugin;
+  private isFlutterEngineFromHost: boolean = false;
+  private engineGroup?: FlutterEngineGroup;
+  private settings?: Settings;
 
   constructor(host: Host) {
     this.host = host;
@@ -71,11 +71,11 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
       await this.setupFlutterEngine();
     }
     //shouldAttachEngineToActivity
-    if (this.host.shouldAttachEngineToActivity()) {
+    if (this.host?.shouldAttachEngineToActivity()) {
       // Notify any plugins that are currently attached to our FlutterEngine that they
       // are now attached to an Ability.
       Log.d(TAG, "Attaching FlutterEngine to the Ability that owns this delegate.");
-      this.flutterEngine.getAbilityControlSurface().attachToAbility(this);
+      this.flutterEngine?.getAbilityControlSurface()?.attachToAbility(this);
     }
 
     //providePlatformPlugin
@@ -83,47 +83,48 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
     //configureFlutterEngine
     this.isAttached = true;
     Log.d(TAG, "onAttach end start loadcontent")
-    this.host.loadContent()
-    this.textInputPlugin = new TextInputPlugin(this.flutterEngine.getTextInputChannel());
-    this.platformPlugin = new PlatformPlugin(this.flutterEngine.getPlatformChannel(), this.context);
-    this.mouseCursorPlugin = new MouseCursorPlugin(this.host, this.flutterEngine.getMouseCursorChannel());
-    this.settings = new Settings(this.flutterEngine.getSettingsChannel());
-    this.flutterEngine.getSystemLanguages();
+    this.host?.loadContent()
+    if (this.flutterEngine) {
+      this.textInputPlugin = new TextInputPlugin(this.flutterEngine.getTextInputChannel()!);
+      this.platformPlugin = new PlatformPlugin(this.flutterEngine.getPlatformChannel()!, this.context);
+      this.settings = new Settings(this.flutterEngine.getSettingsChannel()!);
+      this.flutterEngine.getSystemLanguages();
+    }
   }
 
   /**
    * 加载app.so资源或者snapshot
    */
   private doInitialFlutterViewRun(): void {
-    let initialRoute = this.host.getInitialRoute();
-    if (initialRoute == null) {
+    let initialRoute = this.host?.getInitialRoute();
+    if (initialRoute == null && this.host != null) {
       initialRoute = this.maybeGetInitialRouteFromIntent(this.host.getWant());
       if (initialRoute == null) {
         initialRoute = FlutterAbilityLaunchConfigs.DEFAULT_INITIAL_ROUTE;
       }
     }
-    const libraryUri = this.host.getDartEntrypointLibraryUri();
-    Log.d(TAG, "Executing Dart entrypoint: " + this.host.getDartEntrypointFunctionName() + ", library uri: " + libraryUri == null ? "\"\"" : libraryUri + ", and sending initial route: " + initialRoute);
+    const libraryUri = this.host?.getDartEntrypointLibraryUri();
+    Log.d(TAG, "Executing Dart entrypoint: " + this.host?.getDartEntrypointFunctionName() + ", library uri: " + libraryUri == null ? "\"\"" : libraryUri + ", and sending initial route: " + initialRoute);
 
     // The engine needs to receive the Flutter app's initial route before executing any
     // Dart code to ensure that the initial route arrives in time to be applied.
-    this.flutterEngine.getNavigationChannel().setInitialRoute(initialRoute);
+    this.flutterEngine?.getNavigationChannel()?.setInitialRoute(initialRoute ?? '');
 
-    let appBundlePathOverride = this.host.getAppBundlePath();
+    let appBundlePathOverride = this.host?.getAppBundlePath();
     if (appBundlePathOverride == null || appBundlePathOverride == '') {
       appBundlePathOverride = FlutterInjector.getInstance().getFlutterLoader().findAppBundlePath();
     }
 
     const dartEntrypoint: DartEntrypoint = new DartEntrypoint(
       appBundlePathOverride,
-      this.host.getDartEntrypointLibraryUri(),
-      this.host.getDartEntrypointFunctionName()
+      this.host?.getDartEntrypointLibraryUri() ?? '',
+      this.host?.getDartEntrypointFunctionName() ?? ''
     );
-    this.flutterEngine.dartExecutor.executeDartEntrypoint(dartEntrypoint, this.host.getDartEntrypointArgs());
+    this.flutterEngine?.dartExecutor.executeDartEntrypoint(dartEntrypoint, this.host?.getDartEntrypointArgs());
   }
 
   private maybeGetInitialRouteFromIntent(want: Want): string {
-    return null;
+    return '';
   }
 
 
@@ -132,9 +133,11 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
    * @param want
    */
   onRestoreInstanceState(want: Want) {
-    let frameworkState: Uint8Array = want.parameters[FRAMEWORK_RESTORATION_BUNDLE_KEY] as Uint8Array;
-    if (this.host.shouldRestoreAndSaveState()) {
-      this.flutterEngine.getRestorationChannel().setRestorationData(frameworkState ?? null);
+    let frameworkState = want.parameters != null
+      ? want.parameters[FRAMEWORK_RESTORATION_BUNDLE_KEY] as Uint8Array
+      : new Uint8Array();
+    if (this.host?.shouldRestoreAndSaveState()) {
+      this.flutterEngine?.getRestorationChannel()?.setRestorationData(frameworkState);
     }
   }
 
@@ -143,7 +146,7 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
    */
   async setupFlutterEngine() {
     // First, check if the host wants to use a cached FlutterEngine.
-    const cachedEngineId = this.host.getCachedEngineId();
+    const cachedEngineId = this.host?.getCachedEngineId();
     Log.d(TAG, "cachedEngineId=" + cachedEngineId);
     if (cachedEngineId && cachedEngineId.length > 0) {
       this.flutterEngine = FlutterEngineCache.getInstance().get(cachedEngineId);
@@ -158,7 +161,9 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
     }
 
     // Second, defer to subclasses for a custom FlutterEngine.
-    this.flutterEngine = this.host.provideFlutterEngine(this.context);
+    if (this.host && this.context) {
+      this.flutterEngine = this.host.provideFlutterEngine(this.context);
+    }
     if (this.flutterEngine != null) {
       this.isFlutterEngineFromHost = true;
       return;
@@ -166,7 +171,7 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
 
     // Third, check if the host wants to use a cached FlutterEngineGroup
     // and create new FlutterEngine using FlutterEngineGroup#createAndRunEngine
-    const cachedEngineGroupId = this.host.getCachedEngineGroupId();
+    const cachedEngineGroupId = this.host?.getCachedEngineGroupId();
     Log.d(TAG, "cachedEngineGroupId=" + cachedEngineGroupId);
     if (cachedEngineGroupId != null) {
       const flutterEngineGroup = FlutterEngineGroupCache.instance.get(cachedEngineGroupId);
@@ -177,7 +182,10 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
                 + "'");
       }
 
-      this.flutterEngine =  await flutterEngineGroup.createAndRunEngineByOptions(this.addEntrypointOptions(new Options(this.context)));
+      if (this.context != null) {
+        this.flutterEngine = await flutterEngineGroup.createAndRunEngineByOptions(
+          this.addEntrypointOptions(new Options(this.context)));
+      }
       this.isFlutterEngineFromHost = false;
       return;
     }
@@ -189,24 +197,30 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
         "No preferred FlutterEngine was provided. Creating a new FlutterEngine for this FlutterAbility.");
 
     let group = this.engineGroup;
-    if (group == null) {
+    if (group == null && this.context != null && this.host != null) {
       group = new FlutterEngineGroup();
-      await group.checkLoader(this.context, this.host.getFlutterShellArgs().toArray());
+      await group.checkLoader(this.context, this.host.getFlutterShellArgs().toArray() ?? []);
+      this.engineGroup = group;
     }
-    this.flutterEngine = await group.createAndRunEngineByOptions(this.addEntrypointOptions(new Options(this.context)
-      .setAutomaticallyRegisterPlugins(false).setWaitForRestorationData(this.host.shouldRestoreAndSaveState())));
+    if (this.context) {
+      this.flutterEngine = await group?.createAndRunEngineByOptions(this.addEntrypointOptions(new Options(this.context)
+        .setAutomaticallyRegisterPlugins(false)
+        .setWaitForRestorationData(this.host?.shouldRestoreAndSaveState() || false)));
+    }
     this.isFlutterEngineFromHost = false;
   }
 
   addEntrypointOptions(options: Options): Options {
-    let appBundlePathOverride = this.host.getAppBundlePath();
+    let appBundlePathOverride = this.host?.getAppBundlePath();
     if (appBundlePathOverride == null || appBundlePathOverride.length == 0) {
       appBundlePathOverride = FlutterInjector.getInstance().getFlutterLoader().findAppBundlePath();
     }
 
-    const dartEntrypoint = new DartEntrypoint(appBundlePathOverride, null, this.host.getDartEntrypointFunctionName());
-    let initialRoute = this.host.getInitialRoute();
-    if (initialRoute == null) {
+    const dartEntrypoint = new DartEntrypoint(appBundlePathOverride ?? '',
+      '',
+      this.host?.getDartEntrypointFunctionName() ?? '');
+    let initialRoute = this.host?.getInitialRoute();
+    if (initialRoute == null && this.host != null) {
       initialRoute = this.maybeGetInitialRouteFromIntent(this.host.getWant());
       if (initialRoute == null) {
         initialRoute = FlutterAbilityLaunchConfigs.DEFAULT_INITIAL_ROUTE;
@@ -214,8 +228,8 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
     }
     return options
       .setDartEntrypoint(dartEntrypoint)
-      .setInitialRoute(initialRoute)
-      .setDartEntrypointArgs(this.host.getDartEntrypointArgs());
+      .setInitialRoute(initialRoute ?? '')
+      .setDartEntrypointArgs(this.host?.getDartEntrypointArgs() ?? []);
   }
 
   /**
@@ -227,16 +241,16 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
   }
 
   onDetach() {
-    if (this.host.shouldAttachEngineToActivity()) {
+    if (this.host?.shouldAttachEngineToActivity()) {
       // Notify plugins that they are no longer attached to an Activity.
       Log.d(TAG, "Detaching FlutterEngine from the Ability");
-      this.flutterEngine.getAbilityControlSurface().detachFromAbility();
+      this.flutterEngine?.getAbilityControlSurface()?.detachFromAbility();
     }
   }
 
   onLowMemory(): void {
-    this.getFlutterNapi().notifyLowMemoryWarning();
-    this.flutterEngine.getSystemChannel().sendMemoryPressureWarning();
+    this.getFlutterNapi()?.notifyLowMemoryWarning();
+    this.flutterEngine?.getSystemChannel()?.sendMemoryPressureWarning();
   }
 
   /**
@@ -246,23 +260,23 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
   onCreate() {
     this.ensureAlive();
     if (this.shouldDispatchAppLifecycleState()) {
-      this.flutterEngine.getLifecycleChannel().appIsInactive();
+      this.flutterEngine?.getLifecycleChannel()?.appIsInactive();
     }
   }
 
   onDestroy() {
     this.ensureAlive();
     if (this.shouldDispatchAppLifecycleState()) {
-      this.flutterEngine.getLifecycleChannel().appIsDetached();
+      this.flutterEngine?.getLifecycleChannel()?.appIsDetached();
     }
-    this.textInputPlugin.detach();
+    this.textInputPlugin?.detach();
   }
 
   onWindowStageCreate() {
     this.ensureAlive();
     this.doInitialFlutterViewRun();
     if (this.shouldDispatchAppLifecycleState()) {
-      this.flutterEngine.getLifecycleChannel().appIsResumed();
+      this.flutterEngine?.getLifecycleChannel()?.appIsResumed();
     }
   }
 
@@ -272,11 +286,11 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
 
   onWindowFocusChanged(hasFocus: boolean):void {
     if (this.shouldDispatchAppLifecycleState()) {
-      this.flutterEngine.getAbilityControlSurface().onWindowFocusChanged(hasFocus);
+      this.flutterEngine?.getAbilityControlSurface()?.onWindowFocusChanged(hasFocus);
       if (hasFocus) {
-        this.flutterEngine.getLifecycleChannel().aWindowIsFocused();
+        this.flutterEngine?.getLifecycleChannel()?.aWindowIsFocused();
       } else {
-        this.flutterEngine.getLifecycleChannel().noWindowsAreFocused();
+        this.flutterEngine?.getLifecycleChannel()?.noWindowsAreFocused();
       }
     }
   }
@@ -284,13 +298,13 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
   onForeground() {
     this.ensureAlive();
     if (this.shouldDispatchAppLifecycleState()) {
-      this.flutterEngine.getLifecycleChannel().appIsResumed();
+      this.flutterEngine?.getLifecycleChannel()?.appIsResumed();
     }
   }
 
   onBackground() {
     if (this.shouldDispatchAppLifecycleState()) {
-      this.flutterEngine.getLifecycleChannel().appIsPaused();
+      this.flutterEngine?.getLifecycleChannel()?.appIsPaused();
     }
   }
 
@@ -299,6 +313,9 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
    */
 
   shouldDispatchAppLifecycleState(): boolean {
+    if (this.host == null) {
+      return false;
+    }
     return this.host.shouldDispatchAppLifecycleState() && this.isAttached;
   }
 
@@ -308,12 +325,12 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
     }
   }
 
-  getFlutterNapi() {
-    return this.flutterEngine.getFlutterNapi()
+  getFlutterNapi() : FlutterNapi | null {
+    return this.flutterEngine?.getFlutterNapi() ?? null
   }
 
   detachFromFlutterEngine() {
-    if (this.host.shouldDestroyEngineWithHost()) {
+    if (this.host?.shouldDestroyEngineWithHost()) {
       // The host owns the engine and should never have its engine taken by another exclusive
       // activity.
       throw new Error(
@@ -326,11 +343,11 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
     // Default, but customizable, behavior is for the host to call {@link #onDetach}
     // deterministically as to not mix more events during the lifecycle of the next exclusive
     // activity.
-    this.host.detachFromFlutterEngine();
+    this.host?.detachFromFlutterEngine();
   }
 
   getAppComponent(): UIAbility {
-    const ability = this.host.getAbility();
+    const ability = this.host?.getAbility();
     if (ability == null) {
       throw new Error(
         "FlutterActivityAndFragmentDelegate's getAppComponent should only "
@@ -343,10 +360,10 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
     this.ensureAlive()
     if (this.flutterEngine != null) {
       Log.i(TAG, "Forwarding onNewWant() to FlutterEngine and sending pushRouteInformation message.");
-      this.flutterEngine.getAbilityControlSurface().onNewWant(want, launchParams);
+      this.flutterEngine?.getAbilityControlSurface()?.onNewWant(want, launchParams);
       const initialRoute = this.maybeGetInitialRouteFromIntent(want);
       if (initialRoute && initialRoute.length > 0) {
-        this.flutterEngine.getNavigationChannel().pushRouteInformation(initialRoute);
+        this.flutterEngine?.getNavigationChannel()?.pushRouteInformation(initialRoute);
       }
     } else {
       Log.w(TAG, "onNewIntent() invoked before FlutterFragment was attached to an Activity.");
@@ -356,28 +373,28 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
   onSaveState(reason: AbilityConstant.StateType, wantParam: Record<string, Object>): AbilityConstant.OnSaveResult {
     Log.i(TAG, "onSaveInstanceState. Giving framework and plugins an opportunity to save state.");
     this.ensureAlive();
-    if (this.host.shouldRestoreAndSaveState()) {
-      wantParam[FRAMEWORK_RESTORATION_BUNDLE_KEY] = this.flutterEngine.getRestorationChannel().getRestorationData();
+    if (this.host?.shouldRestoreAndSaveState()) {
+      wantParam[FRAMEWORK_RESTORATION_BUNDLE_KEY] = this.flutterEngine!.getRestorationChannel()!.getRestorationData();
     }
-    if (this.host.shouldAttachEngineToActivity()) {
+    if (this.host?.shouldAttachEngineToActivity()) {
       const plugins:Record<string, Object> = {}
-      const result = this.flutterEngine.getAbilityControlSurface().onSaveState(reason, plugins);
+      const result = this.flutterEngine?.getAbilityControlSurface()?.onSaveState(reason, plugins);
       wantParam[PLUGINS_RESTORATION_BUNDLE_KEY] = plugins;
-      return result
+      return result ?? AbilityConstant.OnSaveResult.ALL_REJECT
     }
     return AbilityConstant.OnSaveResult.ALL_REJECT
   }
 
   addPlugin(plugin: FlutterPlugin): void {
-    this.flutterEngine.getPlugins().add(plugin)
+    this.flutterEngine?.getPlugins()?.add(plugin)
   }
 
   removePlugin(plugin: FlutterPlugin): void {
-    this.flutterEngine.getPlugins().remove(plugin.getUniqueClassName())
+    this.flutterEngine?.getPlugins()?.remove(plugin.getUniqueClassName())
   }
-  
+
   sendSettings(): void {
-    this.settings.sendSettings()
+    this.settings?.sendSettings()
   }
 }
 

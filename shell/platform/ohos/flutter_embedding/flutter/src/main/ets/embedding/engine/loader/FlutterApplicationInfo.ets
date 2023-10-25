@@ -35,8 +35,13 @@ export default class FlutterApplicationInfo {
   //是否是profile模式
   isProfile: boolean;
 
-  constructor(aotSharedLibraryName: string, vmSnapshotData: string, isolateSnapshotData: string, flutterAssetsDir: string, domainNetworkPolicy: string,
-              nativeLibraryDir: string, automaticallyRegisterPlugins: boolean) {
+  constructor(aotSharedLibraryName: string | null,
+              vmSnapshotData: string | null,
+              isolateSnapshotData: string | null,
+              flutterAssetsDir: string | null,
+              domainNetworkPolicy: string | null,
+              nativeLibraryDir: string,
+              automaticallyRegisterPlugins: boolean) {
     this.aotSharedLibraryName = aotSharedLibraryName == null ? DEFAULT_AOT_SHARED_LIBRARY_NAME : aotSharedLibraryName;
     this.vmSnapshotData = vmSnapshotData == null ? DEFAULT_VM_SNAPSHOT_DATA : vmSnapshotData;
     this.isolateSnapshotData = isolateSnapshotData == null ? DEFAULT_ISOLATE_SNAPSHOT_DATA : isolateSnapshotData;

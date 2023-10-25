@@ -16,7 +16,7 @@
 export default class FlutterException implements Error {
   stack?: string;
   message: string;
-  name: string;
+  name: string = "";
   code: string;
   details: ESObject
 
