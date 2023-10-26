@@ -69,13 +69,13 @@ export class FlutterAbility extends UIAbility implements Host {
     this?.delegate?.sendSettings();
 
     if (this.stillAttachedForEvent("onCreate")) {
-      this?.delegate?.onCreate();
+      this.delegate?.onCreate();
     }
 
     console.log('MyAbility onCreate');
     // globalThis.applicationContext = this.context.getApplicationContext();
-    this.context.eventHub.on(EVENT_BACK_PRESS, (_) => {
-      this.delegate.flutterEngine.getNavigationChannel().popRoute();
+    this.context.eventHub.on(EVENT_BACK_PRESS, () => {
+      this.delegate?.flutterEngine?.getNavigationChannel()?.popRoute();
     });
   }
 
