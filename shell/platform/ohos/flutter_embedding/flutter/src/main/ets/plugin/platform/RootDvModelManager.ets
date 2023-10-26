@@ -56,7 +56,7 @@ export class RootDvModeManager {
       build: BuildXComponentStruct
     };
 
-  private static model : DVModel = createDVModelFromJson(new  DVModelJson("Stack", [RootDvModeManager.xComponentModel], {alignContent: Alignment.TopStart},)
+  private static model: DVModel = createDVModelFromJson(new DVModelJson("Stack", [RootDvModeManager.xComponentModel], {alignContent: Alignment.TopStart},)
 
   );
 

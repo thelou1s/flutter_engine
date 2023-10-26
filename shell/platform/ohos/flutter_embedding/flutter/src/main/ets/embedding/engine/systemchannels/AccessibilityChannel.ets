@@ -20,6 +20,7 @@ import HashMap from '@ohos.util.HashMap';
 import FlutterNapi, {AccessibilityDelegate} from '../FlutterNapi';
 import { Action } from '../../../view/AccessibilityBridge'
 import StandardMessageCodec from '../../../plugin/common/StandardMessageCodec';
+import StringUtils from '../../../util/StringUtils';
 
 /**
 * 辅助功能channel
@@ -29,13 +30,13 @@ export default class AccessibilityChannel implements MessageHandler<object>{
     private static CHANNEL_NAME = "flutter/accessibility";
     private channel: BasicMessageChannel<object>;
     private flutterNapi: FlutterNapi;
-    private handler: AccessibilityMessageHandler;
+    private handler: AccessibilityMessageHandler | null = null;
     private nextReplyId: number = 1;
 
     onMessage(message: object, reply: Reply<object>): void {
         if (this.handler == null) {
             Log.i(AccessibilityChannel.TAG, "NULL");
-            reply.reply(null);
+            reply.reply(StringUtils.stringToArrayBuffer(""));
             return;
         }
         let annotatedEvent: HashMap<string, ESObject> = message as HashMap<string, ESObject>;
@@ -77,7 +78,7 @@ export default class AccessibilityChannel implements MessageHandler<object>{
                 break;
             }
         }
-        reply.reply(null);
+        reply.reply(StringUtils.stringToArrayBuffer(""));
     }
 
     constructor(dartExecutor: DartExecutor, flutterNapi: FlutterNapi) {

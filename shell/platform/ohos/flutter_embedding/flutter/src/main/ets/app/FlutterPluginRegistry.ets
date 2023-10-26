@@ -15,7 +15,6 @@
 import { FlutterView } from '../view/FlutterView';
 import common from '@ohos.app.ability.common';
 import PlatformViewController from '../plugin/platform/PlatformViewsController'
-import Log from '../util/Log';
 
 export default class FlutterPluginRegistry {
   private mPlatformViewsController: PlatformViewController;

@@ -15,6 +15,7 @@
 
 import Log from '../../util/Log';
 import MessageChannelUtils from '../../util/MessageChannelUtils';
+import StringUtils from '../../util/StringUtils';
 import { BinaryMessageHandler, BinaryMessenger, BinaryReply, TaskQueue } from './BinaryMessenger';
 import MethodCall from './MethodCall';
 import MethodCodec from './MethodCodec';
@@ -38,7 +39,7 @@ export default class MethodChannel {
   private messenger: BinaryMessenger;
   private name: string;
   private codec: MethodCodec;
-  private taskQueue: TaskQueue;
+  private taskQueue?: TaskQueue;
 
   constructor(messenger: BinaryMessenger, name: string, codec: MethodCodec = StandardMethodCodec.INSTANCE, taskQueue?: TaskQueue) {
     this.messenger = messenger
@@ -80,10 +81,10 @@ export default class MethodChannel {
     // See https://github.com/flutter/flutter/issues/92582.
     if (this.taskQueue != null) {
       this.messenger.setMessageHandler(
-        this.name, handler == null ? null : new IncomingMethodCallHandler(handler, this.codec), this.taskQueue);
+        this.name, new IncomingMethodCallHandler(handler, this.codec), this.taskQueue);
     } else {
       this.messenger.setMessageHandler(
-        this.name, handler == null ? null : new IncomingMethodCallHandler(handler, this.codec));
+        this.name, new IncomingMethodCallHandler(handler, this.codec));
     }
   }
 
@@ -205,7 +206,7 @@ class IncomingMethodCallHandler implements BinaryMessageHandler {
 
         notImplemented: (): void => {
           Log.w(MethodChannel.TAG,"method not implemented");
-          reply.reply(null);
+          reply.reply(StringUtils.stringToArrayBuffer(""));
         }
       });
     } catch (e) {

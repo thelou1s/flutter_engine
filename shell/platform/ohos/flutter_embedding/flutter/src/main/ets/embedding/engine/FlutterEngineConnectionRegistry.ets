@@ -41,6 +41,8 @@ export default class FlutterEngineConnectionRegistry implements PluginRegistry, 
   // PluginRegistry
   private plugins = new Map<string, FlutterPlugin>();
 
+  private defaultPlugin : FlutterPlugin = new EmptyPlugin();
+
   // Standard FlutterPlugin
   private flutterEngine: FlutterEngine;
   private pluginBinding: FlutterPluginBinding;
@@ -48,8 +50,8 @@ export default class FlutterEngineConnectionRegistry implements PluginRegistry, 
   // AbilityAware
   private abilityAwarePlugins = new Map<string, AbilityAware>();
 
-  private exclusiveAbility: ExclusiveAppComponent<UIAbility>;
-  private abilityPluginBinding: FlutterEngineAbilityPluginBinding;
+  private exclusiveAbility: ExclusiveAppComponent<UIAbility> | null = null;
+  private abilityPluginBinding: FlutterEngineAbilityPluginBinding | null = null;
 
   constructor(appContext: common.Context, flutterEngine: FlutterEngine, flutterLoader: FlutterLoader, group: FlutterEngineGroup) {
     this.flutterEngine = flutterEngine;
@@ -100,7 +102,7 @@ export default class FlutterEngineConnectionRegistry implements PluginRegistry, 
   }
 
   get(pluginClassName: string): FlutterPlugin {
-    return this.plugins.get(pluginClassName);
+    return this.plugins.get(pluginClassName) ?? this.defaultPlugin;
   }
 
   remove(pluginClassName: string): void {
@@ -154,15 +156,15 @@ export default class FlutterEngineConnectionRegistry implements PluginRegistry, 
   }
 
   onNewWant(want: Want, launchParams: AbilityConstant.LaunchParam): void {
-    this.abilityPluginBinding.onNewWant(want, launchParams);
+    this.abilityPluginBinding?.onNewWant(want, launchParams);
   }
 
   onWindowFocusChanged(hasFocus: boolean): void {
-    this.abilityPluginBinding.onWindowFocusChanged(hasFocus);
+    this.abilityPluginBinding?.onWindowFocusChanged(hasFocus);
   }
 
   onSaveState(reason: AbilityConstant.StateType, wantParam: Record<string, Object>): AbilityConstant.OnSaveResult {
-    return this.abilityPluginBinding.onSaveState(reason, wantParam);
+    return this.abilityPluginBinding?.onSaveState(reason, wantParam) ?? AbilityConstant.OnSaveResult.ALL_REJECT;
   }
 
   private detachFromAppComponent(): void {
@@ -174,7 +176,7 @@ export default class FlutterEngineConnectionRegistry implements PluginRegistry, 
   private attachToAbilityInternal(ability: UIAbility): void {
     this.abilityPluginBinding = new FlutterEngineAbilityPluginBinding(ability);
     // Notify all AbilityAware plugins that they are now attached to a new Ability.
-    this.abilityAwarePlugins.forEach(abilityAware => abilityAware.onAttachedToAbility(this.abilityPluginBinding));
+    this.abilityAwarePlugins.forEach(abilityAware => abilityAware.onAttachedToAbility(this.abilityPluginBinding!));
   }
 
   private detachFromAbilityInternal(): void {
@@ -230,19 +232,19 @@ class FlutterEngineAbilityPluginBinding implements AbilityPluginBinding {
 
   onNewWant(want: Want, launchParams: AbilityConstant.LaunchParam): void {
     this.onNewWantListeners.forEach((listener, key) => {
-      listener.onNewWant(want, launchParams)
+      listener?.onNewWant(want, launchParams)
     });
   }
 
   onWindowFocusChanged(hasFocus: boolean): void {
     this.onWindowFocusChangedListeners.forEach((listener, key) => {
-      listener.onWindowFocusChanged(hasFocus)
+      listener?.onWindowFocusChanged(hasFocus)
     });
   }
 
   onSaveState(reason: AbilityConstant.StateType, wantParam: Record<string, Object>): AbilityConstant.OnSaveResult {
     this.onSaveStateListeners.forEach((listener, key) => {
-      listener.onSaveState(reason, wantParam)
+      listener?.onSaveState(reason, wantParam)
     });
     return AbilityConstant.OnSaveResult.ALL_AGREE;
   }
@@ -261,5 +263,19 @@ class DefaultFlutterAssets implements FlutterAssets {
 
   getAssetFilePathBySubpath(assetSubpath: string, packageName?: string) {
     return this.flutterLoader.getLookupKeyForAsset(assetSubpath, packageName);
+  }
+}
+
+class EmptyPlugin implements FlutterPlugin {
+  getUniqueClassName(): string {
+    return '';
+  }
+
+  onAttachedToEngine(binding: FlutterPluginBinding) {
+
+  }
+
+  onDetachedFromEngine(binding: FlutterPluginBinding) {
+
   }
 }

@@ -24,8 +24,8 @@ export default class FlutterEngineGroupCache {
     return this.cachedEngineGroups.has(engineGroupId);
   }
 
-  get(engineGroupId: string): FlutterEngineGroup {
-    return this.cachedEngineGroups.get(engineGroupId);
+  get(engineGroupId: string): FlutterEngineGroup | null {
+    return this.cachedEngineGroups.get(engineGroupId) ?? null;
   }
 
   put(engineGroupId: string, engineGroup?: FlutterEngineGroup) {

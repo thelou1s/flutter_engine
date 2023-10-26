@@ -24,7 +24,7 @@ const TAG = "PlatformViewsChannel";
 const NON_TEXTURE_FALLBACK = -2;
 export default class PlatformViewsChannel {
   private channel: MethodChannel;
-  private handler: PlatformViewsHandler;
+  private handler: PlatformViewsHandler | null = null;
   private parsingHandler = new ParsingCallback();
 
   /**
@@ -45,7 +45,7 @@ export default class PlatformViewsChannel {
    * Sets the {@link PlatformViewsHandler} which receives all events and requests that are parsed
    * from the underlying platform views channel.
    */
-  public setPlatformViewsHandler(handler: PlatformViewsHandler): void {
+  public setPlatformViewsHandler(handler: PlatformViewsHandler | null): void {
     this.handler = handler;
     this.parsingHandler.handler = handler;
   }
@@ -82,7 +82,7 @@ export default class PlatformViewsChannel {
           additionalParams,
           RequestedDisplayMode.HYBRID_ONLY
         );
-        this.handler.createForPlatformViewLayer(request);
+        this.handler?.createForPlatformViewLayer(request);
         result.success(null);
       } else {
         const hybridFallback: boolean = createArgs.has("hybridFallback") && createArgs.get("hybridFallback");
@@ -109,7 +109,7 @@ export default class PlatformViewsChannel {
           t:${request.logicalTop},
           d:${request.direction}`);
 
-        const textureId = this.handler.createForTextureLayer(request);
+        const textureId = this.handler?.createForTextureLayer(request);
         if (textureId == NON_TEXTURE_FALLBACK) {
           if (!hybridFallback) {
             throw new Error(
@@ -132,7 +132,7 @@ export default class PlatformViewsChannel {
     const disposeArgs: Map<string, ESObject> = call.args;
     const viewId: number = disposeArgs.get("id");
     try {
-      this.handler.dispose(viewId);
+      this.handler?.dispose(viewId);
       result.success(null);
     } catch (err) {
       Log.e(TAG, "dispose failed", err);
@@ -150,7 +150,7 @@ export default class PlatformViewsChannel {
     try {
       let resizeCallback = new ResizeCallback();
       resizeCallback.result = result;
-      this.handler.resize(resizeRequest, resizeCallback);
+      this.handler?.resize(resizeRequest, resizeCallback);
     } catch (err) {
       Log.e(TAG, "resize failed", err);
       result.error("error", err, null);
@@ -160,7 +160,7 @@ export default class PlatformViewsChannel {
   offset(call: MethodCall, result: MethodResult): void {
     const offsetArgs: Map<string, ESObject> = call.args;
     try {
-      this.handler.offset(
+      this.handler?.offset(
         offsetArgs.get("id"),
         offsetArgs.get("top"),
         offsetArgs.get("left"));
@@ -194,7 +194,7 @@ export default class PlatformViewsChannel {
     );
 
     try {
-      this.handler.onTouch(touch);
+      this.handler?.onTouch(touch);
       result.success(null);
     } catch (err) {
       Log.e(TAG, "offset failed", err);
@@ -208,7 +208,7 @@ export default class PlatformViewsChannel {
     const direction: number = setDirectionArgs.get("direction");
 
     try {
-      this.handler.setDirection(newDirectionViewId, direction);
+      this.handler?.setDirection(newDirectionViewId, direction);
       result.success(null);
     } catch (err) {
       Log.e(TAG, "setDirection failed", err);
@@ -219,7 +219,7 @@ export default class PlatformViewsChannel {
   clearFocus(call: MethodCall, result: MethodResult): void {
     const viewId: number = call.args;
     try {
-      this.handler.clearFocus(viewId);
+      this.handler?.clearFocus(viewId);
       result.success(null);
     } catch (err) {
       Log.e(TAG, "clearFocus failed", err);
@@ -230,7 +230,7 @@ export default class PlatformViewsChannel {
   synchronizeToNativeViewHierarchy(call: MethodCall, result: MethodResult): void {
     const yes: boolean = call.args;
     try {
-      this.handler.synchronizeToNativeViewHierarchy(yes);
+      this.handler?.synchronizeToNativeViewHierarchy(yes);
       result.success(null);
     } catch (err) {
       Log.e(TAG, "synchronizeToNativeViewHierarchy failed", err);
@@ -488,8 +488,8 @@ export class PlatformViewTouch {
 }
 
 class ParsingCallback implements MethodCallHandler {
-  platformChannel : PlatformViewsChannel;
-  handler: PlatformViewsHandler;
+  platformChannel : PlatformViewsChannel | null = null;
+  handler: PlatformViewsHandler | null = null;
 
   onMethodCall(call: MethodCall, result: MethodResult) {
     if (this.handler == null) {
@@ -499,35 +499,35 @@ class ParsingCallback implements MethodCallHandler {
     Log.i(TAG, "Received '" + call.method + "' message.");
     switch (call.method) {
       case "create": {
-        this.platformChannel.create(call, result);
+        this.platformChannel?.create(call, result);
         break;
       }
       case "dispose": {
-        this.platformChannel.dispose(call, result);
+        this.platformChannel?.dispose(call, result);
         break;
       }
       case "resize": {
-        this.platformChannel.resize(call, result);
+        this.platformChannel?.resize(call, result);
         break;
       }
       case "offset": {
-        this.platformChannel.offset(call, result);
+        this.platformChannel?.offset(call, result);
         break;
       }
       case "touch": {
-        this.platformChannel.touch(call, result);
+        this.platformChannel?.touch(call, result);
         break;
       }
       case "setDirection": {
-        this.platformChannel.setDirection(call, result);
+        this.platformChannel?.setDirection(call, result);
         break;
       }
       case "clearFocus": {
-        this.platformChannel.clearFocus(call, result);
+        this.platformChannel?.clearFocus(call, result);
         break;
       }
       case "synchronizeToNativeViewHierarchy": {
-        this.platformChannel.synchronizeToNativeViewHierarchy(call, result);
+        this.platformChannel?.synchronizeToNativeViewHierarchy(call, result);
         break;
       }
       default:
@@ -537,15 +537,15 @@ class ParsingCallback implements MethodCallHandler {
 }
 
 class ResizeCallback extends PlatformViewBufferResized {
-  result : MethodResult;
+  result : MethodResult | null = null;
   run(bufferSize: PlatformViewBufferSize) {
     if (bufferSize == null) {
-      this.result.error("error", "Failed to resize the platform view", null);
+      this.result?.error("error", "Failed to resize the platform view", null);
     } else {
       const response: Map<string, ESObject> = new Map();
       response.set("width", bufferSize.width);
       response.set("height", bufferSize.height);
-      this.result.success(response);
+      this.result?.success(response);
     }
   }
 }

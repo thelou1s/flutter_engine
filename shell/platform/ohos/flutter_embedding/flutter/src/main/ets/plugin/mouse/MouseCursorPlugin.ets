@@ -25,7 +25,7 @@ export default class MouseCursorPlugin implements MouseCursorMethodHandler{
 
   private mouseCursorChannel: MouseCursorChannel;
 
-  private systemCursorConstants: HashMap<string, pointer.PointerStyle>;
+  private systemCursorConstants: HashMap<string, pointer.PointerStyle> | null = null;
 
   constructor(mouseCursorView: MouseCursorViewDelegate, mouseCursorChannel: MouseCursorChannel) {
     this.mView = mouseCursorView;

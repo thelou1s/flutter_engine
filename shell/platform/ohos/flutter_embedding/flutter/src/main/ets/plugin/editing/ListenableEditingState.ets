@@ -23,27 +23,28 @@ const TAG =  "ListenableEditingState";
 export class ListenableEditingState {
   //Cache used to storage software keyboard input action
   private mStringCache: string;
-  private mSelectionStartCache: number;
-  private mSelectionEndCache: number;
-  private mComposingStartCache: number;
-  private mComposingEndCache: number;
+  private mSelectionStartCache: number = 0;
+  private mSelectionEndCache: number = 0;
+  private mComposingStartCache: number = 0;
+  private mComposingEndCache: number = 0;
   //used to compare with Cache
-  private mTextInputState: TextEditState;
+
   private mListeners: ArrayList<EditingStateWatcher> = new ArrayList<EditingStateWatcher>();
   private mPendingListeners: ArrayList<EditingStateWatcher> = new ArrayList<EditingStateWatcher>();
   private  mBatchTextEditingDeltas: ArrayList<TextEditingDelta> = new ArrayList<TextEditingDelta>();
-  private mChangeNotificationDepth: number;
-  private mBatchEditNestDepth: number;
+  private mChangeNotificationDepth: number = 0;
+  private mBatchEditNestDepth: number = 0;
 
   private mTextWhenBeginBatchEdit: string;
-  private mSelectionStartWhenBeginBatchEdit: number;
-  private mSelectionEndWhenBeginBatchEdit: number;
-  private mComposingStartWhenBeginBatchEdit: number;
-  private mComposingEndWhenBeginBatchEdit: number;
+  private mSelectionStartWhenBeginBatchEdit: number = 0;
+  private mSelectionEndWhenBeginBatchEdit: number = 0;
+  private mComposingStartWhenBeginBatchEdit: number = 0;
+  private mComposingEndWhenBeginBatchEdit: number = 0;
 
 
   constructor() {
     this.mStringCache = "";
+    this.mTextWhenBeginBatchEdit = "";
     this.mSelectionStartCache = 0;
     this.mSelectionEndCache = 0;
     this.mComposingStartCache = -1;
@@ -110,9 +111,6 @@ export class ListenableEditingState {
   }
 
   handleInsertTextEvent(text: string): void {
-    if(this.mTextInputState == null) {
-      Log.e(TAG, "mTextInputState is null");
-    }
     if(this.mStringCache.length == this.mSelectionStartCache) {
       //Insert text one by one
       this.mStringCache += text;

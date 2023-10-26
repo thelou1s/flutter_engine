@@ -41,11 +41,11 @@ export default class FlutterNapi {
   //是否已实现
   hasImplemented: boolean = false;
 
-  nativeShellHolderId: number = null;
-  platformMessageHandler: PlatformMessageHandler;
+  nativeShellHolderId: number | null = null;
+  platformMessageHandler: PlatformMessageHandler | null = null;
   private engineLifecycleListeners = new Set<EngineLifecycleListener>();
-  accessibilityDelegate: AccessibilityDelegate;
-  localizationPlugin: LocalizationPlugin;
+  accessibilityDelegate: AccessibilityDelegate | null = null;
+  localizationPlugin: LocalizationPlugin | null = null;
 
   /**
    * 更新刷新率
@@ -81,7 +81,7 @@ export default class FlutterNapi {
     assetManager: resourceManager.ResourceManager,
     entrypointArgs: Array<string>) {
     Log.w(TAG, "init: bundlePath=" + bundlePath + "  entrypointFunctionName=" + entrypointFunctionName + "  pathToEntrypointFunction=" + pathToEntrypointFunction + "  entrypointArgs=" + JSON.stringify(entrypointArgs))
-    flutter.nativeRunBundleAndSnapshotFromLibrary(this.nativeShellHolderId, bundlePath, entrypointFunctionName, pathToEntrypointFunction, assetManager, entrypointArgs);
+    flutter.nativeRunBundleAndSnapshotFromLibrary(this.nativeShellHolderId!, bundlePath, entrypointFunctionName, pathToEntrypointFunction, assetManager, entrypointArgs);
   };
 
   /**
@@ -95,7 +95,7 @@ export default class FlutterNapi {
     return this.hasImplemented;
   }
 
-  setPlatformMessageHandler(platformMessageHandler: PlatformMessageHandler): void {
+  setPlatformMessageHandler(platformMessageHandler: PlatformMessageHandler | null): void {
     this.ensureRunningOnMainThread();
     this.platformMessageHandler = platformMessageHandler;
   }
@@ -111,14 +111,14 @@ export default class FlutterNapi {
 
   }
 
-  static nativeLookupCallbackInformation(handle: number): FlutterCallbackInformation {
+  static nativeLookupCallbackInformation(handle: number): FlutterCallbackInformation | null {
     return null;
   }
 
   notifyLowMemoryWarning(): void {
     this.ensureRunningOnMainThread();
     this.ensureAttachedToNative();
-    this.nativeNotifyLowMemoryWarning(this.nativeShellHolderId);
+    this.nativeNotifyLowMemoryWarning(this.nativeShellHolderId!);
   }
 
   isAttached(): boolean {
@@ -132,7 +132,7 @@ export default class FlutterNapi {
   dispatchEmptyPlatformMessage(channel: String, responseId: number): void {
     this.ensureRunningOnMainThread();
     if (this.isAttached()) {
-      flutter.nativeDispatchEmptyPlatformMessage(this.nativeShellHolderId, channel, responseId);
+      flutter.nativeDispatchEmptyPlatformMessage(this.nativeShellHolderId!, channel, responseId);
     } else {
       Log.w(
         TAG,
@@ -154,7 +154,7 @@ export default class FlutterNapi {
         text += uintArrayBuff[i] + ','
       }
       Log.w(TAG, "message=" + message.byteLength + ",text=" + text);
-      flutter.nativeDispatchPlatformMessage(this.nativeShellHolderId, channel, message, position, responseId);
+      flutter.nativeDispatchPlatformMessage(this.nativeShellHolderId!, channel, message, position, responseId);
     } else {
       Log.w(
         TAG,
@@ -167,7 +167,7 @@ export default class FlutterNapi {
 
   invokePlatformMessageEmptyResponseCallback(responseId: number): void {
     if (this.isAttached()) {
-      flutter.nativeInvokePlatformMessageEmptyResponseCallback(this.nativeShellHolderId, responseId);
+      flutter.nativeInvokePlatformMessageEmptyResponseCallback(this.nativeShellHolderId!, responseId);
     } else {
       Log.w(
         TAG,
@@ -179,7 +179,7 @@ export default class FlutterNapi {
   invokePlatformMessageResponseCallback(responseId: number, message: ArrayBuffer, position: number) {
     if (this.isAttached()) {
       flutter.nativeInvokePlatformMessageResponseCallback(
-        this.nativeShellHolderId, responseId, message, position);
+        this.nativeShellHolderId!, responseId, message, position);
     } else {
       Log.w(
         TAG,
@@ -196,7 +196,7 @@ export default class FlutterNapi {
                      , systemGestureInsetLeft: number, physicalTouchSlop: number, displayFeaturesBounds: Array<number>
                      , displayFeaturesType: Array<number>, displayFeaturesState: Array<number>): void {
     if (this.isAttached()) {
-      flutter.nativeSetViewportMetrics(this.nativeShellHolderId, devicePixelRatio,
+      flutter.nativeSetViewportMetrics(this.nativeShellHolderId!, devicePixelRatio,
         physicalWidth,
         physicalHeight,
         physicalPaddingTop,
@@ -266,7 +266,7 @@ export default class FlutterNapi {
   decodeImage(buffer: ArrayBuffer, imageGeneratorAddress: number): void {
     Log.d(TAG, "called decodeImage=" + buffer.byteLength)
     const imageSourceApi = image.createImageSource(buffer);
-    let tempPixelMap: image.PixelMap = null;
+    let tempPixelMap: image.PixelMap | null = null;
     imageSourceApi.createPixelMap({
       desiredPixelFormat: image.PixelMapFormat.RGBA_8888
     }).then(pixelMap => {
@@ -333,7 +333,7 @@ export default class FlutterNapi {
     }
   }
 
-  setLocalizationPlugin(localizationPlugin: LocalizationPlugin): void {
+  setLocalizationPlugin(localizationPlugin: LocalizationPlugin | null): void {
     this.localizationPlugin = localizationPlugin;
   }
 
@@ -348,7 +348,7 @@ export default class FlutterNapi {
     for (index = 0; index < systemLanguages.length; index++) {
       Log.d(TAG, "systemlanguages "+ index + ":" + systemLanguages[index]);
     }
-    flutter.nativeGetSystemLanguages(this.nativeShellHolderId, systemLanguages);
+    flutter.nativeGetSystemLanguages(this.nativeShellHolderId!, systemLanguages);
   }
 }
 

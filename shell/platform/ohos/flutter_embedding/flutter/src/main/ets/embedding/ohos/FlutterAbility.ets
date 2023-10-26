@@ -42,11 +42,11 @@ const EVENT_BACK_PRESS = 'EVENT_BACK_PRESS';
  * 2、生命周期传递；
  */
 export class FlutterAbility extends UIAbility implements Host {
-  private delegate: FlutterAbilityDelegate;
-  private windowStage: window.WindowStage;
-  private mainWindow: window.Window;
+  private delegate?: FlutterAbilityDelegate | null;
+  private windowStage?: window.WindowStage;
+  private mainWindow?: window.Window;
   private viewportMetrics = new ViewportMetrics();
-  private displayInfo: display.Display;
+  private displayInfo?: display.Display;
 
   /**
    * onCreate
@@ -59,17 +59,17 @@ export class FlutterAbility extends UIAbility implements Host {
     Log.i(TAG, "bundleCodeDir=" + this.context.bundleCodeDir);
     // globalThis.flutterAbility = this
     this.displayInfo = display.getDefaultDisplaySync();
-    this.viewportMetrics.devicePixelRatio = this.displayInfo.densityPixels
+    this.viewportMetrics.devicePixelRatio = this.displayInfo?.densityPixels
 
     this.delegate = new FlutterAbilityDelegate(this);
-    await this.delegate.onAttach(this.context);
+    await this?.delegate?.onAttach(this.context);
     Log.i(TAG, 'onAttach end');
-    this.delegate.platformPlugin.setUIAbilityContext(this.context);
-    this.delegate.onRestoreInstanceState(want);
-    this.delegate.sendSettings();
+    this?.delegate?.platformPlugin?.setUIAbilityContext(this.context);
+    this?.delegate?.onRestoreInstanceState(want);
+    this?.delegate?.sendSettings();
 
     if (this.stillAttachedForEvent("onCreate")) {
-      this.delegate.onCreate();
+      this?.delegate?.onCreate();
     }
 
     console.log('MyAbility onCreate');
@@ -82,7 +82,7 @@ export class FlutterAbility extends UIAbility implements Host {
   onDestroy() {
     this.context.eventHub.off(EVENT_BACK_PRESS);
     if (this.stillAttachedForEvent("onDestroy")) {
-      this.delegate.onDestroy();
+      this?.delegate?.onDestroy();
     }
   }
 
@@ -93,7 +93,7 @@ export class FlutterAbility extends UIAbility implements Host {
   async onWindowStageCreate(windowStage: window.WindowStage) {
     this.windowStage = windowStage
     try {
-      windowStage.on('windowStageEvent', (data) => {
+      windowStage?.on('windowStageEvent', (data) => {
         let stageEventType: window.WindowStageEventType = data;
         switch (stageEventType) {
           case window.WindowStageEventType.SHOWN: // 切到前台
@@ -102,13 +102,13 @@ export class FlutterAbility extends UIAbility implements Host {
           case window.WindowStageEventType.ACTIVE: // 获焦状态
             Log.i(TAG, 'windowStage active.');
             if (this.stillAttachedForEvent("onWindowFocusChanged")) {
-              this.delegate.onWindowFocusChanged(true);
+              this?.delegate?.onWindowFocusChanged(true);
             }
             break;
           case window.WindowStageEventType.INACTIVE: // 失焦状态
             Log.i(TAG, 'windowStage inactive.');
             if (this.stillAttachedForEvent("onWindowFocusChanged")) {
-              this.delegate.onWindowFocusChanged(false);
+              this?.delegate?.onWindowFocusChanged(false);
             }
             break;
           case window.WindowStageEventType.HIDDEN: // 切到后台
@@ -119,21 +119,21 @@ export class FlutterAbility extends UIAbility implements Host {
         }
       });
 
-      this.mainWindow = windowStage.getMainWindowSync()
-      this.mainWindow.on('windowSizeChange', (data) => {
+      this.mainWindow = windowStage?.getMainWindowSync()
+      this.mainWindow?.on('windowSizeChange', (data) => {
         this.onWindowPropertiesUpdated();
       });
 
-      this.mainWindow.on('avoidAreaChange', (data) => {
+      this.mainWindow?.on('avoidAreaChange', (data) => {
         this.onWindowPropertiesUpdated();
       });
 
-      this.mainWindow.on('keyboardHeightChange', (data) => {
+      this.mainWindow?.on('keyboardHeightChange', (data) => {
         this.onWindowPropertiesUpdated();
       });
 
       this.loadContent();
-      this.mainWindow.setWindowLayoutFullScreen(true);
+      this.mainWindow?.setWindowLayoutFullScreen(true);
     } catch (exception) {
       Log.e(TAG, 'Failed to enable the listener for window stage event changes. Cause:' + JSON.stringify(exception));
     }
@@ -142,7 +142,7 @@ export class FlutterAbility extends UIAbility implements Host {
   loadContent() {
     if (this.windowStage != null && this.stillAttachedForEvent("loadContent")) {
       Log.i(TAG, 'loadContent');
-      this.windowStage.loadContent('pages/Index', (err, data) => {
+      this.windowStage?.loadContent('pages/Index', (err, data) => {
         if (err.code) {
           Log.e(TAG, 'Failed to load the content. Cause: %{public}s', JSON.stringify(err) ?? '');
           return;
@@ -151,9 +151,9 @@ export class FlutterAbility extends UIAbility implements Host {
         Log.i(TAG, 'Succeeded in loading the content. Data: %{public}s', JSON.stringify(data) ?? '');
       });
       if (this.stillAttachedForEvent("onWindowStageCreate")) {
-        this.delegate.onWindowStageCreate();
+        this?.delegate?.onWindowStageCreate();
       }
-      this.delegate.getFlutterNapi().updateRefreshRate(this.displayInfo.refreshRate)
+      this?.delegate?.getFlutterNapi()?.updateRefreshRate(this.displayInfo!.refreshRate)
       this.onFlutterEngineReady()
     }
   }
@@ -163,7 +163,7 @@ export class FlutterAbility extends UIAbility implements Host {
   }
 
   private updateViewportMetrics() {
-    this.delegate.getFlutterNapi().setViewportMetrics(this.viewportMetrics.devicePixelRatio,
+    this?.delegate?.getFlutterNapi()?.setViewportMetrics(this.viewportMetrics.devicePixelRatio,
       this.viewportMetrics.physicalWidth,
       this.viewportMetrics.physicalHeight,
       this.viewportMetrics.physicalViewPaddingTop,
@@ -186,25 +186,25 @@ export class FlutterAbility extends UIAbility implements Host {
 
   onWindowStageDestroy() {
     if (this.stillAttachedForEvent("onWindowStageDestroy")) {
-      this.delegate.onWindowStageDestroy();
+      this?.delegate?.onWindowStageDestroy();
     }
   }
 
   onForeground() {
     if (this.stillAttachedForEvent("onForeground")) {
-      this.delegate.onForeground();
+      this?.delegate?.onForeground();
     }
   }
 
   onBackground() {
     if (this.stillAttachedForEvent("onBackground")) {
-      this.delegate.onBackground();
+      this?.delegate?.onBackground();
     }
   }
 
   release() {
-    if (this.delegate != null) {
-      this.delegate.release();
+    if (this?.delegate != null) {
+      this?.delegate?.release();
       this.delegate = null;
     }
   }
@@ -221,7 +221,7 @@ export class FlutterAbility extends UIAbility implements Host {
     return true;
   }
 
-  provideFlutterEngine(context: common.Context): FlutterEngine {
+  provideFlutterEngine(context: common.Context): FlutterEngine | null {
     return null;
   }
 
@@ -238,15 +238,15 @@ export class FlutterAbility extends UIAbility implements Host {
   }
 
   getDartEntrypointArgs(): Array<string> {
-    if (this.launchWant.parameters[FlutterAbilityLaunchConfigs.EXTRA_DART_ENTRYPOINT_ARGS]) {
-      return this.launchWant.parameters[FlutterAbilityLaunchConfigs.EXTRA_DART_ENTRYPOINT_ARGS] as Array<string>;
+    if (this.launchWant.parameters![FlutterAbilityLaunchConfigs.EXTRA_DART_ENTRYPOINT_ARGS]) {
+      return this.launchWant.parameters![FlutterAbilityLaunchConfigs.EXTRA_DART_ENTRYPOINT_ARGS] as Array<string>;
     }
     return new Array<string>()
   }
 
   detachFromFlutterEngine() {
-    if (this.delegate != null) {
-      this.delegate.onDetach();
+    if (this?.delegate != null) {
+      this?.delegate?.onDetach();
     }
   }
 
@@ -259,25 +259,25 @@ export class FlutterAbility extends UIAbility implements Host {
   }
 
   getDartEntrypointLibraryUri(): string {
-    return null;
+    return "";
   }
 
   getAppBundlePath(): string {
-    return null;
+    return "";
   }
 
   getDartEntrypointFunctionName(): string {
-    if (this.launchWant.parameters[FlutterAbilityLaunchConfigs.EXTRA_DART_ENTRYPOINT]) {
-      return this.launchWant.parameters[FlutterAbilityLaunchConfigs.EXTRA_DART_ENTRYPOINT] as string;
+    if (this.launchWant.parameters![FlutterAbilityLaunchConfigs.EXTRA_DART_ENTRYPOINT]) {
+      return this.launchWant.parameters![FlutterAbilityLaunchConfigs.EXTRA_DART_ENTRYPOINT] as string;
     }
     return FlutterAbilityLaunchConfigs.DEFAULT_DART_ENTRYPOINT
   }
 
   getInitialRoute(): string {
-    if (this.launchWant.parameters[FlutterAbilityLaunchConfigs.EXTRA_INITIAL_ROUTE]) {
-      return this.launchWant.parameters[FlutterAbilityLaunchConfigs.EXTRA_INITIAL_ROUTE] as string;
+    if (this.launchWant.parameters![FlutterAbilityLaunchConfigs.EXTRA_INITIAL_ROUTE]) {
+      return this.launchWant.parameters![FlutterAbilityLaunchConfigs.EXTRA_INITIAL_ROUTE] as string;
     }
-    return null
+    return ""
   }
 
   getWant(): Want {
@@ -289,8 +289,8 @@ export class FlutterAbility extends UIAbility implements Host {
   }
 
   shouldRestoreAndSaveState(): boolean{
-    if (this.launchWant.parameters[FlutterAbilityLaunchConfigs.EXTRA_CACHED_ENGINE_ID] != undefined) {
-      return this.launchWant.parameters[FlutterAbilityLaunchConfigs.EXTRA_CACHED_ENGINE_ID] as boolean;
+    if (this.launchWant.parameters![FlutterAbilityLaunchConfigs.EXTRA_CACHED_ENGINE_ID] != undefined) {
+      return this.launchWant.parameters![FlutterAbilityLaunchConfigs.EXTRA_CACHED_ENGINE_ID] as boolean;
     }
     if (this.getCachedEngineId() != null) {
       // Prevent overwriting the existing state in a cached engine with restoration state.
@@ -300,11 +300,11 @@ export class FlutterAbility extends UIAbility implements Host {
   }
 
   getCachedEngineId(): string {
-    return this.launchWant.parameters[FlutterAbilityLaunchConfigs.EXTRA_CACHED_ENGINE_ID] as string
+    return this.launchWant.parameters![FlutterAbilityLaunchConfigs.EXTRA_CACHED_ENGINE_ID] as string
   }
 
   getCachedEngineGroupId(): string {
-    return this.launchWant.parameters[FlutterAbilityLaunchConfigs.EXTRA_CACHED_ENGINE_GROUP_ID] as string
+    return this.launchWant.parameters![FlutterAbilityLaunchConfigs.EXTRA_CACHED_ENGINE_GROUP_ID] as string
   }
 
   /**
@@ -312,11 +312,11 @@ export class FlutterAbility extends UIAbility implements Host {
    */
   private stillAttachedForEvent(event: string) {
     Log.i(TAG, 'Ability ' + event);
-    if (this.delegate == null) {
+    if (this?.delegate == null) {
       Log.w(TAG, "FlutterAbility " + event + " call after release.");
       return false;
     }
-    if (!this.delegate.isAttached) {
+    if (!this?.delegate?.isAttached) {
       Log.w(TAG, "FlutterAbility " + event + " call after detach.");
       return false;
     }
@@ -324,42 +324,42 @@ export class FlutterAbility extends UIAbility implements Host {
   }
 
   addPlugin(plugin: FlutterPlugin): void {
-    if (this.delegate != null) {
-      this.delegate.addPlugin(plugin)
+    if (this?.delegate != null) {
+      this?.delegate?.addPlugin(plugin)
     }
   }
 
   removePlugin(plugin: FlutterPlugin): void {
-    if (this.delegate != null) {
-      this.delegate.removePlugin(plugin)
+    if (this?.delegate != null) {
+      this?.delegate?.removePlugin(plugin)
     }
   }
 
   private onWindowPropertiesUpdated(){
-    if (!this.delegate.isAttached) {
+    if (this.delegate == null || !this.delegate.isAttached) {
       return;
     }
-    let systemAvoidArea = this.mainWindow.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM);
-    let gestureAvoidArea = this.mainWindow.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM_GESTURE);
-    let keyboardAvoidArea = this.mainWindow.getWindowAvoidArea(window.AvoidAreaType.TYPE_KEYBOARD);
-    const properties = this.mainWindow.getWindowProperties();
-    this.viewportMetrics.physicalWidth = properties.windowRect.width;
-    this.viewportMetrics.physicalHeight = properties.windowRect.height;
+    let systemAvoidArea = this.mainWindow?.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM);
+    let gestureAvoidArea = this.mainWindow?.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM_GESTURE);
+    let keyboardAvoidArea = this.mainWindow?.getWindowAvoidArea(window.AvoidAreaType.TYPE_KEYBOARD);
+    const properties = this.mainWindow?.getWindowProperties();
+    this.viewportMetrics.physicalWidth = properties!.windowRect.width;
+    this.viewportMetrics.physicalHeight = properties!.windowRect.height;
 
-    this.viewportMetrics.physicalViewPaddingTop = systemAvoidArea.topRect.height
-    this.viewportMetrics.physicalViewPaddingLeft = systemAvoidArea.leftRect.width
-    this.viewportMetrics.physicalViewPaddingBottom = systemAvoidArea.bottomRect.height
-    this.viewportMetrics.physicalViewPaddingRight = systemAvoidArea.rightRect.width
+    this.viewportMetrics.physicalViewPaddingTop = systemAvoidArea!.topRect.height
+    this.viewportMetrics.physicalViewPaddingLeft = systemAvoidArea!.leftRect.width
+    this.viewportMetrics.physicalViewPaddingBottom = systemAvoidArea!.bottomRect.height
+    this.viewportMetrics.physicalViewPaddingRight = systemAvoidArea!.rightRect.width
 
-    this.viewportMetrics.physicalViewInsetTop = keyboardAvoidArea.topRect.height
-    this.viewportMetrics.physicalViewInsetLeft = keyboardAvoidArea.leftRect.width
-    this.viewportMetrics.physicalViewInsetBottom = keyboardAvoidArea.bottomRect.height
-    this.viewportMetrics.physicalViewInsetRight = keyboardAvoidArea.rightRect.width
+    this.viewportMetrics.physicalViewInsetTop = keyboardAvoidArea!.topRect.height
+    this.viewportMetrics.physicalViewInsetLeft = keyboardAvoidArea!.leftRect.width
+    this.viewportMetrics.physicalViewInsetBottom = keyboardAvoidArea!.bottomRect.height
+    this.viewportMetrics.physicalViewInsetRight = keyboardAvoidArea!.rightRect.width
 
-    this.viewportMetrics.systemGestureInsetTop = gestureAvoidArea.topRect.height
-    this.viewportMetrics.systemGestureInsetLeft = gestureAvoidArea.leftRect.width
-    this.viewportMetrics.systemGestureInsetBottom = gestureAvoidArea.bottomRect.height
-    this.viewportMetrics.systemGestureInsetRight = gestureAvoidArea.rightRect.width
+    this.viewportMetrics.systemGestureInsetTop = gestureAvoidArea!.topRect.height
+    this.viewportMetrics.systemGestureInsetLeft = gestureAvoidArea!.leftRect.width
+    this.viewportMetrics.systemGestureInsetBottom = gestureAvoidArea!.bottomRect.height
+    this.viewportMetrics.systemGestureInsetRight = gestureAvoidArea!.rightRect.width
 
     this.updateViewportMetrics()
   }
@@ -367,13 +367,13 @@ export class FlutterAbility extends UIAbility implements Host {
   onMemoryLevel(level: AbilityConstant.MemoryLevel): void {
     Log.i(TAG, 'onMemoryLevel: ' + level);
     if (level === AbilityConstant.MemoryLevel.MEMORY_LEVEL_CRITICAL) {
-      this.delegate.onLowMemory();
+      this?.delegate?.onLowMemory();
     }
   }
 
   onConfigurationUpdated(config: Configuration){
     Log.i(TAG, 'onConfigurationUpdated config:' + JSON.stringify(config));
-    this.delegate.flutterEngine.getSettingsChannel().startMessage()
+    this?.delegate?.flutterEngine?.getSettingsChannel()?.startMessage()
       .setAlwaysUse24HourFormat(I18n.System.is24HourClock())
       .setPlatformBrightness(config.colorMode != ConfigurationConstant.ColorMode.COLOR_MODE_DARK
         ? PlatformBrightness.LIGHT : PlatformBrightness.DARK);

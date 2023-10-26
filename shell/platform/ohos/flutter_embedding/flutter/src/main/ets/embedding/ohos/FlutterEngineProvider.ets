@@ -17,5 +17,5 @@ import FlutterEngine from '../engine/FlutterEngine';
 import common from '@ohos.app.ability.common';
 
 export default interface FlutterEngineProvider {
-  provideFlutterEngine(context: common.Context): FlutterEngine;
+  provideFlutterEngine(context: common.Context): FlutterEngine | null;
 }

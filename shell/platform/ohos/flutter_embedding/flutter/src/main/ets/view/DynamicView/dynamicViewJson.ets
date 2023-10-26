@@ -54,7 +54,7 @@ export function createDVModelFromJson(json: Object): DVModel {
 
   if (typeof json !== 'object') {
     console.error("createDVModelFromJson: input is not JSON");
-    return undefined;
+    return new DVModel("", "", "", createChildrenFrom([]));
   }
 
   let jsonObject = json as Record<string, string | ESObject>;

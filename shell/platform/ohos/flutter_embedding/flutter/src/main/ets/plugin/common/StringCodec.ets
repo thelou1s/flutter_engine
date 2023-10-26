@@ -28,14 +28,14 @@ export default class StringCodec implements MessageCodec<string> {
 
   encodeMessage(message: string): ArrayBuffer {
     if (message == null) {
-      return null;
+      return StringUtils.stringToArrayBuffer("");
     }
     return StringUtils.stringToArrayBuffer(message);
   }
 
   decodeMessage(message: ArrayBuffer): string {
     if (message == null) {
-      return null;
+      return "";
     }
     return StringUtils.arrayBufferToString(message);
   }
