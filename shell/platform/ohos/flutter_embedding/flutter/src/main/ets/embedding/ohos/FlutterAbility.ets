@@ -34,6 +34,7 @@ import { RootDvModeManager } from '../../plugin/platform/RootDvModelManager';
 import { Configuration } from '@ohos.app.ability.Configuration';
 
 const TAG = "FlutterAbility";
+const EVENT_BACK_PRESS = 'EVENT_BACK_PRESS';
 /**
  * flutter ohos基础ability，请在让主ability继承自该类。
  * 该类主要职责：
@@ -68,14 +69,18 @@ export class FlutterAbility extends UIAbility implements Host {
     this?.delegate?.sendSettings();
 
     if (this.stillAttachedForEvent("onCreate")) {
-      this?.delegate?.onCreate();
+      this.delegate?.onCreate();
     }
 
     console.log('MyAbility onCreate');
     // globalThis.applicationContext = this.context.getApplicationContext();
+    this.context.eventHub.on(EVENT_BACK_PRESS, () => {
+      this.delegate?.flutterEngine?.getNavigationChannel()?.popRoute();
+    });
   }
 
   onDestroy() {
+    this.context.eventHub.off(EVENT_BACK_PRESS);
     if (this.stillAttachedForEvent("onDestroy")) {
       this?.delegate?.onDestroy();
     }
