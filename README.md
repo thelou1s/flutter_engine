@@ -50,6 +50,7 @@ Flutter Engine
 3. 同步代码：在engine目录，执行`gclient sync`；这里会同步engine源码、官方packages仓，还有执行ohos_setup任务；
 
 4. 下载sdk： 在[每日构建](http://ci.openharmony.cn/workbench/cicd/dailybuild/dailylist)下载ohos-sdk-full，在engine根目录下，新建文件夹 ndk/linux/4.0，解压ohos-sdk-full中的native文件夹并放置到ndk/linux/4.0文件夹中；
+(mac环境，请下载mac-sdk-full或者mac-sdk-m1-full，放置目录为ndk/mac/4.0)
 
 5. 开始构建：engine目录，执行`make`，即可开始构建支持ohos设备的flutter engine。
 
@@ -69,3 +70,5 @@ Flutter Engine
     ```
 
 3. har文件输出路径为：shell/platform/ohos/flutter_embedding/flutter/build
+
+ps:如果你使用的是DevEco Studio的Beta版本，编译工程时遇到“must have required property 'compatibleSdkVersion', location: build-profile.json5:17:11"错误，请参考《DevEco Studio环境配置指导.docx》中的‘6 创建工程和运行Hello World’【配置插件】章节修改 shell/platform/ohos/flutter_embedding/hvigor/hvigor-config.json5文件。

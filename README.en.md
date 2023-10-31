@@ -51,6 +51,7 @@ This warehouse is based on the extension of Flutter's official engine warehouse 
 3. Synchronize code: In the engine directory, execute `gclient sync`; here the engine source code, official packages repository will be synchronized, and the ohos_setup task will be executed;
 
 4. Download sdk: Download ohos-sdk-full in [the daily build](http://ci.openharmony.cn/workbench/cicd/dailybuild/dailylist), create a new folder ndk/linux/4.0 in the engine root directory, unzip the native folder in ohos-sdk-full and place it in ndk/linux/4.0 in folder;
+(For mac environment, please download mac-sdk-full or mac-sdk-m1-full, and the placement directory is ndk/mac/4.0)
 
 5. Start building: engine directory, execute `make` to start building the flutter engine that supports ohos devices.
 
@@ -72,3 +73,5 @@ This warehouse is based on the extension of Flutter's official engine warehouse 
 
 
 3. The har file output path is: shell/platform/ohos/flutter_embedding/flutter/build
+
+ps: If you are using the Beta version of DevEco Studio and encounter the error "must have required property 'compatibleSdkVersion', location: build-profile.json5:17:11" when compiling the project, please refer to the "DevEco Studio Environment Configuration Guide." docx》Chapter '6 Creating Projects and Running Hello World' [Configuration Plugin] Modify the shell/platform/ohos/flutter_embedding/hvigor/hvigor-config.json5 file.
