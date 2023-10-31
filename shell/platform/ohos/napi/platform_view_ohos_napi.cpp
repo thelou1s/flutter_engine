@@ -287,16 +287,15 @@ void PlatformViewOHOSNapi::FlutterViewHandlePlatformMessage(
     return;
   }
 
-  if (message->data().GetSize() > 0) {
-    callbackParam[1] = fml::napi::CreateArrayBuffer(
-        env_, (void*)message->data().GetMapping(), message->data().GetSize());
+  callbackParam[1] = fml::napi::CreateArrayBuffer(
+      env_, (void*)message->data().GetMapping(), message->data().GetSize());
 
-    status = napi_create_int64(env_, reponse_id, &callbackParam[2]);
-    if (status != napi_ok) {
-      FML_DLOG(ERROR) << "napi_create_int64 err " << status;
-      return;
-    }
-
+  status = napi_create_int64(env_, reponse_id, &callbackParam[2]);
+  if (status != napi_ok) {
+    FML_DLOG(ERROR) << "napi_create_int64 err " << status;
+    return;
+  }
+  if (message->hasData()) {
     fml::MallocMapping mapping = message->releaseData();
     char* mapData = (char*)mapping.Release();
     status = napi_create_string_utf8(env_, mapData, strlen(mapData),
@@ -309,12 +308,14 @@ void PlatformViewOHOSNapi::FlutterViewHandlePlatformMessage(
     if (mapData) {
       delete mapData;
     }
+  } else {
+    callbackParam[3] = nullptr;
+  }
 
-    status = fml::napi::InvokeJsMethod(
-        env_, ref_napi_obj_, "handlePlatformMessage", 4, callbackParam);
-    if (status != napi_ok) {
-      FML_DLOG(ERROR) << "InvokeJsMethod fail ";
-    }
+  status = fml::napi::InvokeJsMethod(env_, ref_napi_obj_,
+                                     "handlePlatformMessage", 4, callbackParam);
+  if (status != napi_ok) {
+    FML_DLOG(ERROR) << "InvokeJsMethod fail ";
   }
 }
 

@@ -65,15 +65,15 @@ export default class StandardMessageCodec implements MessageCodec<ESObject> {
     static INSTANCE = new StandardMessageCodec();
 
     encodeMessage(message: ESObject): ArrayBuffer {
-        if (message == null) {
-            return StringUtils.stringToArrayBuffer("");
-        }
         const stream = ByteBuffer.from(new ArrayBuffer(1024))
         this.writeValue(stream, message);
         return stream.buffer
     }
 
     decodeMessage(message: ArrayBuffer): ESObject {
+        if (message == null) {
+            return null
+        }
         const buffer = ByteBuffer.from(message)
         return this.readValue(buffer)
     }
