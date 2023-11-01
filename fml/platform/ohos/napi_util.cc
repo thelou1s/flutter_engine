@@ -220,6 +220,9 @@ napi_value CreateArrayBuffer(napi_env env, void* inputData, size_t dataSize) {
   void* data = nullptr;
   napi_value arrayBuffer = nullptr;
   napi_value result = nullptr;
+  if (inputData == nullptr) {
+    return nullptr;
+  }
   napi_status status =
       napi_create_arraybuffer(env, dataSize, &data, &arrayBuffer);
   if (status) {
