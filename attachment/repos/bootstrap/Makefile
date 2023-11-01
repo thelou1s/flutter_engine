@@ -11,10 +11,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+ifeq ($(OS),Windows_NT)
+	ohos=".\ohos.bat"
+	clean=".\clean.bat"
+else
+	ohos="./ohos.sh"
+	clean="./clean.sh"
+endif
+
+$(info ${clean_command})
 default: ohos
 ohos:
-	./ohos.sh
+	${ohos}
 clean:
-	rm -rf src/out
-setup:
-	./setup.sh
+	${clean}
+
+
