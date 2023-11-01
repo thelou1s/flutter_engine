@@ -9,7 +9,7 @@ Flutter Engine
 ## 构建说明：
 
 * 构建环境：
-1. 目前支持在Linux与Mac中构建；
+1. 目前支持在Linux与Mac中构建，Window环境中支持构建gen_snapshot;
 2. 请确保当前构建环境可以访问DEPS文件中配置的字段allowed_hosts列表。
 
 * 构建步骤：
@@ -32,6 +32,11 @@ Flutter Engine
    export PATH=$NODE_HOME/bin:$PATH
    ```
 
+   Windows构建环境：
+   可参考[官网](https://github.com/flutter/flutter/wiki/Compiling-the-engine#compiling-for-windows) 
+   "Compiling for Windows" 章节搭建Windows构建环境
+
+
 2. 配置文件：创建空文件夹engine，engine内新建.gclient文件，编辑文件：
 
    ```
@@ -50,7 +55,8 @@ Flutter Engine
 3. 同步代码：在engine目录，执行`gclient sync`；这里会同步engine源码、官方packages仓，还有执行ohos_setup任务；
 
 4. 下载sdk： 在[每日构建](http://ci.openharmony.cn/workbench/cicd/dailybuild/dailylist)下载ohos-sdk-full，在engine根目录下，新建文件夹 ndk/linux/4.0，解压ohos-sdk-full中的native文件夹并放置到ndk/linux/4.0文件夹中；
-(mac环境，请下载mac-sdk-full或者mac-sdk-m1-full，放置目录为ndk/mac/4.0)
+(mac环境，请下载mac-sdk-full或者mac-sdk-m1-full，放置目录为ndk/mac/4.0；Windows环境无需下载鸿蒙sdk，请参考《构建基础环境》配置Windows环境)
+
 
 5. 开始构建：engine目录，执行`make`，即可开始构建支持ohos设备的flutter engine。
 
