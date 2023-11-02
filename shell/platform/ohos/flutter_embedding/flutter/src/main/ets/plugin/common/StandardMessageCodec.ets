@@ -65,15 +65,15 @@ export default class StandardMessageCodec implements MessageCodec<ESObject> {
     static INSTANCE = new StandardMessageCodec();
 
     encodeMessage(message: ESObject): ArrayBuffer {
-        if (message == null) {
-            return StringUtils.stringToArrayBuffer("");
-        }
         const stream = ByteBuffer.from(new ArrayBuffer(1024))
         this.writeValue(stream, message);
         return stream.buffer
     }
 
     decodeMessage(message: ArrayBuffer): ESObject {
+        if (message == null) {
+            return null
+        }
         const buffer = ByteBuffer.from(message)
         return this.readValue(buffer)
     }
@@ -102,18 +102,25 @@ export default class StandardMessageCodec implements MessageCodec<ESObject> {
             stream.writeInt8(value ? StandardMessageCodec.TRUE : StandardMessageCodec.FALSE)
         } else if (typeof value === "number") {
             if (Number.isInteger(value)) { //整型
-                if (-0x7fffffff - 1 <= value && value <= 0x7fffffff) {
+                if (-0x7fffffff - 1 <= value && value <= 0x7fffffff) { //int32
                     stream.writeInt8(StandardMessageCodec.INT32)
                     stream.writeInt32(value, true)
-                } else {
+                } else if(-0x7fffffffffffffff - 1 <= value && value <= 0x7fffffffffffffff) { //int64
                     stream.writeInt8(StandardMessageCodec.INT64)
-                    stream.writeInt64(value, true)
+                    stream.writeBigInt64(BigInt(value), true)
+                } else { //被判为整型的double型
+                    stream.writeInt8(StandardMessageCodec.FLOAT64)
+                    this.writeAlignment(stream, 8);
+                    stream.writeFloat64(value, true)
                 }
             } else { //浮点型
                 stream.writeInt8(StandardMessageCodec.FLOAT64)
                 this.writeAlignment(stream, 8);
                 stream.writeFloat64(value, true)
             }
+        }else if (typeof value === "bigint") {
+            stream.writeInt8(StandardMessageCodec.INT64)
+            stream.writeBigInt64(value, true)
         } else if (typeof value === "string") {
             stream.writeInt8(StandardMessageCodec.STRING)
             let stringBuff = StringUtils.stringToArrayBuffer(value)
@@ -126,6 +133,11 @@ export default class StandardMessageCodec implements MessageCodec<ESObject> {
             this.writeSize(stream, value.length);
             this.writeAlignment(stream, 4);
             value.forEach(item => stream.writeInt32(item, true))
+        } else if(value instanceof BigInt64Array) {
+            stream.writeInt8(StandardMessageCodec.INT64_ARRAY)
+            this.writeSize(stream, value.length);
+            this.writeAlignment(stream, 8);
+            value.forEach(item => stream.writeBigInt64(item, true))
         } else if (value instanceof Float32Array) {
             stream.writeInt8(StandardMessageCodec.FLOAT32_ARRAY)
             this.writeSize(stream, value.length);
@@ -231,6 +243,7 @@ export default class StandardMessageCodec implements MessageCodec<ESObject> {
                 break;
             case StandardMessageCodec.BIGINT:
                 result = buffer.readBigInt64(true)
+                break;
             case StandardMessageCodec.FLOAT64:
                 this.readAlignment(buffer, 8);
                 result = buffer.readFloat64(true)
@@ -254,12 +267,12 @@ export default class StandardMessageCodec implements MessageCodec<ESObject> {
                 result = array;
                 break;
             }
-            case StandardMessageCodec.INT64_ARRAY: { //这里是都城array 还是 bigint待定
+            case StandardMessageCodec.INT64_ARRAY: {
                 let length = this.readSize(buffer);
-                let array: Array<ESObject> = new Array(length)
+                let array = new BigInt64Array(length)
                 this.readAlignment(buffer, 8);
                 for (let i = 0; i < length; i++) {
-                    array[i] = buffer.readInt64(true)
+                    array[i] = buffer.readBigInt64(true)
                 }
                 result = array;
                 break;

@@ -54,7 +54,7 @@ This warehouse is based on the extension of Flutter's official engine warehouse 
 3. Synchronize code: In the engine directory, execute `gclient sync`; here the engine source code, official packages repository will be synchronized, and the ohos_setup task will be executed;
 
 4. Download sdk: Download ohos-sdk-full in [the daily build](http://ci.openharmony.cn/workbench/cicd/dailybuild/dailylist), create a new folder ndk/linux/4.0 in the engine root directory, unzip the native folder in ohos-sdk-full and place it in ndk/linux/4.0 in folder;
-(For mac environment, please download mac-sdk-full or mac-sdk-m1-full, and the placement directory is ndk/mac/4.0；No need to download HarmonyOS SDK in Windows environment)
+(For mac environment, please download mac-sdk-full or mac-sdk-m1-full, and the placement directory is ndk/mac/4.0；No need to download OpenHarmony SDK in Windows environment)
 
 5. Start building: engine directory, execute `make` to start building the flutter engine that supports ohos devices.
 
