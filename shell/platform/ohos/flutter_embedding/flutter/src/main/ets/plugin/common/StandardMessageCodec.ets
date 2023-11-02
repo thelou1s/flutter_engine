@@ -105,7 +105,7 @@ export default class StandardMessageCodec implements MessageCodec<ESObject> {
                 if (-0x7fffffff - 1 <= value && value <= 0x7fffffff) { //int32
                     stream.writeInt8(StandardMessageCodec.INT32)
                     stream.writeInt32(value, true)
-                } else if(-0x7fffffffffffffff - 1 <= value && value <= 0x7fffffffffffffff) { //int64
+                } else if(Number.MIN_SAFE_INTEGER <= value && value <= Number.MAX_SAFE_INTEGER) { //int64 number整型取值范围
                     stream.writeInt8(StandardMessageCodec.INT64)
                     stream.writeBigInt64(BigInt(value), true)
                 } else { //被判为整型的double型
@@ -148,7 +148,8 @@ export default class StandardMessageCodec implements MessageCodec<ESObject> {
             this.writeSize(stream, value.length);
             this.writeAlignment(stream, 8);
             value.forEach(item => stream.writeFloat64(item, true))
-        } else if (value instanceof Array) {
+        } else if (value instanceof Array || value instanceof Int8Array || value instanceof Int16Array
++            || value instanceof Uint16Array || value instanceof Uint32Array) {
             stream.writeInt8(StandardMessageCodec.LIST)
             this.writeSize(stream, value.length);
             value.forEach((item: ESObject): void => this.writeValue(stream, item))
