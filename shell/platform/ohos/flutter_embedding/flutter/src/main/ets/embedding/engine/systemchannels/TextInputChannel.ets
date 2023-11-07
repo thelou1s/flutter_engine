@@ -40,24 +40,26 @@ export default class TextInputChannel {
     this.channel.invokeMethod("TextInputClient.requestExistingInputState", null);
   }
 
-  createEditingStateJSON(text: String,
+  createEditingStateJSON(text: string,
                          selectionStart: number,
                          selectionEnd: number,
                          composingStart: number,
-                         composingEnd: number): ESObject {
-    return new Map()
-      .set("text", text)
-      .set("selectionBase", selectionStart)
-      .set("selectionExtent", selectionEnd)
-      .set("composingBase", composingStart)
-      .set("composingExtent", composingEnd);
+                         composingEnd: number): EditingState {
+    let state: EditingState = {
+        text: text,
+        selectionBase: selectionStart,
+        selectionExtent: selectionEnd,
+        composingBase: composingStart,
+        composingExtent: composingEnd
+    };
+    return state;
   }
 
   /**
    * Instructs Flutter to update its text input editing state to reflect the given configuration.
    */
   updateEditingState(inputClientId: number,
-                     text: String,
+                     text: string,
                      selectionStart: number,
                      selectionEnd: number,
                      composingStart: number,
@@ -67,8 +69,6 @@ export default class TextInputChannel {
       + selectionEnd + " Composing start: " + composingStart + " Composing end: " + composingEnd);
     const state: ESObject = this.createEditingStateJSON(text, selectionStart, selectionEnd, composingStart, composingEnd);
     this.channel.invokeMethod('TextInputClient.updateEditingState', [inputClientId, state]);
-    Log.d(TAG,"updateEditingState end");
-
   }
 
   newline(inputClientId: number): void {
@@ -120,10 +120,15 @@ export default class TextInputChannel {
 
   }
 
-
-
 }
 
+interface EditingState {
+    text: string;
+    selectionBase: number;
+    selectionExtent: number;
+    composingBase: number;
+    composingExtent: number;
+}
 
 export interface TextInputMethodHandler {
   show(): void;
