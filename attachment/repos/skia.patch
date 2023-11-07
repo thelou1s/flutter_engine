@@ -932,6 +932,26 @@ index 0000000000..eb318dc3a3
 +#endif
 +
 +#endif /* __gl2platform_h_ */
+diff --git a/src/gpu/ganesh/mtl/GrMtlGpu.mm b/src/gpu/ganesh/mtl/GrMtlGpu.mm
+index 7979a2ede9..08440478db 100644
+--- a/src/gpu/ganesh/mtl/GrMtlGpu.mm
++++ b/src/gpu/ganesh/mtl/GrMtlGpu.mm
+@@ -1584,13 +1584,13 @@ void copy_src_data(char* dst,
+         dispatch_semaphore_signal(semaphore);
+     });
+ 
+-    const void* cfFence = (__bridge_retained const void*) semaphore;
++    const void* cfFence = (const void*) semaphore;
+     return (GrFence) cfFence;
+ }
+ 
+ bool GrMtlGpu::waitFence(GrFence fence) {
+     const void* cfFence = (const void*) fence;
+-    dispatch_semaphore_t semaphore = (__bridge dispatch_semaphore_t)cfFence;
++    dispatch_semaphore_t semaphore = (dispatch_semaphore_t)cfFence;
+ 
+     long result = dispatch_semaphore_wait(semaphore, 0);
+ 
 diff --git a/src/ports/skia_ohos/FontConfig_ohos.cpp b/src/ports/skia_ohos/FontConfig_ohos.cpp
 new file mode 100644
 index 0000000000..10c967ee02

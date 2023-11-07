@@ -160,7 +160,7 @@ def get_host_os():
 # Rosetta. I.e., python3 is an x64 executable and we're on an arm64 Mac.
 def is_rosetta():
   if platform.system() == 'Darwin':
-    proc = subprocess.Popen(['sysctl', '-in', 'sysctl.proc_translated'],
+    proc = subprocess.Popen(['sysctl', '-in', 'sysctl.proc_translated'], shell=True,
                             stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT)
     output, _ = proc.communicate()
