@@ -161,7 +161,14 @@ export default class StandardMessageCodec implements MessageCodec<ESObject> {
                 this.writeValue(stream, value);
             })
         } else if (typeof value == 'object') {
-            this.writeValue(stream, new Map<string, ESObject>(value.entries()))
+            let map: Map<string, ESObject> = new Map();
+            Object.keys(value).forEach(key => {
+                map.set(key, value[key]);
+            });
+            this.writeValue(stream, map);
+        } else {
+            throw new Error("Unsupported value: " + value);
+            stream.writeInt8(StandardMessageCodec.NULL);
         }
         return stream
     }
