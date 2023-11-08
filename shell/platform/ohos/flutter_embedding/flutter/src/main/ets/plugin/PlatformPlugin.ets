@@ -107,24 +107,24 @@ class PlatformPluginCallback implements PlatformMessageHandler {
   vibrateHapticFeedback(feedbackType: HapticFeedbackType) {
     switch (feedbackType) {
       case HapticFeedbackType.STANDARD:
-        vibrator.startVibration({ type: 'time', duration: 100 },
+        vibrator.startVibration({ type: 'time', duration: 75 },
           { id: 0, usage: 'touch' });
         break;
       case HapticFeedbackType.LIGHT_IMPACT:
-        vibrator.startVibration({ type: 'time', duration: 100 },
-          { id: 0, usage: 'notification' }).then();
+        vibrator.startVibration({ type: 'time', duration: 25 },
+          { id: 0, usage: 'touch' });
         break;
       case HapticFeedbackType.MEDIUM_IMPACT:
-        vibrator.startVibration({ type: 'time', duration: 100 },
-          { id: 0, usage: 'ring' });
+        vibrator.startVibration({ type: 'time', duration: 150 },
+          { id: 0, usage: 'touch' });
         break;
       case HapticFeedbackType.HEAVY_IMPACT:
-        vibrator.startVibration({ type: 'time', duration: 100 },
-          { id: 0, usage: 'alarm' });
+        vibrator.startVibration({ type: 'time', duration: 300 },
+          { id: 0, usage: 'touch' });
         break;
       case HapticFeedbackType.SELECTION_CLICK:
         vibrator.startVibration({ type: 'time', duration: 100 },
-          { id: 0, usage: 'physicalFeedback' });
+          { id: 0, usage: 'touch' });
         break;
     }
   }
