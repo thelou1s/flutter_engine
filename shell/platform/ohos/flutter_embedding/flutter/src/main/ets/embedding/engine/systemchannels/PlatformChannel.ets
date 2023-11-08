@@ -119,17 +119,12 @@ export default class PlatformChannel {
       HapticFeedbackType.HEAVY_IMPACT,
       HapticFeedbackType.SELECTION_CLICK
     ];
-    for (let i = 0; i < feedbackTypes.length; i++) {
-      let feedbackType: string = feedbackTypes[i];
-      if (
-        (HapticFeedbackType[feedbackType] == encodedName) ||
-          (HapticFeedbackType[feedbackType] == null && encodedName == null)
-      ) {
-        return HapticFeedbackType[feedbackType];
-      }
+    if (feedbackTypes.includes(encodedName as HapticFeedbackType)) {
+      return encodedName as HapticFeedbackType;
+    } else {
+      Log.e(PlatformChannel.TAG, "No such HapticFeedbackType:" + encodedName);
+      return HapticFeedbackType.STANDARD;
     }
-    Log.e(PlatformChannel.TAG, "No such HapticFeedbackType:" + encodedName);
-    return HapticFeedbackType.STANDARD;
   }
 
   getClipboardContentFormatFromValue(encodedName: string): ClipboardContentFormat {
