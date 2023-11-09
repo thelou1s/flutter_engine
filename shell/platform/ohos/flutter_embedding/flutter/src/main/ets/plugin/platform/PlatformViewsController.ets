@@ -117,6 +117,10 @@ export default class PlatformViewsController implements PlatformViewsAccessibili
 
     let viewWrapper: PlatformViewWrapper | null = this.viewWrappers.get(viewId) || null;
     if (viewWrapper != null) {
+      let children = viewWrapper.getDvModel().children;
+      let index = RootDvModeManager.getRootDvMode().model.children.indexOf(viewWrapper.getDvModel());
+      children.splice(0, children.length);
+      RootDvModeManager.getRootDvMode().model.children.splice(index, 1);
       this.viewWrappers.delete(viewId);
     }
 
