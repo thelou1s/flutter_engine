@@ -58,6 +58,7 @@ export class DartMessenger implements BinaryMessenger, PlatformMessageHandler {
     this.flutterNapi = flutterNapi;
   }
   makeBackgroundTaskQueue(options?: TaskQueueOptions): TaskQueue {
+    Log.w(TAG, "ArkTS use aync function to perform time-consuming tasks");
     throw new Error('Method not implemented.');
   }
 
@@ -103,16 +104,16 @@ export class DartMessenger implements BinaryMessenger, PlatformMessageHandler {
     }
   }
 
-  invokeHandler(handlerInfo: HandlerInfo | null, message: ArrayBuffer, replyId: number): void {
-      // Called from any thread.
-      if (handlerInfo != null) {
-        try {
-          Log.d(TAG, "Deferring to registered handler to process message.");
-          handlerInfo.handler.onMessage(message, new Reply(this.flutterNapi, replyId));
-        } catch (ex) {
-          Log.e(TAG, "Uncaught exception in binary message listener", ex);
-          this.flutterNapi.invokePlatformMessageEmptyResponseCallback(replyId);
-        }
+  async invokeHandler(handlerInfo: HandlerInfo | null, message: ArrayBuffer, replyId: number): Promise<void> {
+    // Called from any thread.
+    if (handlerInfo != null) {
+      try {
+        Log.d(TAG, "Deferring to registered handler to process message.");
+        await handlerInfo.handler.onMessage(message, new Reply(this.flutterNapi, replyId));
+      } catch (ex) {
+        Log.e(TAG, "Uncaught exception in binary message listener", ex);
+        this.flutterNapi.invokePlatformMessageEmptyResponseCallback(replyId);
+      }
     } else {
       Log.d(TAG, "No registered handler for message. Responding to Dart with empty reply message.");
       this.flutterNapi.invokePlatformMessageEmptyResponseCallback(replyId);
