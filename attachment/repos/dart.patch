@@ -11,20 +11,6 @@ index 177a9265649..c7038c56ad7 100644
      bool ipv6 = false,
      bool enableServicePortFallback = false,
      List<String> cachedUserTags = const [],
-diff --git a/pkg/dds/lib/devtools_server.dart b/pkg/dds/lib/devtools_server.dart
-index 9d302638dc7..e95c3602cad 100644
---- a/pkg/dds/lib/devtools_server.dart
-+++ b/pkg/dds/lib/devtools_server.dart
-@@ -218,7 +218,8 @@ class DevToolsServer {
-     String? appSizeBase,
-     String? appSizeTest,
-   }) async {
--    hostname ??= 'localhost';
-+    //hostname ??= 'localhost';
-+    hostname ??= '0.0.0.0';
- 
-     // Collect profiling information.
-     if (profileFilename != null && serviceProtocolUri != null) {
 diff --git a/pkg/dds/lib/src/dap/adapters/dart.dart b/pkg/dds/lib/src/dap/adapters/dart.dart
 index 7cc20b487ed..552048e2e24 100644
 --- a/pkg/dds/lib/src/dap/adapters/dart.dart
@@ -2562,25 +2548,6 @@ index f2c1be724ef..0a5d97d1bbe 100644
    "sync_socket_macos.cc",
    "sync_socket_win.cc",
    "typed_data_utils.cc",
-diff --git a/runtime/bin/main_options.h b/runtime/bin/main_options.h
-index 2c9100f2af0..49293cd6306 100644
---- a/runtime/bin/main_options.h
-+++ b/runtime/bin/main_options.h
-@@ -90,9 +90,12 @@ enum VerbosityLevel {
-   kAll,
- };
- 
--static constexpr const char* DEFAULT_VM_SERVICE_SERVER_IP = "localhost";
-+//static constexpr const char* DEFAULT_VM_SERVICE_SERVER_IP = "localhost";
-+//TODO 临时修改非localhost
-+static constexpr const char* DEFAULT_VM_SERVICE_SERVER_IP = "0.0.0.0";
- static constexpr int DEFAULT_VM_SERVICE_SERVER_PORT = 8181;
--static constexpr int INVALID_VM_SERVICE_SERVER_PORT = -1;
-+//static constexpr int INVALID_VM_SERVICE_SERVER_PORT = -1;
-+static constexpr int INVALID_VM_SERVICE_SERVER_PORT = DEFAULT_VM_SERVICE_SERVER_PORT;
- 
- class Options {
-  public:
 diff --git a/runtime/bin/namespace_ohos.cc b/runtime/bin/namespace_ohos.cc
 new file mode 100644
 index 00000000000..71b68ca618d
@@ -7635,15 +7602,12 @@ index 4413fdeecb2..41168412aec 100644
    "timer.cc",
    "timer.h",
 diff --git a/sdk/lib/_internal/vm/bin/vmservice_server.dart b/sdk/lib/_internal/vm/bin/vmservice_server.dart
-index b7e5be3eab5..7f318bb176d 100644
+index b7e5be3eab5..8a8f873f6c5 100644
 --- a/sdk/lib/_internal/vm/bin/vmservice_server.dart
 +++ b/sdk/lib/_internal/vm/bin/vmservice_server.dart
-@@ -175,13 +175,20 @@ class Server {
-   // would have to be written into the hub alongside the port number.
-   Server(
+@@ -177,11 +177,11 @@ class Server {
        this._service,
--      this._ip,
-+      _ip,
+       this._ip,
        this._port,
 -      this._originCheckDisabled,
 +      _originCheckDisabled,
@@ -7651,14 +7615,7 @@ index b7e5be3eab5..7f318bb176d 100644
        this._serviceInfoFilename,
        this._enableServicePortFallback)
 -      : _authCodesDisabled = (authCodesDisabled || Platform.isFuchsia);
-+      : _authCodesDisabled = (authCodesDisabled || Platform.isFuchsia),this._ip="0.0.0.0",this._originCheckDisabled=true;
-+      /*
-+      // TODO 临时去掉验证
-+       this._authCodesDisabled = true;
-+       this._ip="0.0.0.0";
-+       this._originCheckDisabled = true;
-+  }
-+  */
++      : _authCodesDisabled = (authCodesDisabled || Platform.isFuchsia),this._originCheckDisabled=true;
  
    bool _isAllowedOrigin(String origin) {
      Uri uri;
