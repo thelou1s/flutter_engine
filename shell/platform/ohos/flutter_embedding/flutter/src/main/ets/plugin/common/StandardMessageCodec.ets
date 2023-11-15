@@ -196,7 +196,7 @@ export default class StandardMessageCodec implements MessageCodec<ESObject> {
 
     writeBytes(stream: ByteBuffer, bytes: Uint8Array) {
         this.writeSize(stream, bytes.length)
-        bytes.forEach(item => stream.writeInt8(item))
+        stream.writeUint8Array(bytes);
     }
 
     readSize(buffer: ByteBuffer) {
