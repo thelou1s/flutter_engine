@@ -95,6 +95,8 @@ used to filter file path.
                 <filteritem type="filepath" name="attachment/repos/build1.bin" desc="git apply所需patch" />
                 <filteritem type="filepath" name="attachment/repos/build2.bin" desc="git apply所需patch" />
                 <filteritem type="filepath" name="attachment/repos/build3.bin" desc="git apply所需patch" />
+				<filteritem type="filepath" name="attachment/repos/dart.patch0" desc="git apply所需patch" />
+				<filteritem type="filepath" name="attachment/repos/dart.patch1" desc="git apply所需patch" />
                 <filteritem type="filepath" name="third_party/gn/gn" desc="二进制，构建文件" />
                 <filteritem type="filepath" name="third_party/gn/gn_linux" desc="二进制，构建文件" />
                 <filteritem type="filepath" name="third_party/gn/gn_mac" desc="二进制，构建文件" />

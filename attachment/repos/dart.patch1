@@ -1,0 +1,976 @@
+diff --git a/.gitignore b/.gitignore
+index 3c7338f1ac8..dc54d947c56 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -76,7 +76,7 @@ packages
+ pubspec.lock
+ 
+ # The top level package file (this is auto-generated per checkout).
+-/.dart_tool/package_config.json
++#/.dart_tool/package_config.json
+ 
+ # Local pub storage
+ .pub
+@@ -100,7 +100,7 @@ tools/xcodebuild
+ /outline.dill
+ /generated/
+ /crash_logs/
+-/build/config/gclient_args.gni
++#/build/config/gclient_args.gni
+ /pkg/front_end/testcases/old_dills/
+ logs/logs.json
+ logs/results.json
+diff --git a/BUILD.gn b/BUILD.gn
+index a25f379b0ff..c413327b217 100644
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -70,7 +70,7 @@ group("runtime") {
+     }
+   }
+ 
+-  if (is_linux || is_android) {
++  if (is_linux || is_android || is_ohos) {
+     deps += [ "runtime/bin:abstract_socket_test" ]
+   }
+ }
+@@ -86,7 +86,7 @@ group("runtime_precompiled") {
+     "runtime/bin:dart_precompiled_runtime",
+     "runtime/bin:process_test",
+   ]
+-  if (is_linux || is_android) {
++  if (is_linux || is_android || is_ohos) {
+     deps += [ "runtime/bin:abstract_socket_test" ]
+   }
+ }
+diff --git a/build/config/compiler/BUILD.gn b/build/config/compiler/BUILD.gn
+index 36c7e9f4fb4..00a1cb64be8 100644
+--- a/build/config/compiler/BUILD.gn
++++ b/build/config/compiler/BUILD.gn
+@@ -238,7 +238,7 @@ config("compiler") {
+ 
+   # Linux/Android common flags setup.
+   # ---------------------------------
+-  if (is_linux || is_android) {
++  if (is_linux || is_android || is_ohos) {
+     ldflags += [
+       "-Wl,-z,noexecstack",
+       "-Wl,-z,now",
+@@ -253,14 +253,14 @@ config("compiler") {
+   # 3. When using the sanitizers.
+   # Otherwise there is a performance hit, in particular on ia32.
+   if (is_android || is_asan || is_lsan || is_msan || is_tsan || is_ubsan ||
+-      (is_linux && current_cpu != "x86") || is_fuchsia) {
++      ((is_linux || is_ohos) && current_cpu != "x86") || is_fuchsia) {
+     cflags += [ "-fPIC" ]
+     ldflags += [ "-fPIC" ]
+   }
+ 
+   # Linux-specific compiler flags setup.
+   # ------------------------------------
+-  if (is_linux) {
++  if (is_linux || is_ohos) {
+     if (is_clang) {
+       if (current_cpu == "arm") {
+         cflags += [ "--target=armv7-linux-gnueabihf" ]
+@@ -368,7 +368,7 @@ config("compiler") {
+   # changes since artifacts from an older version of the toolchain may or may
+   # not be compatible with newer ones. To achieve this, we insert a synthetic
+   # define into the compile line.
+-  if (is_clang && (is_linux || is_mac)) {
++  if (is_clang && (is_linux || is_mac || is_ohos))) {
+     if (is_linux && host_cpu == "arm64") {
+       toolchain_stamp_file =
+           "//buildtools/linux-arm64/clang/.versions/clang.cipd_version"
+@@ -465,6 +465,11 @@ config("runtime_library") {
+       "dl",
+       "pthread",
+     ]
++  } else if (is_ohos) {
++    libs += [
++      "dl",
++      "pthread",
++    ]
+   } else if (is_android) {
+     # Android standard library setup.
+     if (is_clang) {
+@@ -607,7 +612,7 @@ if (is_win) {
+ 
+   # The Raspberry Pi 1 toolchain enables this warning, but Dart doesn't build
+   # cleanly with it.
+-  if (is_linux && !is_clang && current_cpu == "arm" && arm_version == 6) {
++  if ((is_linux || is_ohos) && !is_clang && current_cpu == "arm" && arm_version == 6) {
+     default_warning_flags += [ "-Wno-type-limits" ]
+   }
+ 
+diff --git a/build/config/sanitizers/sanitizers.gni b/build/config/sanitizers/sanitizers.gni
+index c7da74b09fe..8c11b3401dc 100644
+--- a/build/config/sanitizers/sanitizers.gni
++++ b/build/config/sanitizers/sanitizers.gni
+@@ -7,7 +7,7 @@ declare_args() {
+   # buildtools/third_party/libc++abi) instead of stdlibc++ as standard library.
+   # This is intended to be used for instrumented builds.
+   use_custom_libcxx =
+-      (is_asan && is_linux) || is_lsan || is_msan || is_tsan || is_ubsan
++      (is_asan && (is_linux || is_ohos)) || is_lsan || is_msan || is_tsan || is_ubsan
+ 
+   # Track where uninitialized memory originates from. From fastest to slowest:
+   # 0 - no tracking, 1 - track only the initial allocation site, 2 - track the
+diff --git a/build/config/sysroot.gni b/build/config/sysroot.gni
+index fce65c42d21..d506de46045 100644
+--- a/build/config/sysroot.gni
++++ b/build/config/sysroot.gni
+@@ -14,7 +14,7 @@ declare_args() {
+   dart_use_debian_sysroot = false
+ }
+ 
+-if (is_linux && dart_use_debian_sysroot) {
++if ((is_linux || is_ohos) && dart_use_debian_sysroot) {
+   if (current_cpu == "x86") {
+     target_sysroot =
+         rebase_path("//build/linux/debian_stretch_i386-sysroot", root_build_dir)
+diff --git a/build/rust/rust.gni b/build/rust/rust.gni
+index 0a8cdc13970..8bdbf6a1ff5 100644
+--- a/build/rust/rust.gni
++++ b/build/rust/rust.gni
+@@ -27,6 +27,8 @@ template("rust_library") {
+   cargo_out_dir = target_out_dir
+   if (is_linux) {
+     rust_os = "unknown-linux-gnu"
++  } else if (is_ohos) {
++    rust_os = "unknown-linux-gnu"
+   } else if (is_mac) {
+     rust_os = "apple-darwin"
+   } else if (is_win) {
+diff --git a/build/sanitizers/BUILD.gn b/build/sanitizers/BUILD.gn
+index e9f8c7a55cd..b1df3aef772 100644
+--- a/build/sanitizers/BUILD.gn
++++ b/build/sanitizers/BUILD.gn
+@@ -2,7 +2,7 @@
+ # Use of this source code is governed by a BSD-style license that can be
+ # found in the LICENSE file.
+ 
+-if (is_linux && !is_chromeos) {
++if ((is_linux || is_ohos) && !is_chromeos) {
+   # TODO(GYP): Figure out which of these work and are needed on other platforms.
+   copy("copy_llvm_symbolizer") {
+     if (is_win) {
+diff --git a/runtime/bin/BUILD.gn b/runtime/bin/BUILD.gn
+index 5eecfb63c08..14548125acb 100644
+--- a/runtime/bin/BUILD.gn
++++ b/runtime/bin/BUILD.gn
+@@ -33,8 +33,13 @@ config("libdart_builtin_config") {
+     ]
+   }
+ 
+-  print("dart runtime is_win:%b" ,is_win)
+-  print("dart runtime is_ohos:%b" , is_ohos)
++  if (is_linux && is_ohos) {
++    is_linux = false
++  }
++
++  print("dart runtime is_linux:" ,is_linux)
++  print("dart runtime is_win:" ,is_win)
++  print("dart runtime is_ohos:" , is_ohos)
+   if(is_ohos && !is_win){
+       libs +=[
+         "hilog_ndk.z"
+@@ -1063,7 +1068,7 @@ shared_library("ffi_test_dynamic_library") {
+     # The only effect of DART_SHARED_LIB is to export the Dart API.
+     "DART_SHARED_LIB",
+   ]
+-  if (is_linux || is_android) {
++  if (is_linux || is_android || is_ohos) {
+     cflags = [ "-fPIC" ]
+   }
+   if (is_win) {
+diff --git a/runtime/bin/abstract_socket_test.cc b/runtime/bin/abstract_socket_test.cc
+index fab2f26fe49..3aacb9058b4 100644
+--- a/runtime/bin/abstract_socket_test.cc
++++ b/runtime/bin/abstract_socket_test.cc
+@@ -8,7 +8,7 @@
+ // closes the connection and UNIX socket.
+ 
+ #include "platform/globals.h"
+-#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID)
++#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_OHOS)
+ 
+ #include <stdio.h>
+ #include <stdlib.h>
+@@ -101,4 +101,4 @@ int main() {
+   return -1;
+ }
+ 
+-#endif  // defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID)
++#endif  // defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_OHOS)
+diff --git a/runtime/bin/address_sanitizer.cc b/runtime/bin/address_sanitizer.cc
+index 4b8776df7a5..5f3b9ce4f2f 100644
+--- a/runtime/bin/address_sanitizer.cc
++++ b/runtime/bin/address_sanitizer.cc
+@@ -4,7 +4,7 @@
+ 
+ #include "platform/globals.h"
+ 
+-#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_MACOSX)
++#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_MACOSX) || defined(DART_HOST_OS_OHOS)
+ #if defined(__has_feature)
+ #if __has_feature(address_sanitizer)
+ #if !defined(GOOGLE3)
+@@ -25,4 +25,4 @@ __asan_default_options() {
+ #endif  // !defined(GOOGLE3)
+ #endif  // __has_feature(address_sanitizer)
+ #endif  // defined(__has_feature)
+-#endif  //  defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_MACOSX)
++#endif  //  defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_MACOSX) || defined(DART_HOST_OS_OHOS)
+diff --git a/runtime/bin/builtin_impl_sources.gni b/runtime/bin/builtin_impl_sources.gni
+index d93fa28e4ee..1a37194d0be 100644
+--- a/runtime/bin/builtin_impl_sources.gni
++++ b/runtime/bin/builtin_impl_sources.gni
+@@ -14,6 +14,7 @@ builtin_impl_sources = [
+   "crypto_linux.cc",
+   "crypto_macos.cc",
+   "crypto_win.cc",
++  "crypto_ohos.cc",
+   "dartutils.cc",
+   "dartutils.h",
+   "directory.cc",
+@@ -31,11 +32,13 @@ builtin_impl_sources = [
+   "fdutils_fuchsia.cc",
+   "fdutils_linux.cc",
+   "fdutils_macos.cc",
++  "fdutils_ohos.cc",
+   "file.cc",
+   "file.h",
+   "file_android.cc",
+   "file_fuchsia.cc",
+   "file_linux.cc",
++  "file_ohos.cc",
+   "file_macos.cc",
+   "file_support.cc",
+   "file_win.cc",
+@@ -58,10 +61,13 @@ builtin_impl_sources = [
+   "thread_macos.h",
+   "thread_win.cc",
+   "thread_win.h",
++  "thread_ohos.cc",
++  "thread_ohos.h",
+   "utils.cc",
+   "utils.h",
+   "utils_android.cc",
+   "utils_fuchsia.cc",
++  "utils_ohos.cc",
+   "utils_linux.cc",
+   "utils_macos.cc",
+   "utils_win.cc",
+diff --git a/runtime/bin/console_posix.cc b/runtime/bin/console_posix.cc
+index f318ae1ef6a..59c2b6c6509 100644
+--- a/runtime/bin/console_posix.cc
++++ b/runtime/bin/console_posix.cc
+@@ -4,7 +4,7 @@
+ 
+ #include "platform/globals.h"
+ #if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_MACOS) ||              \
+-    defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_FUCHSIA)
++    defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_FUCHSIA) || defined(DART_HOST_OS_OHOS)
+ 
+ #include "bin/console.h"
+ 
+@@ -28,4 +28,4 @@ void Console::RestoreConfig() {
+ }  // namespace dart
+ 
+ #endif  // defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_MACOS) ||       \
+-        // defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_FUCHSIA)
++        // defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_FUCHSIA) || defined(DART_HOST_OS_OHOS)
+diff --git a/runtime/bin/eventhandler.h b/runtime/bin/eventhandler.h
+index e2635e0cb20..dbb8051d162 100644
+--- a/runtime/bin/eventhandler.h
++++ b/runtime/bin/eventhandler.h
+@@ -595,6 +595,8 @@ class DescriptorInfoMultipleMixin : public DI {
+ #include "bin/eventhandler_macos.h"
+ #elif defined(DART_HOST_OS_WINDOWS)
+ #include "bin/eventhandler_win.h"
++#elif defined(DART_HOST_OS_OHOS)
++#include "bin/eventhandler_ohos.h"
+ #else
+ #error Unknown target os.
+ #endif
+diff --git a/runtime/bin/ffi_test/ffi_test_functions_vmspecific.cc b/runtime/bin/ffi_test/ffi_test_functions_vmspecific.cc
+index d87ae66e9fd..5ec7ff6a97b 100644
+--- a/runtime/bin/ffi_test/ffi_test_functions_vmspecific.cc
++++ b/runtime/bin/ffi_test/ffi_test_functions_vmspecific.cc
+@@ -1287,7 +1287,7 @@ DART_EXPORT void SetFfiNativeResolverForTest(Dart_Handle url) {
+ ////////////////////////////////////////////////////////////////////////////////
+ 
+ #if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID) ||            \
+-    defined(DART_HOST_OS_MACOS)
++    defined(DART_HOST_OS_MACOS) || defined(DART_HOST_OS_OHOS)
+ static bool Regress216834909_hang_at_exit = true;
+ 
+ static void Regress216834909_AtExit() {
+@@ -1309,6 +1309,6 @@ DART_EXPORT void Regress216834909_SetAtExit(int64_t install) {
+   }
+ }
+ #endif  // defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID) ||
+-        // defined(DART_HOST_OS_MACOS)
++        // defined(DART_HOST_OS_MACOS) || defined(DART_HOST_OS_OHOS)
+ 
+ }  // namespace dart
+diff --git a/runtime/bin/main_options.cc b/runtime/bin/main_options.cc
+index ff9c3d1672d..31940a88072 100644
+--- a/runtime/bin/main_options.cc
++++ b/runtime/bin/main_options.cc
+@@ -239,7 +239,7 @@ void Options::PrintUsage() {
+ "  use for secure socket connections.\n"
+ #if defined(DART_HOST_OS_LINUX) || \
+     defined(DART_HOST_OS_ANDROID) || \
+-    defined(DART_HOST_OS_FUCHSIA)
++    defined(DART_HOST_OS_FUCHSIA) || defined(DART_HOST_OS_OHOS)
+ "--namespace=<path>\n"
+ "  The path to a directory that dart:io calls will treat as the root of the\n"
+ "  filesystem.\n"
+diff --git a/runtime/bin/process.h b/runtime/bin/process.h
+index 5a6adfdc6fc..0dfff8a0e26 100644
+--- a/runtime/bin/process.h
++++ b/runtime/bin/process.h
+@@ -349,7 +349,7 @@ class BufferListBase {
+ };
+ 
+ #if defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_FUCHSIA) ||          \
+-    defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_MACOS)
++    defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_MACOS) || defined(DART_HOST_OS_OHOS)
+ class BufferList : public BufferListBase {
+  public:
+   BufferList() {}
+diff --git a/runtime/bin/socket.cc b/runtime/bin/socket.cc
+index 708bda49461..8bd55b4e8f6 100644
+--- a/runtime/bin/socket.cc
++++ b/runtime/bin/socket.cc
+@@ -209,12 +209,12 @@ Dart_Handle ListeningSocketRegistry::CreateUnixDomainBindListen(
+     return result;
+   }
+ 
+-#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID)
++#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_OHOS)
+   // Abstract unix domain socket doesn't exist in file system.
+   if (File::Exists(namespc, addr.un.sun_path) && path[0] != '@') {
+ #else
+   if (File::Exists(namespc, addr.un.sun_path)) {
+-#endif  // defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID)
++#endif  // defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_OHOS)
+     if (unix_domain_sockets_ != nullptr) {
+       // If there is a socket listening on this file. Ensure
+       // that it was created with `shared` mode and current `shared`
+@@ -286,7 +286,7 @@ bool ListeningSocketRegistry::CloseOneSafe(OSSocket* os_socket,
+   }
+   // Unlink the socket file, if os_socket contains unix domain sockets.
+   if (os_socket->address.addr.sa_family == AF_UNIX) {
+-#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID)
++#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_OHOS)
+     // If the socket is abstract, which has a path starting with a null byte,
+     // unlink() is not necessary because the file doesn't exist.
+     if (os_socket->address.un.sun_path[0] != '\0') {
+@@ -294,7 +294,7 @@ bool ListeningSocketRegistry::CloseOneSafe(OSSocket* os_socket,
+     }
+ #else
+     Utils::Unlink(os_socket->address.un.sun_path);
+-#endif  // defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID)
++#endif  // defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_OHOS)
+     // Remove os_socket from unix_domain_sockets_ list.
+     OSSocket* prev = nullptr;
+     OSSocket* current = unix_domain_sockets_;
+diff --git a/runtime/bin/socket.h b/runtime/bin/socket.h
+index b0efe349a4a..69413ce2247 100644
+--- a/runtime/bin/socket.h
++++ b/runtime/bin/socket.h
+@@ -262,7 +262,7 @@ class ListeningSocketRegistry {
+                                  const char* path) {
+     while (current != NULL) {
+       ASSERT(current->address.addr.sa_family == AF_UNIX);
+-#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID)
++#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_OHOS)
+       bool condition;
+       if (path[0] == '\0') {
+         condition = current->address.un.sun_path[0] == '\0' &&
+@@ -280,7 +280,7 @@ class ListeningSocketRegistry {
+                              namespc, path) == File::kIdentical) {
+         return current;
+       }
+-#endif  // defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID)
++#endif  // defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_OHOS)
+       current = current->next;
+     }
+     return NULL;
+diff --git a/runtime/bin/socket_base.cc b/runtime/bin/socket_base.cc
+index de4f2598d69..33a7414c656 100644
+--- a/runtime/bin/socket_base.cc
++++ b/runtime/bin/socket_base.cc
+@@ -128,7 +128,7 @@ void SocketAddress::GetSockAddr(Dart_Handle obj, RawAddr* addr) {
+ Dart_Handle SocketAddress::GetUnixDomainSockAddr(const char* path,
+                                                  Namespace* namespc,
+                                                  RawAddr* addr) {
+-#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID)
++#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_OHOS)
+   NamespaceScope ns(namespc, path);
+   path = ns.path();
+   bool is_abstract = (path[0] == '@');
+@@ -139,7 +139,7 @@ Dart_Handle SocketAddress::GetUnixDomainSockAddr(const char* path,
+     // connection will be rejected.
+     bzero(addr->un.sun_path, sizeof(addr->un.sun_path));
+   }
+-#endif  // defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID)
++#endif  // defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_OHOS)
+   if (sizeof(path) > sizeof(addr->un.sun_path)) {
+     OSError os_error(-1,
+                      "The length of path exceeds the limit. "
+@@ -149,12 +149,12 @@ Dart_Handle SocketAddress::GetUnixDomainSockAddr(const char* path,
+   }
+   addr->un.sun_family = AF_UNIX;
+   Utils::SNPrint(addr->un.sun_path, sizeof(addr->un.sun_path), "%s", path);
+-#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID)
++#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_OHOS)
+   // In case of abstract namespace, transfer the leading '@' into a null byte.
+   if (is_abstract) {
+     addr->un.sun_path[0] = '\0';
+   }
+-#endif  // defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID)
++#endif  // defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_OHOS)
+   return Dart_Null();
+ }
+ 
+diff --git a/runtime/bin/socket_base.h b/runtime/bin/socket_base.h
+index 320165323f6..85adadd8ecb 100644
+--- a/runtime/bin/socket_base.h
++++ b/runtime/bin/socket_base.h
+@@ -11,6 +11,8 @@
+ #include "bin/socket_base_android.h"
+ #elif defined(DART_HOST_OS_FUCHSIA)
+ #include "bin/socket_base_fuchsia.h"
++#elif defined(DART_HOST_OS_OHOS)
++#include "bin/socket_base_ohos.h"
+ #elif defined(DART_HOST_OS_LINUX)
+ #include "bin/socket_base_linux.h"
+ #elif defined(DART_HOST_OS_MACOS)
+@@ -87,7 +89,7 @@ class SocketAddress {
+ 
+  private:
+ #if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_MACOS) ||              \
+-    defined(DART_HOST_OS_ANDROID)
++    defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_OHOS)
+   // Unix domain address is only on Linux, Mac OS and Android now.
+   // unix(7) require sun_path to be 108 bytes on Linux and Android, 104 bytes on
+   // Mac OS.
+@@ -97,7 +99,7 @@ class SocketAddress {
+ #else
+   char as_string_[INET6_ADDRSTRLEN];
+ #endif  // defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_MACOS) ||       \
+-        // defined(DART_HOST_OS_ANDROID)
++        // defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_OHOS)
+   RawAddr addr_;
+ 
+   DISALLOW_COPY_AND_ASSIGN(SocketAddress);
+diff --git a/runtime/bin/socket_base_posix.cc b/runtime/bin/socket_base_posix.cc
+index e5c48c22208..c0b542d7d27 100644
+--- a/runtime/bin/socket_base_posix.cc
++++ b/runtime/bin/socket_base_posix.cc
+@@ -3,7 +3,7 @@
+ // BSD-style license that can be found in the LICENSE file.
+ 
+ #include "platform/globals.h"
+-#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_MACOS)
++#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_MACOS) || defined(DART_HOST_OS_OHOS)
+ #include "bin/socket_base.h"
+ 
+ #include <errno.h>        // NOLINT
+@@ -519,4 +519,4 @@ bool SocketBase::SetOption(intptr_t fd,
+ }  // namespace dart
+ 
+ #endif  // defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX) ||     \
+-        // defined(DART_HOST_OS_MACOS)
++        // defined(DART_HOST_OS_MACOS) || defined(DART_HOST_OS_OHOS)
+diff --git a/runtime/bin/thread.h b/runtime/bin/thread.h
+index 18a088f30a7..da06deb7a55 100644
+--- a/runtime/bin/thread.h
++++ b/runtime/bin/thread.h
+@@ -24,6 +24,8 @@ class Monitor;
+ #include "bin/thread_fuchsia.h"
+ #elif defined(DART_HOST_OS_LINUX)
+ #include "bin/thread_linux.h"
++#elif defined(DART_HOST_OS_OHOS)
++#include "bin/thread_ohos.h"
+ #elif defined(DART_HOST_OS_MACOS)
+ #include "bin/thread_macos.h"
+ #elif defined(DART_HOST_OS_WINDOWS)
+diff --git a/runtime/bin/thread_absl.cc b/runtime/bin/thread_absl.cc
+index b0163922918..4dbc37830a3 100644
+--- a/runtime/bin/thread_absl.cc
++++ b/runtime/bin/thread_absl.cc
+@@ -71,7 +71,7 @@ static void* ThreadStart(void* data_ptr) {
+   uword parameter = data->parameter();
+   delete data;
+ 
+-#if defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX)
++#if defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_OHOS)
+   // Set the thread name. There is 16 bytes limit on the name (including \0).
+   // pthread_setname_np ignores names that are too long rather than truncating.
+   char truncated_name[16];
+diff --git a/runtime/bin/thread_ohos.h b/runtime/bin/thread_ohos.h
+index 2d2b5fbb12c..c15799d45f7 100644
+--- a/runtime/bin/thread_ohos.h
++++ b/runtime/bin/thread_ohos.h
+@@ -6,7 +6,7 @@
+ #define RUNTIME_BIN_THREAD_OHOS_H_
+ 
+ #if !defined(RUNTIME_BIN_THREAD_H_)
+-#error Do not include thread_linux.h directly; use thread.h instead.
++#error Do not include thread_ohos.h directly; use thread.h instead.
+ #endif
+ 
+ #include <pthread.h>
+diff --git a/runtime/bin/virtual_memory_posix.cc b/runtime/bin/virtual_memory_posix.cc
+index 36185648ccd..e061ab47ec9 100644
+--- a/runtime/bin/virtual_memory_posix.cc
++++ b/runtime/bin/virtual_memory_posix.cc
+@@ -4,7 +4,7 @@
+ 
+ #include "platform/globals.h"
+ #if defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX) ||            \
+-    defined(DART_HOST_OS_MACOS)
++    defined(DART_HOST_OS_MACOS) || defined(DART_HOST_OS_OHOS)
+ 
+ #include "bin/virtual_memory.h"
+ 
+diff --git a/runtime/lib/ffi_dynamic_library.cc b/runtime/lib/ffi_dynamic_library.cc
+index e04c881411e..fb5f9dd1993 100644
+--- a/runtime/lib/ffi_dynamic_library.cc
++++ b/runtime/lib/ffi_dynamic_library.cc
+@@ -19,7 +19,7 @@
+ #include "vm/object_store.h"
+ 
+ #if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_MACOS) ||              \
+-    defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_FUCHSIA)
++    defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_FUCHSIA) || defined(DART_HOST_OS_OHOS)
+ #include <dlfcn.h>
+ #endif
+ 
+@@ -168,7 +168,7 @@ DEFINE_NATIVE_ENTRY(Ffi_dl_open, 0, 1) {
+ 
+ DEFINE_NATIVE_ENTRY(Ffi_dl_processLibrary, 0, 0) {
+ #if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_MACOS) ||              \
+-    defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_FUCHSIA)
++    defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_FUCHSIA) || defined(DART_HOST_OS_OHOS)
+   return DynamicLibrary::New(RTLD_DEFAULT);
+ #else
+   return DynamicLibrary::New(kWindowsDynamicLibraryProcessPtr);
+diff --git a/runtime/platform/globals.h b/runtime/platform/globals.h
+index 7122f9f7d08..db441e1ea5a 100644
+--- a/runtime/platform/globals.h
++++ b/runtime/platform/globals.h
+@@ -108,6 +108,10 @@
+ // Check for Android first, to determine its difference from Linux.
+ #define DART_HOST_OS_ANDROID 1
+ 
++#elif defined(DART_TARGET_OS_OHOS)
++
++#define DART_HOST_OS_OHOS 1
++
+ #elif defined(__linux__) || defined(__FreeBSD__)
+ 
+ // Generic Linux.
+@@ -746,6 +750,8 @@ DART_FORCE_INLINE D bit_copy(const S& source) {
+ #define kHostOperatingSystemName "macos"
+ #elif defined(DART_HOST_OS_WINDOWS)
+ #define kHostOperatingSystemName "windows"
++#elif defined(DART_HOST_OS_OHOS)
++#define kHostOperatingSystemName "ohos"
+ #else
+ #error Host operating system detection failed.
+ #endif
+@@ -790,10 +796,10 @@ DART_FORCE_INLINE D bit_copy(const S& source) {
+ #define kTargetOperatingSystemName "android"
+ #elif defined(DART_TARGET_OS_FUCHSIA)
+ #define kTargetOperatingSystemName "fuchsia"
+-#elif defined(DART_TARGET_OS_LINUX)
+-#define kTargetOperatingSystemName "linux"
+ #elif defined(DART_TARGET_OS_OHOS)
+ #define kTargetOperatingSystemName "ohos"
++#elif defined(DART_TARGET_OS_LINUX)
++#define kTargetOperatingSystemName "linux"
+ #elif defined(DART_TARGET_OS_MACOS_IOS)
+ #define kTargetOperatingSystemName "ios"
+ #elif defined(DART_TARGET_OS_MACOS)
+diff --git a/runtime/platform/utils.cc b/runtime/platform/utils.cc
+index f8bd278785f..2ddcf679720 100644
+--- a/runtime/platform/utils.cc
++++ b/runtime/platform/utils.cc
+@@ -8,7 +8,7 @@
+ #include "platform/globals.h"
+ 
+ #if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_MACOS) ||              \
+-    defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_FUCHSIA)
++    defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_FUCHSIA) || defined(DART_HOST_OS_OHOS)
+ #include <dlfcn.h>
+ #endif
+ 
+@@ -314,7 +314,7 @@ static void GetLastErrorAsString(char** error) {
+   if (error == nullptr) return;  // Nothing to do.
+ 
+ #if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_MACOS) ||              \
+-    defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_FUCHSIA)
++    defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_FUCHSIA) || defined(DART_HOST_OS_OHOS)
+   const char* status = dlerror();
+   *error = status != nullptr ? strdup(status) : nullptr;
+ #elif defined(DART_HOST_OS_WINDOWS)
+@@ -329,7 +329,7 @@ void* Utils::LoadDynamicLibrary(const char* library_path, char** error) {
+   void* handle = nullptr;
+ 
+ #if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_MACOS) ||              \
+-    defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_FUCHSIA)
++    defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_FUCHSIA) || defined(DART_HOST_OS_OHOS)
+   handle = dlopen(library_path, RTLD_LAZY);
+ #elif defined(DART_HOST_OS_WINDOWS)
+   SetLastError(0);  // Clear any errors.
+@@ -364,7 +364,7 @@ void* Utils::ResolveSymbolInDynamicLibrary(void* library_handle,
+   void* result = nullptr;
+ 
+ #if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_MACOS) ||              \
+-    defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_FUCHSIA)
++    defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_FUCHSIA) || defined(DART_HOST_OS_OHOS)
+   dlerror();  // Clear any errors.
+   result = dlsym(library_handle, symbol);
+   // Note: nullptr might be a valid return from dlsym. Must call dlerror
+@@ -388,7 +388,7 @@ void Utils::UnloadDynamicLibrary(void* library_handle, char** error) {
+   bool ok = false;
+ 
+ #if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_MACOS) ||              \
+-    defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_FUCHSIA)
++    defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_FUCHSIA) || defined(DART_HOST_OS_OHOS)
+   ok = dlclose(library_handle) == 0;
+ #elif defined(DART_HOST_OS_WINDOWS)
+   SetLastError(0);  // Clear any errors.
+diff --git a/runtime/platform/utils.h b/runtime/platform/utils.h
+index a4caafda349..8ac51cef68a 100644
+--- a/runtime/platform/utils.h
++++ b/runtime/platform/utils.h
+@@ -567,6 +567,8 @@ class Utils {
+ #include "platform/utils_fuchsia.h"
+ #elif defined(DART_HOST_OS_LINUX)
+ #include "platform/utils_linux.h"
++#elif defined(DART_HOST_OS_OHOS)
++#include "platform/utils_ohos.h"
+ #elif defined(DART_HOST_OS_MACOS)
+ #include "platform/utils_macos.h"
+ #elif defined(DART_HOST_OS_WINDOWS)
+diff --git a/runtime/platform/utils_ohos.h b/runtime/platform/utils_ohos.h
+index b33c3291826..abb486ed2d4 100644
+--- a/runtime/platform/utils_ohos.h
++++ b/runtime/platform/utils_ohos.h
+@@ -6,7 +6,7 @@
+ #define RUNTIME_PLATFORM_UTILS_OHOS_H_
+ 
+ #if !defined(RUNTIME_PLATFORM_UTILS_H_)
+-#error Do not include utils_linux.h directly; use utils.h instead.
++#error Do not include utils_ohos.h directly; use utils.h instead.
+ #endif
+ 
+ #include <endian.h>  // NOLINT
+diff --git a/runtime/vm/compiler/ffi/abi.cc b/runtime/vm/compiler/ffi/abi.cc
+index cc5eb834b3d..243aca8daf3 100644
+--- a/runtime/vm/compiler/ffi/abi.cc
++++ b/runtime/vm/compiler/ffi/abi.cc
+@@ -31,7 +31,7 @@ static_assert(offsetof(AbiAlignmentUint64, i) == 8,
+               "FFI transformation alignment");
+ #elif (defined(HOST_ARCH_IA32) && /* NOLINT(whitespace/parens) */              \
+        (defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_MACOS) ||          \
+-        defined(DART_HOST_OS_ANDROID))) ||                                     \
++        defined(DART_HOST_OS_ANDROID)) || defined(DART_HOST_OS_OHOS)) ||                                     \
+     (defined(HOST_ARCH_ARM) && defined(DART_HOST_OS_IOS))
+ static_assert(offsetof(AbiAlignmentDouble, d) == 4,
+               "FFI transformation alignment");
+diff --git a/runtime/vm/cpu_arm.cc b/runtime/vm/cpu_arm.cc
+index 04c3aefb682..f3975f10c34 100644
+--- a/runtime/vm/cpu_arm.cc
++++ b/runtime/vm/cpu_arm.cc
+@@ -85,7 +85,7 @@ void CPU::FlushICache(uword start, uword size) {
+ // https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man3/sys_icache_invalidate.3.html
+ #if defined(DART_HOST_OS_IOS)
+   sys_icache_invalidate(reinterpret_cast<void*>(start), size);
+-#elif defined(DART_HOST_OS_LINUX)
++#elif defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_OHOS)
+   char* beg = reinterpret_cast<char*>(start);
+   char* end = reinterpret_cast<char*>(start + size);
+   __builtin___clear_cache(beg, end);
+diff --git a/runtime/vm/cpu_arm64.cc b/runtime/vm/cpu_arm64.cc
+index 10827ba7c45..cbf5358d7c2 100644
+--- a/runtime/vm/cpu_arm64.cc
++++ b/runtime/vm/cpu_arm64.cc
+@@ -41,7 +41,7 @@ void CPU::FlushICache(uword start, uword size) {
+ // https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man3/sys_icache_invalidate.3.html
+ #if defined(DART_HOST_OS_MACOS) || defined(DART_HOST_OS_IOS)
+   sys_icache_invalidate(reinterpret_cast<void*>(start), size);
+-#elif defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX)
++#elif defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_OHOS)
+   char* beg = reinterpret_cast<char*>(start);
+   char* end = reinterpret_cast<char*>(start + size);
+   __builtin___clear_cache(beg, end);
+diff --git a/runtime/vm/cpu_riscv.cc b/runtime/vm/cpu_riscv.cc
+index e7ab8fe083b..20eceb4b308 100644
+--- a/runtime/vm/cpu_riscv.cc
++++ b/runtime/vm/cpu_riscv.cc
+@@ -37,7 +37,7 @@ void CPU::FlushICache(uword start, uword size) {
+ 
+ #if defined(DART_HOST_OS_MACOS) || defined(DART_HOST_OS_IOS)
+   sys_icache_invalidate(reinterpret_cast<void*>(start), size);
+-#elif defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX)
++#elif defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_OHOS)
+   char* beg = reinterpret_cast<char*>(start);
+   char* end = reinterpret_cast<char*>(start + size);
+   __builtin___clear_cache(beg, end);
+diff --git a/runtime/vm/malloc_hooks_unsupported.cc b/runtime/vm/malloc_hooks_unsupported.cc
+index 11bc11521e5..2954eb67ac3 100644
+--- a/runtime/vm/malloc_hooks_unsupported.cc
++++ b/runtime/vm/malloc_hooks_unsupported.cc
+@@ -10,7 +10,7 @@
+ 
+ #include "vm/json_stream.h"
+ 
+-#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID)
++#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_OHOS)
+ #include <malloc.h>
+ #elif defined(DART_HOST_OS_MACOS)
+ #include <malloc/malloc.h>
+diff --git a/runtime/vm/os_thread.h b/runtime/vm/os_thread.h
+index e125847dc07..8f525e29444 100644
+--- a/runtime/vm/os_thread.h
++++ b/runtime/vm/os_thread.h
+@@ -21,6 +21,8 @@
+ #include "vm/os_thread_fuchsia.h"
+ #elif defined(DART_HOST_OS_LINUX)
+ #include "vm/os_thread_linux.h"
++#elif defined(DART_HOST_OS_OHOS)
++#include "vm/os_thread_ohos.h"
+ #elif defined(DART_HOST_OS_MACOS)
+ #include "vm/os_thread_macos.h"
+ #elif defined(DART_HOST_OS_WINDOWS)
+diff --git a/runtime/vm/os_thread_absl.cc b/runtime/vm/os_thread_absl.cc
+index e5887c3fae4..93feb2749a1 100644
+--- a/runtime/vm/os_thread_absl.cc
++++ b/runtime/vm/os_thread_absl.cc
+@@ -107,7 +107,7 @@ static void UnblockSIGPROF() {
+ // is used to ensure that the thread is properly destroyed if the thread just
+ // exits.
+ static void* ThreadStart(void* data_ptr) {
+-#if defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX)
++#if defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_OHOS)
+   if (FLAG_worker_thread_priority != kMinInt) {
+     if (setpriority(PRIO_PROCESS, syscall(__NR_gettid),
+                     FLAG_worker_thread_priority) == -1) {
+@@ -138,7 +138,7 @@ static void* ThreadStart(void* data_ptr) {
+   uword parameter = data->parameter();
+   delete data;
+ 
+-#if defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX)
++#if defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_OHOS)
+   // Set the thread name. There is 16 bytes limit on the name (including \0).
+   // pthread_setname_np ignores names that are too long rather than truncating.
+   char truncated_name[16];
+@@ -221,7 +221,7 @@ ThreadId OSThread::GetCurrentThreadId() {
+ ThreadId OSThread::GetCurrentThreadTraceId() {
+ #if defined(DART_HOST_OS_ANDROID)
+   return GetCurrentThreadId();
+-#elif defined(DART_HOST_OS_LINUX)
++#elif defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_OHOS)
+   return syscall(__NR_gettid);
+ #elif defined(DART_HOST_OS_MACOS)
+   return ThreadIdFromIntPtr(pthread_mach_thread_np(pthread_self()));
+@@ -249,7 +249,7 @@ void OSThread::Join(ThreadJoinId id) {
+ 
+ intptr_t OSThread::ThreadIdToIntPtr(ThreadId id) {
+   ASSERT(sizeof(id) == sizeof(intptr_t));
+-#if defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX)
++#if defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_OHOS)
+   return static_cast<intptr_t>(id);
+ #elif defined(DART_HOST_OS_MACOS)
+   return reinterpret_cast<intptr_t>(id);
+@@ -257,7 +257,7 @@ intptr_t OSThread::ThreadIdToIntPtr(ThreadId id) {
+ }
+ 
+ ThreadId OSThread::ThreadIdFromIntPtr(intptr_t id) {
+-#if defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX)
++#if defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_OHOS)
+   return static_cast<ThreadId>(id);
+ #elif defined(DART_HOST_OS_MACOS)
+   return reinterpret_cast<ThreadId>(id);
+@@ -269,7 +269,7 @@ bool OSThread::Compare(ThreadId a, ThreadId b) {
+ }
+ 
+ bool OSThread::GetCurrentStackBounds(uword* lower, uword* upper) {
+-#if defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX)
++#if defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_OHOS)
+   pthread_attr_t attr;
+   // May fail on the main thread.
+   if (pthread_getattr_np(pthread_self(), &attr) != 0) {
+diff --git a/runtime/vm/proccpuinfo.cc b/runtime/vm/proccpuinfo.cc
+index 066e3f7a5f6..0a8ce77b2ca 100644
+--- a/runtime/vm/proccpuinfo.cc
++++ b/runtime/vm/proccpuinfo.cc
+@@ -3,7 +3,7 @@
+ // BSD-style license that can be found in the LICENSE file.
+ 
+ #include "vm/globals.h"
+-#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID)
++#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_OHOS)
+ 
+ #include "vm/proccpuinfo.h"
+ 
+@@ -146,4 +146,4 @@ bool ProcCpuInfo::HasField(const char* field) {
+ 
+ }  // namespace dart
+ 
+-#endif  // defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID)
++#endif  // defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_OHOS)
+diff --git a/runtime/vm/proccpuinfo.h b/runtime/vm/proccpuinfo.h
+index ff249d42d2d..4c829f4ace6 100644
+--- a/runtime/vm/proccpuinfo.h
++++ b/runtime/vm/proccpuinfo.h
+@@ -6,7 +6,7 @@
+ #define RUNTIME_VM_PROCCPUINFO_H_
+ 
+ #include "vm/globals.h"
+-#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID)
++#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_OHOS)
+ 
+ #include "vm/allocation.h"
+ 
+@@ -29,6 +29,6 @@ class ProcCpuInfo : public AllStatic {
+ 
+ }  // namespace dart
+ 
+-#endif  // defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID)
++#endif  // defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_OHOS)
+ 
+ #endif  // RUNTIME_VM_PROCCPUINFO_H_
+diff --git a/runtime/vm/profiler.cc b/runtime/vm/profiler.cc
+index 4ad80c5e5a9..080cebc5e72 100644
+--- a/runtime/vm/profiler.cc
++++ b/runtime/vm/profiler.cc
+@@ -399,7 +399,7 @@ void Profiler::DumpStackTrace(void* context) {
+     return;
+   }
+ #if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_MACOS) ||              \
+-    defined(DART_HOST_OS_ANDROID)
++    defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_OHOS)
+   ucontext_t* ucontext = reinterpret_cast<ucontext_t*>(context);
+   mcontext_t mcontext = ucontext->uc_mcontext;
+   uword pc = SignalHandler::GetProgramCounter(mcontext);
+diff --git a/runtime/vm/service.cc b/runtime/vm/service.cc
+index ec4385f869d..3f65586df68 100644
+--- a/runtime/vm/service.cc
++++ b/runtime/vm/service.cc
+@@ -4587,7 +4587,7 @@ static void RequestHeapSnapshot(Thread* thread, JSONStream* js) {
+   PrintSuccess(js);
+ }
+ 
+-#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID)
++#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_OHOS)
+ struct VMMapping {
+   char path[256];
+   size_t size;
+@@ -4786,7 +4786,7 @@ static intptr_t GetProcessMemoryUsageHelper(JSONStream* js) {
+   }
+ #endif
+ 
+-#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID)
++#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_OHOS)
+   AddVMMappings(&rss_children);
+ #endif
+   // TODO(46166): Implement for other operating systems.
+diff --git a/runtime/vm/signal_handler.h b/runtime/vm/signal_handler.h
+index cabe1498f93..36fccd7a358 100644
+--- a/runtime/vm/signal_handler.h
++++ b/runtime/vm/signal_handler.h
+@@ -33,6 +33,9 @@ typedef struct ucontext {
+ struct siginfo_t;
+ struct mcontext_t;
+ struct sigset_t {};
++#elif defined(DART_HOST_OS_OHOS)
++#include <signal.h>    // NOLINT
++#include <ucontext.h>  // NOLINT
+ #elif defined(DART_HOST_OS_FUCHSIA)
+ #include <signal.h>    // NOLINT
+ #include <ucontext.h>  // NOLINT
+diff --git a/runtime/vm/timeline.cc b/runtime/vm/timeline.cc
+index 3d2177af165..7eddaf7ed24 100644
+--- a/runtime/vm/timeline.cc
++++ b/runtime/vm/timeline.cc
+@@ -131,7 +131,7 @@ static TimelineEventRecorder* CreateTimelineRecorder() {
+ 
+   // Systrace recorder.
+   if (strcmp("systrace", flag) == 0) {
+-#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID)
++#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_OHOS)
+     return new TimelineEventSystraceRecorder();
+ #elif defined(DART_HOST_OS_MACOS)
+     if (__builtin_available(iOS 12.0, macOS 10.14, *)) {
+diff --git a/runtime/vm/timeline.h b/runtime/vm/timeline.h
+index 5c409a836bc..b84e3df2f20 100644
+--- a/runtime/vm/timeline.h
++++ b/runtime/vm/timeline.h
+@@ -1046,7 +1046,7 @@ class TimelineEventFuchsiaRecorder : public TimelineEventPlatformRecorder {
+ };
+ #endif  // defined(DART_HOST_OS_FUCHSIA)
+ 
+-#if defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX)
++#if defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_OHOS)
+ // A recorder that writes events to Android Systrace. This class is exposed in
+ // this header file only so that PrintSystrace can be visible to
+ // timeline_test.cc.
+@@ -1067,7 +1067,7 @@ class TimelineEventSystraceRecorder : public TimelineEventPlatformRecorder {
+ 
+   int systrace_fd_;
+ };
+-#endif  // defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX)
++#endif  // defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_OHOS)
+ 
+ #if defined(DART_HOST_OS_MACOS)
+ // A recorder that sends events to Macos's tracing app. See:
+diff --git a/runtime/vm/virtual_memory_posix.cc b/runtime/vm/virtual_memory_posix.cc
+index 21f6f7900cf..93c83c17852 100644
+--- a/runtime/vm/virtual_memory_posix.cc
++++ b/runtime/vm/virtual_memory_posix.cc
+@@ -4,7 +4,7 @@
+ 
+ #include "vm/globals.h"
+ #if defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX) ||            \
+-    defined(DART_HOST_OS_MACOS)
++    defined(DART_HOST_OS_MACOS) || defined(DART_HOST_OS_OHOS)
+ 
+ #include "vm/virtual_memory.h"
+ 
+@@ -199,7 +199,7 @@ void VirtualMemory::Init() {
+   }
+ #endif  // defined(DUAL_MAPPING_SUPPORTED)
+ 
+-#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID)
++#if defined(DART_HOST_OS_LINUX) || defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_OHOS)
+   FILE* fp = fopen("/proc/sys/vm/max_map_count", "r");
+   if (fp != nullptr) {
+     size_t max_map_count = 0;
+@@ -577,4 +577,4 @@ void VirtualMemory::DontNeed(void* address, intptr_t size) {
+ }  // namespace dart
+ 
+ #endif  // defined(DART_HOST_OS_ANDROID) || defined(DART_HOST_OS_LINUX) ||     \
+-        // defined(DART_HOST_OS_MACOS)
++        // defined(DART_HOST_OS_MACOS) || defined(DART_HOST_OS_OHOS)
+diff --git a/sdk/lib/io/platform.dart b/sdk/lib/io/platform.dart
+index b302b4a0396..5d8b9cbc34f 100644
+--- a/sdk/lib/io/platform.dart
++++ b/sdk/lib/io/platform.dart
+@@ -156,6 +156,9 @@ class Platform {
+   /// [Fuchsia](https://en.wikipedia.org/wiki/Google_Fuchsia).
+   static final bool isFuchsia = (_operatingSystem == "fuchsia");
+ 
++  /// Whether the operating system is a version of Ohos
++  static final bool isOhos = (_operatingSystem == "ohos");
++
+   /// The environment for this process as a map from string key to string value.
+   ///
+   /// The map is unmodifiable,
