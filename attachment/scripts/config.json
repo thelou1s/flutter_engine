@@ -5,10 +5,16 @@
         "type": "files"
     },
     {
-        "name": "dart",
+        "name": "dart0",
         "target": "./src/third_party/dart",
         "type": "patch",
-        "file_path": "../../flutter/attachment/repos/dart.patch"
+        "file_path": "../../flutter/attachment/repos/dart.patch0"
+    },
+	{
+        "name": "dart1",
+        "target": "./src/third_party/dart",
+        "type": "patch",
+        "file_path": "../../flutter/attachment/repos/dart.patch1"
     },
     {
         "name": "skia",
