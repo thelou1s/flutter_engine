@@ -55,6 +55,13 @@ class OHOSShellHolder {
               const std::string& libraryUrl,
               const std::vector<std::string>& entrypoint_args);
 
+  std::unique_ptr<OHOSShellHolder> Spawn(
+      std::shared_ptr<PlatformViewOHOSNapi> napi_facade,
+      const std::string& entrypoint,
+      const std::string& libraryUrl,
+      const std::string& initial_route,
+      const std::vector<std::string>& entrypoint_args) const;
+
   const std::shared_ptr<PlatformMessageHandler>& GetPlatformMessageHandler()
       const {
     LOGI("GetPlatformMessageHandler LOGI");
@@ -77,6 +84,13 @@ class OHOSShellHolder {
   std::unique_ptr<OHOSAssetProvider> assetProvider_;
 
   std::shared_ptr<PlatformViewOHOSNapi> napi_facade_;
+
+  OHOSShellHolder(const flutter::Settings& settings,
+                  const std::shared_ptr<PlatformViewOHOSNapi>& napi_facade,
+                  const std::shared_ptr<ThreadHost>& thread_host,
+                  std::unique_ptr<Shell> shell,
+                  std::unique_ptr<OHOSAssetProvider> apk_asset_provider,
+                  const fml::WeakPtr<PlatformViewOHOS>& platform_view);
 
   static void ThreadDestructCallback(void* value);
 

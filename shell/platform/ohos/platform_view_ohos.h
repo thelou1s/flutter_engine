@@ -100,7 +100,7 @@ class PlatformViewOHOS final : public PlatformView {
       std::unique_ptr<AssetResolver> updated_asset_resolver,
       AssetResolver::AssetResolverType type) override;
 
-  const std::shared_ptr<OHOSContext>& GetAndroidContext() {
+  const std::shared_ptr<OHOSContext>& GetOHOSContext() {
     return ohos_context_;
   }
 

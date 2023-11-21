@@ -188,12 +188,83 @@ OHOSShellHolder::OHOSShellHolder(
   is_valid_ = shell_ != nullptr;
 }
 
+OHOSShellHolder::OHOSShellHolder(
+    const Settings& settings,
+    const std::shared_ptr<PlatformViewOHOSNapi>& napi_facade,
+    const std::shared_ptr<ThreadHost>& thread_host,
+    std::unique_ptr<Shell> shell,
+    std::unique_ptr<OHOSAssetProvider> apk_asset_provider,
+    const fml::WeakPtr<PlatformViewOHOS>& platform_view)
+    : settings_(settings),
+      platform_view_(platform_view),
+      thread_host_(thread_host),
+      shell_(std::move(shell)),
+      assetProvider_(std::move(apk_asset_provider)),
+      napi_facade_(napi_facade) {
+  FML_DCHECK(napi_facade);
+  FML_DCHECK(shell_);
+  FML_DCHECK(shell_->IsSetup());
+  FML_DCHECK(platform_view_);
+  FML_DCHECK(thread_host_);
+  is_valid_ = shell_ != nullptr;
+}
+
 bool OHOSShellHolder::IsValid() const {
   return is_valid_;
 }
 
 const flutter::Settings& OHOSShellHolder::GetSettings() const {
   return settings_;
+}
+
+std::unique_ptr<OHOSShellHolder> OHOSShellHolder::Spawn(
+    std::shared_ptr<PlatformViewOHOSNapi> napi_facade,
+    const std::string& entrypoint,
+    const std::string& libraryUrl,
+    const std::string& initial_route,
+    const std::vector<std::string>& entrypoint_args) const {
+  FML_DCHECK(shell_ && shell_->IsSetup())
+      << "A new Shell can only be spawned "
+         "if the current Shell is properly constructed";
+
+  fml::WeakPtr<PlatformViewOHOS> weak_platform_view;
+  PlatformViewOHOS* ohos_platform_view = platform_view_.get();
+  FML_DCHECK(ohos_platform_view);
+  std::shared_ptr<flutter::OHOSContext> ohos_context =
+      ohos_platform_view->GetOHOSContext();
+  FML_DCHECK(ohos_context);
+
+  Shell::CreateCallback<PlatformView> on_create_platform_view =
+      [&napi_facade, ohos_context, &weak_platform_view](Shell& shell) {
+        std::unique_ptr<PlatformViewOHOS> platform_view_ohos;
+        platform_view_ohos = std::make_unique<PlatformViewOHOS>(
+            shell,                   // delegate
+            shell.GetTaskRunners(),  // task runners
+            napi_facade,              // JNI interop
+            ohos_context          // Ohos context
+        );
+        weak_platform_view = platform_view_ohos->GetWeakPtr();
+        return platform_view_ohos;
+      };
+
+  Shell::CreateCallback<Rasterizer> on_create_rasterizer = [](Shell& shell) {
+    return std::make_unique<Rasterizer>(shell);
+  };
+
+  auto config = BuildRunConfiguration(entrypoint, libraryUrl, entrypoint_args);
+  if (!config) {
+    // If the RunConfiguration was null, the kernel blob wasn't readable.
+    // Fail the whole thing.
+    return nullptr;
+  }
+
+  std::unique_ptr<flutter::Shell> shell =
+      shell_->Spawn(std::move(config.value()), initial_route,
+                    on_create_platform_view, on_create_rasterizer);
+
+  return std::unique_ptr<OHOSShellHolder>(new OHOSShellHolder(
+      GetSettings(), napi_facade, thread_host_, std::move(shell),
+      assetProvider_->Clone(), weak_platform_view));
 }
 
 fml::WeakPtr<PlatformViewOHOS> OHOSShellHolder::GetPlatformView() {

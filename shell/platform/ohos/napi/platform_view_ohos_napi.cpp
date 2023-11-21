@@ -571,10 +571,63 @@ napi_value PlatformViewOHOSNapi::nativeGetPixelMap(napi_env env,
 /**
  * 从当前的flutterNapi复制一个新的实例
  */
-napi_value PlatformViewOHOSNapi::nativeSpawn(napi_env env,
-                                             napi_callback_info info) {
-  // TODO:
-  return nullptr;
+napi_value PlatformViewOHOSNapi::nativeSpawn(napi_env env, napi_callback_info info) {
+  napi_status ret;
+  size_t argc = 6;
+  napi_value args[6] = {nullptr};
+  ret = napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+  if (ret != napi_ok) {
+    LOGE("nativeSpawn napi_get_cb_info error");
+    return nullptr;
+  }
+
+  int64_t shell_holder;
+  ret = napi_get_value_int64(env, args[0], &shell_holder);
+  if (ret != napi_ok) {
+    LOGE("nativeSpawn napi_get_value_int64 error");
+    return nullptr;
+  }
+  LOGD("nativeSpawn::shell_holder : %{public}ld", shell_holder);
+
+  std::string entrypoint;
+  if (fml::napi::SUCCESS != fml::napi::GetString(env, args[1], entrypoint)) {
+    LOGE(" napi_get_value_string_utf8 error");
+    return nullptr;
+  }
+  LOGD("entrypoint: %{public}s", entrypoint.c_str());
+
+  std::string libraryUrl;
+  if (fml::napi::SUCCESS != fml::napi::GetString(env, args[2], libraryUrl)) {
+    LOGE(" napi_get_value_string_utf8 error");
+    return nullptr;
+  }
+  LOGD(" libraryUrl: %{public}s", libraryUrl.c_str());
+
+  std::string initial_route;
+  if (fml::napi::SUCCESS != fml::napi::GetString(env, args[3], initial_route)) {
+    LOGE(" napi_get_value_string_utf8 error");
+    return nullptr;
+  }
+  LOGD(" initialRoute: %{public}s", initial_route.c_str());
+
+  std::vector<std::string> entrypoint_args;
+  if (fml::napi::SUCCESS != fml::napi::GetArrayString(env, args[4], entrypoint_args)) {
+    LOGE("nativeRunBundleAndSnapshotFromLibrary GetArrayString error");
+    return nullptr;
+  }
+
+  std::shared_ptr<PlatformViewOHOSNapi> napi_facade = std::make_shared<PlatformViewOHOSNapi>(env);
+  auto spawned_shell_holder = OHOS_SHELL_HOLDER->Spawn(
+      napi_facade, entrypoint, libraryUrl, initial_route, entrypoint_args);
+
+  if (spawned_shell_holder == nullptr || !spawned_shell_holder->IsValid()) {
+    FML_LOG(ERROR) << "Could not spawn Shell";
+    return nullptr;
+  }
+
+  napi_value shell_holder_id;
+  napi_create_int64(env, reinterpret_cast<int64_t>(spawned_shell_holder.release()), &shell_holder_id);
+  return shell_holder_id;
 }
 
 static void LoadLoadingUnitFailure(intptr_t loading_unit_id,

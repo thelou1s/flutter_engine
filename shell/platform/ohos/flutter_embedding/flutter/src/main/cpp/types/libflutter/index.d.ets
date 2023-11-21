@@ -47,6 +47,14 @@ export const nativeInit: (
 
 export const nativeAttach: (napi: FlutterNapi) => number;
 
+export const nativeSpawn: (
+  nativeSpawningShellId: number,
+  entrypointFunctionName: string,
+  pathToEntrypointFunction: string,
+  initialRoute: string,
+  entrypointArgs: Array<string>
+) => number;
+
 export const nativeRunBundleAndSnapshotFromLibrary: (
   nativeShellHolderId: number,
   bundlePath: string,
