@@ -529,7 +529,7 @@ deps = {
       }
     ],
     'dep_type': 'cipd',
-    'condition': 'host_os == "win" and download_dart_sdk and not release_candidate'
+    'condition': 'host_os == "win" and download_dart_sdk and not release_candidate and host_cpu == "arm64"'
   },
 
   'src/third_party/colorama/src':
