@@ -74,7 +74,7 @@ export const nativeSpawn: (
   pathToEntrypointFunction: string,
   initialRoute: string,
   entrypointArgs: Array<string>
-) => FlutterNapi;
+) => number;
 
 /**
  * Detaches flutterNapi和engine之间的关联

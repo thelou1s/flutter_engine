@@ -219,7 +219,10 @@ export default class FlutterNapi {
   }
 
   spawn(entrypointFunctionName: string, pathToEntrypointFunction: string, initialRoute: string, entrypointArgs: Array<string>): FlutterNapi {
-    return new FlutterNapi();
+    let shellHolderId = flutter.nativeSpawn(this.nativeShellHolderId, entrypointFunctionName, pathToEntrypointFunction, initialRoute, entrypointArgs)
+    let flutterNapi = new FlutterNapi()
+    flutterNapi.nativeShellHolderId = shellHolderId
+    return flutterNapi;
   }
 
   addEngineLifecycleListener(engineLifecycleListener: EngineLifecycleListener): void {
