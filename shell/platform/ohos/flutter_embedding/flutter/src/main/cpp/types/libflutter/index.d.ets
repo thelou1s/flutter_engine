@@ -48,7 +48,7 @@ export const nativeInit: (
 export const nativeAttach: (napi: FlutterNapi) => number;
 
 export const nativeSpawn: (
-  nativeSpawningShellId: number,
+  nativeSpawningShellId: number | null,
   entrypointFunctionName: string,
   pathToEntrypointFunction: string,
   initialRoute: string,
