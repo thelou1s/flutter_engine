@@ -561,14 +561,14 @@ index e04c881411e..fb5f9dd1993 100644
  #else
    return DynamicLibrary::New(kWindowsDynamicLibraryProcessPtr);
 diff --git a/runtime/platform/globals.h b/runtime/platform/globals.h
-index 7122f9f7d08..db441e1ea5a 100644
+index 7122f9f7d08..373e958a322 100644
 --- a/runtime/platform/globals.h
 +++ b/runtime/platform/globals.h
 @@ -108,6 +108,10 @@
  // Check for Android first, to determine its difference from Linux.
  #define DART_HOST_OS_ANDROID 1
  
-+#elif defined(DART_TARGET_OS_OHOS)
++#elif defined(DART_TARGET_OS_OHOS) && !defined(__APPLE__) && !defined(_WIN32)
 +
 +#define DART_HOST_OS_OHOS 1
 +
