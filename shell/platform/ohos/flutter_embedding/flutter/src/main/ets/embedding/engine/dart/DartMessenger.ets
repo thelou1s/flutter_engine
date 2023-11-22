@@ -74,7 +74,7 @@ export class DartMessenger implements BinaryMessenger, PlatformMessageHandler {
       this.messageHandlers.delete(channel);
       return;
     }
-    let dartMessengerTaskQueue: DartMessengerTaskQueue | null;
+    let dartMessengerTaskQueue: DartMessengerTaskQueue | null = null;
     if( taskQueue != null) {
       dartMessengerTaskQueue = this.createdTaskQueues.get(taskQueue) ?? null;
       if(dartMessengerTaskQueue == null) {
@@ -167,7 +167,7 @@ export class DartMessenger implements BinaryMessenger, PlatformMessageHandler {
     }
     if (!messageDeferred) {
       //ArkTS 没有线程池,任务队列使用异步实现
-      if(handlerInfo.taskQueue != null) {
+      if(handlerInfo?.taskQueue != null) {
           this.asyncInvokeHandler(handlerInfo, message, replyId);
         } else {
           this.invokeHandler(handlerInfo, message, replyId);  
@@ -217,7 +217,7 @@ export class DartMessenger implements BinaryMessenger, PlatformMessageHandler {
 class HandlerInfo {
   handler: BinaryMessageHandler;
   taskQueue: DartMessengerTaskQueue | null;
-  constructor(handler: BinaryMessageHandler, taskQueue?:DartMessengerTaskQueue) {
+  constructor(handler: BinaryMessageHandler, taskQueue?:DartMessengerTaskQueue | null) {
     this.handler = handler;
     this.taskQueue = taskQueue ?? null;
   }
