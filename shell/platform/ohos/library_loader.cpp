@@ -23,7 +23,7 @@
 
 EXTERN_C_START
 static napi_value Init(napi_env env, napi_value exports) {
-  FML_DLOG(INFO) << "Flutter Init NAPI";
+  FML_DLOG(INFO) << "Init NAPI Start.";
   napi_property_descriptor desc[] = {
       DECLARE_NAPI_FUNCTION("nativeInit", flutter::OhosMain::NativeInit),
       DECLARE_NAPI_FUNCTION(
@@ -106,7 +106,9 @@ static napi_value Init(napi_env env, napi_value exports) {
   napi_define_properties(env, exports, sizeof(desc) / sizeof(desc[0]), desc);
   bool ret = flutter::XComponentAdapter::GetInstance()->Export(env, exports);
   if (!ret) {
-    LOGE("Flutter Init NAPI Failed");
+    LOGE("Init NAPI Failed.");
+  } else {
+    FML_DLOG(INFO) << "Init NAPI Succeed.";
   }
   return exports;
 }
