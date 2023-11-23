@@ -20,7 +20,7 @@ from operator import itemgetter
 在gclient中pre_deps_hooks中配置执行,用于在sync前回滚patch
 职责如下：
 1.解析config.json,并按顺序倒序排序
-2.回滚路径的patch
+2.回滚目录下的patch
 """
 ROOT = './src/flutter/attachment'
 
