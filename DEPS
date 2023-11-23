@@ -840,7 +840,6 @@ recursedeps = [
 
 pre_deps_hooks = [
   {
-    # Generate the ohos compile environment
     'name': 'ohos_reverse',
     'pattern': 'src/flutter/attachment/scripts/.*\\.py',
     'action': ['python3', 'src/flutter/attachment/scripts/ohos_reverse_patch.py'],
