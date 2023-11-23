@@ -16,31 +16,10 @@
 #include "ohos_xcomponent_adapter.h"
 #include "flutter/shell/platform/ohos/napi/platform_view_ohos_napi.h"
 #include "types.h"
+#include <functional>
 namespace flutter {
 
-enum ContextType {
-  APP_LIFECYCLE = 0,
-  JS_PAGE_LIFECYCLE,
-};
-
 XComponentAdapter XComponentAdapter::mXComponentAdapter;
-OH_NativeXComponent_Callback XComponentAdapter::callback_;
-
-void OnSurfaceCreatedCB(OH_NativeXComponent* component, void* window) {
-  XComponentAdapter::GetInstance()->OnSurfaceCreated(component, window);
-}
-
-void OnSurfaceChangedCB(OH_NativeXComponent* component, void* window) {
-  XComponentAdapter::GetInstance()->OnSurfaceChanged(component, window);
-}
-
-void OnSurfaceDestroyedCB(OH_NativeXComponent* component, void* window) {
-  XComponentAdapter::GetInstance()->OnSurfaceDestroyed(component, window);
-}
-
-void DispatchTouchEventCB(OH_NativeXComponent* component, void* window) {
-  XComponentAdapter::GetInstance()->DispatchTouchEvent(component, window);
-}
 
 XComponentAdapter::XComponentAdapter(/* args */) {}
 
@@ -80,7 +59,6 @@ bool XComponentAdapter::Export(napi_env env, napi_value exports) {
   std::string id(idStr);
   auto context = XComponentAdapter::GetInstance();
   if (context) {
-    XComponentAdapter::shell_holder = PlatformViewOHOSNapi::GetShellHolder();
     context->SetNativeXComponent(id, nativeXComponent);
     return true;
   }
@@ -91,14 +69,11 @@ bool XComponentAdapter::Export(napi_env env, napi_value exports) {
 void XComponentAdapter::SetNativeXComponent(
     std::string& id,
     OH_NativeXComponent* nativeXComponent) {
-  nativeXComponent_ = nativeXComponent;
-  BindXComponentCallback();
-  OH_NativeXComponent_RegisterCallback(nativeXComponent_,
-                                       &XComponentAdapter::callback_);
-}
-
-OH_NativeXComponent* XComponentAdapter::GetNativeXComponent(std::string& id) {
-  return nativeXComponent_;
+  auto iter = xcomponetMap_.find(id);
+  if(iter == xcomponetMap_.end()) {
+    XComponentBase* xcomponet = new XComponentBase(id, nativeXComponent);
+    xcomponetMap_[id] = xcomponet;
+  }
 }
 
 #include <native_window/external_window.h>
@@ -189,8 +164,66 @@ static int32_t SetNativeWindowOpt(OHNativeWindow* nativeWindow,
   }
   return ret;
 }
-void XComponentAdapter::OnSurfaceCreated(OH_NativeXComponent* component,
-                                         void* window) {
+
+void OnSurfaceCreatedCB(OH_NativeXComponent* component, void* window) {
+  for(auto it: XComponentAdapter::GetInstance()->xcomponetMap_)
+  {
+    if(it.second->nativeXComponent_ == component) {
+      it.second->OnSurfaceCreated(component, window);
+    }
+  }
+}
+
+void OnSurfaceChangedCB(OH_NativeXComponent* component, void* window) {
+  for(auto it: XComponentAdapter::GetInstance()->xcomponetMap_)
+  {
+    if(it.second->nativeXComponent_ == component) {
+      it.second->OnSurfaceChanged(component, window);
+    }
+  }
+}
+
+void OnSurfaceDestroyedCB(OH_NativeXComponent* component, void* window) {
+  for(auto it: XComponentAdapter::GetInstance()->xcomponetMap_)
+  {
+    if(it.second->nativeXComponent_ == component) {
+      it.second->OnSurfaceDestroyed(component, window);
+    }
+  }
+
+}
+void DispatchTouchEventCB(OH_NativeXComponent* component, void* window) {
+  for(auto it: XComponentAdapter::GetInstance()->xcomponetMap_)
+  {
+    if(it.second->nativeXComponent_ == component) {
+      it.second->OnDispatchTouchEvent(component, window);
+    }
+  }
+}
+
+void XComponentBase::BindXComponentCallback() {
+  callback_.OnSurfaceCreated = OnSurfaceCreatedCB;
+  callback_.OnSurfaceChanged = OnSurfaceChangedCB;
+  callback_.OnSurfaceDestroyed = OnSurfaceDestroyedCB;
+  callback_.DispatchTouchEvent = DispatchTouchEventCB;
+}
+
+XComponentBase::XComponentBase(std::string id,OH_NativeXComponent* xcomponet) {
+  nativeXComponent_ = xcomponet;
+  if (nativeXComponent_ != nullptr) {
+    id_ = id;
+    BindXComponentCallback();
+    OH_NativeXComponent_RegisterCallback(nativeXComponent_, &callback_);
+  }
+}
+
+XComponentBase::~XComponentBase()
+{
+
+}
+
+void XComponentBase::OnSurfaceCreated(OH_NativeXComponent* component, void* window)
+{
   LOGD(
       "XComponentManger::OnSurfaceCreated window = %{public}p component = "
       "%{public}p",
@@ -210,11 +243,11 @@ void XComponentAdapter::OnSurfaceCreated(OH_NativeXComponent* component,
   if (ret) {
     LOGD("SetNativeWindowOpt failed:%{public}d", ret);
   }
-  PlatformViewOHOSNapi::SurfaceCreated(shell_holder, window);
+  PlatformViewOHOSNapi::SurfaceCreated(atoi(id_.c_str()), window);
 }
 
-void XComponentAdapter::OnSurfaceChanged(OH_NativeXComponent* component,
-                                         void* window) {
+void XComponentBase::OnSurfaceChanged(OH_NativeXComponent* component, void* window)
+{
   LOGD("XComponentManger::OnSurfaceChanged ");
   int32_t ret = OH_NativeXComponent_GetXComponentSize(component, window,
                                                       &width_, &height_);
@@ -222,35 +255,23 @@ void XComponentAdapter::OnSurfaceChanged(OH_NativeXComponent* component,
     LOGD("XComponent Current width:%{public}d,height:%{public}d",
          static_cast<int>(width_), static_cast<int>(height_));
   }
-  PlatformViewOHOSNapi::SurfaceChanged(shell_holder, width_, height_);
+  PlatformViewOHOSNapi::SurfaceChanged(atoi(id_.c_str()), width_, height_);
 }
 
-void XComponentAdapter::OnSurfaceDestroyed(OH_NativeXComponent* component,
-                                           void* window) {
+void XComponentBase::OnSurfaceDestroyed(OH_NativeXComponent* component, void* window)
+{
   LOGD("XComponentManger::OnSurfaceDestroyed");
-  PlatformViewOHOSNapi::SurfaceDestroyed(shell_holder);
+  PlatformViewOHOSNapi::SurfaceDestroyed(atoi(id_.c_str()));
 }
 
-void XComponentAdapter::DispatchTouchEvent(OH_NativeXComponent* component,
-                                           void* window) {
+void XComponentBase::OnDispatchTouchEvent(OH_NativeXComponent* component, void* window)
+{
   LOGD("XComponentManger::DispatchTouchEvent");
   int32_t ret =
       OH_NativeXComponent_GetTouchEvent(component, window, &touchEvent_);
   if (ret == OH_NATIVEXCOMPONENT_RESULT_SUCCESS) {
-    ohosTouchProcessor_.HandleTouchEvent(shell_holder, component, &touchEvent_);
+    ohosTouchProcessor_.HandleTouchEvent(atoi(id_.c_str()), component, &touchEvent_);
   }
-}
-
-OH_NativeXComponent_Callback* XComponentAdapter::GetNXComponentCallback() {
-  return &XComponentAdapter::callback_;
-}
-
-void XComponentAdapter::BindXComponentCallback() {
-  auto renderCallback = XComponentAdapter::GetNXComponentCallback();
-  renderCallback->OnSurfaceCreated = OnSurfaceCreatedCB;
-  renderCallback->OnSurfaceChanged = OnSurfaceChangedCB;
-  renderCallback->OnSurfaceDestroyed = OnSurfaceDestroyedCB;
-  renderCallback->DispatchTouchEvent = DispatchTouchEventCB;
 }
 
 }  // namespace flutter
