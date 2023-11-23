@@ -838,6 +838,14 @@ recursedeps = [
   'src/third_party/vulkan-deps',
 ]
 
+pre_deps_hooks = [
+  {
+    'name': 'ohos_reverse',
+    'pattern': 'src/flutter/attachment/scripts/.*\\.py',
+    'action': ['python3', 'src/flutter/attachment/scripts/ohos_reverse_patch.py'],
+  },
+]
+
 hooks = [
   {
     # Generate the Dart SDK's .dart_tool/package_confg.json file.
