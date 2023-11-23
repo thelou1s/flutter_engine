@@ -20,8 +20,33 @@
 #include "flutter/shell/platform/ohos/ohos_touch_processor.h"
 #include "napi/native_api.h"
 #include "napi_common.h"
-
+#include <map>
 namespace flutter {
+
+class XComponentBase
+{
+private:
+  void BindXComponentCallback();
+  
+public:
+  XComponentBase(std::string id_, OH_NativeXComponent* xcomponet);
+  ~XComponentBase();
+
+  // Callback, called by ACE XComponent
+  void OnSurfaceCreated(OH_NativeXComponent* component, void* window);
+  void OnSurfaceChanged(OH_NativeXComponent* component, void* window);
+  void OnSurfaceDestroyed(OH_NativeXComponent* component, void* window);
+  void OnDispatchTouchEvent(OH_NativeXComponent* component, void* window);
+
+  OH_NativeXComponent_TouchEvent touchEvent_;
+  OH_NativeXComponent_Callback callback_;
+  std::string id_;
+  OH_NativeXComponent* nativeXComponent_;
+  uint64_t width_;
+  uint64_t height_;
+  OhosTouchProcessor ohosTouchProcessor_;
+
+};
 
 class XComponentAdapter {
  public:
@@ -29,33 +54,14 @@ class XComponentAdapter {
   ~XComponentAdapter();
   static XComponentAdapter* GetInstance();
   bool Export(napi_env env, napi_value exports);
-  OH_NativeXComponent* GetNativeXComponent(std::string& id);
   void SetNativeXComponent(std::string& id,
                            OH_NativeXComponent* nativeXComponent);
-  OH_NativeXComponent_Callback* GetNXComponentCallback();
-
-  // Callback, called by ACE XComponent
-  void OnSurfaceCreated(OH_NativeXComponent* component, void* window);
-  void OnSurfaceChanged(OH_NativeXComponent* component, void* window);
-  void OnSurfaceDestroyed(OH_NativeXComponent* component, void* window);
-  void DispatchTouchEvent(OH_NativeXComponent* component, void* window);
-
-  void BindXComponentCallback();
-  void PackPointerDataAndDispatch(
-      const OH_NativeXComponent_TouchEvent touchEvent);
 
  public:
-  static OH_NativeXComponent_Callback callback_;
-  std::string id_;
-  uint64_t width_;
-  uint64_t height_;
-  OH_NativeXComponent_TouchEvent touchEvent_;
+  std::map<std::string, XComponentBase*> xcomponetMap_;
 
  private:
   static XComponentAdapter mXComponentAdapter;
-  OH_NativeXComponent* nativeXComponent_;
-  int64_t shell_holder;
-  OhosTouchProcessor ohosTouchProcessor_;
 };
 
 }  // namespace flutter
