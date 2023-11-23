@@ -57,6 +57,8 @@ This warehouse is based on the extension of Flutter's official engine warehouse 
 (For mac environment, please download mac-sdk-full or mac-sdk-m1-full, and the placement directory is ndk/mac/4.0；No need to download OpenHarmony SDK in Windows environment)
 
 5. Start building: engine directory, execute `make` to start building the flutter engine that supports ohos devices.
+   
+6. Update project: execute update_engine.sh under linux/mac
 
 ## Embedding layer code construction guide
 
