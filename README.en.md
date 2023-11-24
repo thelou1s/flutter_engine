@@ -58,7 +58,7 @@ This warehouse is based on the extension of Flutter's official engine warehouse 
 
 5. Start building: engine directory, execute `make` to start building the flutter engine that supports ohos devices.
    
-6. Update project: execute update_engine.sh under linux/mac
+6. Update project: execute `./update_engine.sh` under Linux/Mac;execute `update_engine.bat` under Windows
 
 ## Embedding layer code construction guide
 

@@ -60,7 +60,7 @@ Flutter Engine
 
 5. 开始构建：engine目录，执行`make`，即可开始构建支持ohos设备的flutter engine。
    
-6. 更新代码：linux/mac下执行update_engine.sh
+6. 更新代码：Linux/Mac下在engine目录执行`./update_engine.sh`; Windows下执行`update_engine.bat`
 
 ## embedding层代码构建指导
 
