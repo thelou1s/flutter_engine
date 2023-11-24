@@ -14,51 +14,13 @@
 */
 
 import { DVModel,
+  DVModelChildren,
   DVModelContainer,
+  DVModelEvents,
   DVModelParameters } from '../../view/DynamicView/dynamicView';
-import { createDVModelFromJson } from '../../view/DynamicView/dynamicViewJson';
 
-@Component
-struct XComponentStruct {
-  private context:ESObject;
-
-  build() {
-    XComponent({ id: 'flutterXComponent', type: 'texture', libraryname: 'flutter' })
-      .onLoad((context) => {
-        this.context = context;
-      })
-      .onDestroy(() => {
-      })
-  }
-}
-interface  $$type{
-  param: DVModelParameters
-}
-@Builder function BuildXComponentStruct($$: $$type) {
-  XComponentStruct();
-}
-
-class  DVModelJson{
-  compType: string
-  children:Array<ESObject>
-  attributes:ESObject
-
-  constructor(compType:string , children:Array<ESObject> , attributes:ESObject) {
-    this.compType = compType
-    this.children = children
-    this.attributes = attributes
-  }
-}
 export class RootDvModeManager {
-  private static xComponentModel:ESObject =
-    {
-      compType: "xComponent",
-      build: BuildXComponentStruct
-    };
-
-  private static model: DVModel = createDVModelFromJson(new DVModelJson("Stack", [RootDvModeManager.xComponentModel], {alignContent: Alignment.TopStart},)
-
-  );
+  private static model: DVModel = new DVModel("Stack", new DVModelParameters(), new DVModelEvents(), new DVModelChildren(), null);
 
   private static container : DVModelContainer = new DVModelContainer(RootDvModeManager.model);
 
