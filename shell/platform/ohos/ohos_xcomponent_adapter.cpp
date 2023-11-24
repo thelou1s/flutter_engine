@@ -184,10 +184,15 @@ void OnSurfaceChangedCB(OH_NativeXComponent* component, void* window) {
 }
 
 void OnSurfaceDestroyedCB(OH_NativeXComponent* component, void* window) {
-  for(auto it: XComponentAdapter::GetInstance()->xcomponetMap_)
+  for(auto it = XComponentAdapter::GetInstance()->xcomponetMap_.begin(); 
+    it != XComponentAdapter::GetInstance()->xcomponetMap_.end();)
   {
-    if(it.second->nativeXComponent_ == component) {
-      it.second->OnSurfaceDestroyed(component, window);
+    if(it->second->nativeXComponent_ == component) {
+      it->second->OnSurfaceDestroyed(component, window);
+      delete it->second;
+      it = XComponentAdapter::GetInstance()->xcomponetMap_.erase(it);
+    } else {
+      ++it;
     }
   }
 
