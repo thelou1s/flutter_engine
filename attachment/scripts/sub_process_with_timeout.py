@@ -53,11 +53,11 @@ class SubProcess(threading.Thread):
         self.event.set()
 
 # 执行数组命令
-def excuteArr(cmdArr, path=".", log = True, timeout=5):
+def excuteArr(cmdArr, path=".", log = True, timeout=10):
     str = ' '.join(cmdArr)
     return execCommandEx(str, path, log, timeout)
 
-def execCommandEx(cmd, path = ".", log = False, timeout=1):
+def execCommandEx(cmd, path = ".", log = False, timeout=10):
     start_time = end_time = time.time()
     sub = SubProcess(cmd, path, 10, log)
     sub.daemon = True
