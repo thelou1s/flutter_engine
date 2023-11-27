@@ -13,5 +13,5 @@
 
 @echo off
 py -3 .\src\flutter\attachment\scripts\ohos_reverse_patch.py %1
-call  git -C .\src\flutter pull
+call  git -C .\src\flutter checkout master && git -C .\src\flutter  pull origin master
 py -3 .\src\flutter\attachment\scripts\ohos_setup.py %1
