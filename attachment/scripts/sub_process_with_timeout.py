@@ -63,9 +63,7 @@ def execCommandEx(cmd, path = ".", log = False, timeout=1):
     sub.daemon = True
     sub.start()
     while True:
-        # print("执行中000：" + cmd  + "  is_set:" + str(sub.event.is_set()) +  " is_alive:" + str(sub.is_alive())  + " name:" + sub.name +  "  time:" + str(time.time())    + " start:" + str(start_time) + "  t:" + str(int(time.time() - start_time)) + "  tout:" + str(timeout))
         if int(time.time()  - start_time) > int(timeout):
-            # print("执行中：" + cmd + "  time:" + str(time.time())    + " start:" + str(start_time) + "  t:" + str(int(time.time() - start_time)) + "  tout:" + str(timeout))
             sub.retcode = -1
             sub.stderr = TimeoutError('执行超时：' + cmd)
             sub.stop()
