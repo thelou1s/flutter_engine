@@ -15,7 +15,7 @@
 import sys
 import json
 import file_util
-import excute_util
+import sub_process_with_timeout
 import os
 
 """
@@ -29,20 +29,32 @@ import os
 ROOT = './src/flutter/attachment'
 REPOS_ROOT = ROOT + '/repos'
 
-
 def apply_patch(task, log=False):
     file_path = task['file_path']
     target_path = task['target']
-    excute_util.excuteArr(['git', 'apply', file_path], target_path, log)
+    retcode,stdout,stderr = sub_process_with_timeout.excuteArr(
+        ['git', 'apply', '--ignore-whitespace', '--whitespace=nowarn', file_path], target_path, log, timeout=20)
+    if retcode == 0 and log:
+        print("Apply succeded. file path:" + file_path)
+    if log:
+        print(str(stdout))
+        print(str(stderr))
+    if retcode != 0:
+        print("Apply failed. file path:" + file_path + " Error:" + str(stderr))
     pass
-
 
 def apply_check(task, log=False):
     file_path = task['file_path']
     target_path = task['target']
-    result = excute_util.excuteArr(
-        ['git', 'apply', '--check', file_path], target_path, log)
-    return result != '-1' and 'error' not in result
+    retcode,stdout,stderr = sub_process_with_timeout.excuteArr(
+        ['git', 'apply', '--check', '--ignore-whitespace', file_path], target_path, log, timeout=20)
+    if log:
+        print("retcode:" + str(retcode))
+        print(str(stdout))
+        print(str(stderr))
+    if retcode != 0:
+        print("Apply check failed. file path:" + file_path + " Error:" + str(stderr))
+    return retcode != -1 and 'error' not in str(stderr)
 
 
 def doTask(task, log=False):
@@ -55,8 +67,9 @@ def doTask(task, log=False):
     elif (task['type'] == 'file'):
         file_util.copy_file(sourceFile, targetFile, log)
     elif (task['type'] == 'patch'):
-        if apply_check(task, False):
+        if apply_check(task, log):
             apply_patch(task, log)
+        pass
 
 
 def parse_config(config_file="{}/scripts/config.json".format(ROOT)):
@@ -68,7 +81,6 @@ def parse_config(config_file="{}/scripts/config.json".format(ROOT)):
         data = json.load(json_file)
         for task in data:
             doTask(task, log)
-
 
 if __name__ == "__main__":
     parse_config()

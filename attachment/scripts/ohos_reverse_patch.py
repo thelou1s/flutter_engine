@@ -14,7 +14,7 @@
 #!/usr/bin/python
 import sys
 import json
-import excute_util
+import sub_process_with_timeout
 from operator import itemgetter
 
 """
@@ -28,15 +28,29 @@ ROOT = './src/flutter/attachment'
 def apply_reverse_patch(task, log=False):
     file_path = task['file_path']
     target_path = task['target']
-    excute_util.excuteArr(['git', 'apply', '-R', '--ignore-whitespace', file_path], target_path, log)
+    retcode,stdout,stderr = sub_process_with_timeout.excuteArr(
+        ['git', 'apply', '-R', '--ignore-whitespace','--whitespace=nowarn', file_path], target_path, log, timeout=20)
+    if retcode == 0 and log:
+        print("Apply reverse succeded. file path:" + file_path)
+    if log:
+        print(str(stdout))
+        print(str(stderr))
+    if retcode != 0 and log:
+        print("Apply reverse failed. file path:" + file_path + " Error:" + str(stderr))
     pass
 
 def apply_reverse_check(task, log=False):
     file_path = task['file_path']
     target_path = task['target']
-    result = excute_util.excuteArr(
-        ['git', 'apply', '-R', '--check', '--ignore-whitespace', file_path], target_path, log)
-    return result != '-1' and 'error' not in result
+    retcode,stdout,stderr = sub_process_with_timeout.excuteArr(
+        ['git', 'apply', '-R', '--check', '--ignore-whitespace', file_path], target_path, log, timeout=20)
+    if log:
+        print("retcode:" + str(retcode))
+        print(str(stdout))
+        print(str(stderr))
+    if retcode != 0 and log:
+        print("Apply reverse check failed. file path:" + file_path + " Error:" + str(stderr))
+    return retcode != '-1' and 'error' not in str(stderr)
 
 def doTask(task, log=False):
     if (task['type'] == 'patch'):
