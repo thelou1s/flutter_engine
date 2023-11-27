@@ -15,4 +15,3 @@
 py -3 .\src\flutter\attachment\scripts\ohos_reverse_patch.py %1
 call  git -C .\src\flutter pull
 py -3 .\src\flutter\attachment\scripts\ohos_setup.py %1
-pause
