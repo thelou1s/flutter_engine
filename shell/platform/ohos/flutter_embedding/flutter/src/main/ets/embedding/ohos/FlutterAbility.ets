@@ -32,9 +32,36 @@ import ConfigurationConstant from '@ohos.app.ability.ConfigurationConstant';
 import { DVModelContainer } from '../../view/DynamicView/dynamicView';
 import { RootDvModeManager } from '../../plugin/platform/RootDvModelManager';
 import { Configuration } from '@ohos.app.ability.Configuration';
+import {
+  BuilderParams,
+  DVModel,
+  DVModelChildren,
+  DVModelEvents,
+  DVModelParameters } from '../../view/DynamicView/dynamicView';
+import StringUtils from '../../util/StringUtils';
 
 const TAG = "FlutterAbility";
 const EVENT_BACK_PRESS = 'EVENT_BACK_PRESS';
+
+@Component
+struct XComponentStruct {
+  private context:ESObject;
+  dvModelParams: DVModelParameters = new DVModelParameters();
+
+  build() {
+    XComponent({ id: (this.dvModelParams as Record<string, ESObject>)["xComponentId"], type: 'texture', libraryname: 'flutter'})
+      .onLoad((context) => {
+        this.context = context;
+      })
+      .onDestroy(() => {
+      })
+  }
+}
+
+@Builder function BuildXComponentStruct(buildParams: BuilderParams) {
+  XComponentStruct({dvModelParams: buildParams.params});
+}
+
 /**
  * flutter ohos基础ability，请在让主ability继承自该类。
  * 该类主要职责：
@@ -142,6 +169,13 @@ export class FlutterAbility extends UIAbility implements Host {
   loadContent() {
     if (this.windowStage != null && this.stillAttachedForEvent("loadContent")) {
       Log.i(TAG, 'loadContent');
+      let params: DVModelParameters = new DVModelParameters();
+      (params as Record<string, ESObject>)["xComponentId"] =
+        this.delegate?.getFlutterNapi()?.nativeShellHolderId?.toString();
+      let xComponentModel: DVModel =
+        new DVModel("xComponent", params, new DVModelEvents(), new DVModelChildren(), BuildXComponentStruct);
+      RootDvModeManager.addDvModel(xComponentModel);
+
       this.windowStage?.loadContent('pages/Index', (err, data) => {
         if (err.code) {
           Log.e(TAG, 'Failed to load the content. Cause: %{public}s', JSON.stringify(err) ?? '');
