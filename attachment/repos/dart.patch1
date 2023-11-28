@@ -102,6 +102,15 @@ index 36c7e9f4fb4..00a1cb64be8 100644
      default_warning_flags += [ "-Wno-type-limits" ]
    }
  
+diff --git a/build/config/gclient_args.gni b/build/config/gclient_args.gni
+new file mode 100755
+index 00000000000..69d89776479
+--- /dev/null
++++ b/build/config/gclient_args.gni
+@@ -0,0 +1,2 @@
++# Generated from 'DEPS'
++checkout_llvm = false
+\ No newline at end of file
 diff --git a/build/config/sanitizers/sanitizers.gni b/build/config/sanitizers/sanitizers.gni
 index c7da74b09fe..8c11b3401dc 100644
 --- a/build/config/sanitizers/sanitizers.gni
@@ -154,6 +163,22 @@ index e9f8c7a55cd..b1df3aef772 100644
    # TODO(GYP): Figure out which of these work and are needed on other platforms.
    copy("copy_llvm_symbolizer") {
      if (is_win) {
+diff --git a/runtime/BUILD.gn b/runtime/BUILD.gn
+index 042b6a45f7e..7f89f9fcd06 100644
+--- a/runtime/BUILD.gn
++++ b/runtime/BUILD.gn
+@@ -87,8 +87,10 @@ config("dart_precompiler_config") {
+ 
+ config("dart_os_config") {
+   defines = []
+-  if (target_os == "linux") {
++  if (target_os == "linux" && !is_mac) {
+     target_os = "ohos"
++  } else if (is_mac){
++    target_os = "mac"
+   }
+   print("DART  TARGET OS: "+target_os )
+   if (target_os == "android") {
 diff --git a/runtime/bin/BUILD.gn b/runtime/bin/BUILD.gn
 index 5eecfb63c08..14548125acb 100644
 --- a/runtime/bin/BUILD.gn
@@ -561,14 +586,14 @@ index e04c881411e..fb5f9dd1993 100644
  #else
    return DynamicLibrary::New(kWindowsDynamicLibraryProcessPtr);
 diff --git a/runtime/platform/globals.h b/runtime/platform/globals.h
-index 7122f9f7d08..373e958a322 100644
+index 7122f9f7d08..f8a861e6c54 100644
 --- a/runtime/platform/globals.h
 +++ b/runtime/platform/globals.h
 @@ -108,6 +108,10 @@
  // Check for Android first, to determine its difference from Linux.
  #define DART_HOST_OS_ANDROID 1
  
-+#elif defined(DART_TARGET_OS_OHOS) && !defined(__APPLE__) && !defined(_WIN32)
++#elif defined(DART_TARGET_OS_OHOS) && !defined(_WIN32)
 +
 +#define DART_HOST_OS_OHOS 1
 +

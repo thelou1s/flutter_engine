@@ -58,7 +58,9 @@ Flutter Engine
 (mac环境，请下载mac-sdk-full或者mac-sdk-m1-full，放置目录为ndk/mac/4.0；Windows环境无需下载鸿蒙sdk，请参考《构建基础环境》配置Windows环境)
 
 
-5. 开始构建：engine目录，执行`make`，即可开始构建支持ohos设备的flutter engine。
+5. 开始构建：在engine目录，执行`make`，即可开始构建支持ohos设备的flutter engine。
+   
+6. 更新代码：在engine目录，执行`./update_engine.sh`(Linux/Mac平台)或`update_engine.bat`(Windows平台)
 
 ## embedding层代码构建指导
 

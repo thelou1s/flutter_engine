@@ -35,16 +35,18 @@ def copytree(src, dst, symlinks=False, ignore=None):
             copy_file(s, d)
 
 
-def copy_file(sourceFile, targetFile):
-    print("拷贝文件，从{}到{}".format(sourceFile, targetFile))
+def copy_file(sourceFile, targetFile, log=False):
+    if log:
+      print("拷贝文件，从{}到{}".format(sourceFile, targetFile))
     if os.path.exists(targetFile):
         os.remove(targetFile)
     shutil.copy2(sourceFile, targetFile)
 
 
 # 拷贝文件夹
-def copy_dir(sourceFiles, targetFiles):
-    print("拷贝文件夹，从{}到{}".format(sourceFiles, targetFiles))
+def copy_dir(sourceFiles, targetFiles, log=False):
+    if log:
+      print("拷贝文件夹，从{}到{}".format(sourceFiles, targetFiles))
     if os.path.exists(targetFiles):
         print("目标文件夹已存在，退出")
         pass
@@ -54,8 +56,9 @@ def copy_dir(sourceFiles, targetFiles):
 
 
 # 拷贝文件夹中所有文件到目标目录（必须存在），不拷贝文件夹本身
-def copy_files(source_folder, destination_folder):
-    print("拷贝文件夹内所有文件，从{}到{}".format(source_folder, destination_folder))
+def copy_files(source_folder, destination_folder, log=False):
+    if log:
+      print("拷贝文件夹内所有文件，从{}到{}".format(source_folder, destination_folder))
     # 获取源文件夹中的所有文件
     files = os.listdir(source_folder)
 

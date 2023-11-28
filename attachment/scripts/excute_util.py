@@ -29,26 +29,12 @@ def excute(cmdStr, path=".", log=True):
     try:
         proc = subprocess.Popen(cmdStr, cwd=path, shell=True,
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        # 逐行读取输出结果
-        for line in proc.stdout:
-            if line == b'' and proc.poll() is not None:
-                break
-            data = line.strip()
-            if log:
-                print(data)
-            result += data
-        error_output = proc.stderr.read().strip()
-        if error_output:
-            if log:
-                print("错误输出:", error_output)
-            err = True
-        if err:
+        out, err = proc.communicate()
+        if proc.returncode != 0:
             result = '-1'
-            if log:
-                print("执行失败", proc.returncode)
-        else:
-            if log:
-                print("执行成功")
+            if (log):
+                print("Executing: %s failed. Exit code: %s" % (cmdStr, proc.returncode))
+
     except subprocess.CalledProcessError as e:
         if log:
             print("命令执行错误:", str(e))
@@ -66,12 +52,9 @@ def excute(cmdStr, path=".", log=True):
     return result
 
 # 执行数组命令
-
-
-def excuteArr(cmdArr, path="."):
+def excuteArr(cmdArr, path=".", log = True):
     str = ' '.join(cmdArr)
-    return excute(str, path)
-
+    return excute(str, path, log)
 
 def getDateStr(date):
     hour = date.hour
