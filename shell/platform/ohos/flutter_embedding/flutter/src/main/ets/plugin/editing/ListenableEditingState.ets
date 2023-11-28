@@ -18,9 +18,12 @@ import Log from '../../util/Log';
 import inputMethod from '@ohos.inputMethod';
 import ArrayList from '@ohos.util.ArrayList';
 import { TextEditingDelta } from './TextEditingDelta';
-
+import TextInputChannel from '../../embedding/engine/systemchannels/TextInputChannel';
 const TAG =  "ListenableEditingState";
 export class ListenableEditingState {
+
+  private TextInputChannel: TextInputChannel|null = null ;
+  private client: number = 0
   //Cache used to storage software keyboard input action
   private mStringCache: string;
   private mSelectionStartCache: number = 0;
@@ -42,7 +45,9 @@ export class ListenableEditingState {
   private mComposingEndWhenBeginBatchEdit: number = 0;
 
 
-  constructor() {
+  constructor(TextInputChannel:TextInputChannel,client:number) {
+    this.TextInputChannel = TextInputChannel;
+    this.client = client
     this.mStringCache = "";
     this.mTextWhenBeginBatchEdit = "";
     this.mSelectionStartCache = 0;
@@ -237,14 +242,29 @@ export class ListenableEditingState {
   handleFunctionKey(functionKey: inputMethod.FunctionKey): void {
     switch (functionKey.enterKeyType) {
       case inputMethod.EnterKeyType.PREVIOUS:
+        this.TextInputChannel.previous(this.client);
+        break;
       case inputMethod.EnterKeyType.UNSPECIFIED:
+        this.TextInputChannel.unspecifiedAction(this.client);
+        break;
       case inputMethod.EnterKeyType.NONE:
+        this.TextInputChannel.done(this.client)
+        break;
       case inputMethod.EnterKeyType.GO:
+        this.TextInputChannel.go(this.client);
+        break;
       case inputMethod.EnterKeyType.SEARCH:
+        this.TextInputChannel.search(this.client);
+        break;
       case inputMethod.EnterKeyType.SEND:
+        this.TextInputChannel.send(this.client);
+        break;
       case inputMethod.EnterKeyType.NEXT:
+        this.TextInputChannel.next(this.client);
+        break;
       case inputMethod.EnterKeyType.DONE:
-
+        this.TextInputChannel.done(this.client)
+        break;
     }
   }
 

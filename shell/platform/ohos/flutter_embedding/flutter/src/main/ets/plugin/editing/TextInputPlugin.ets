@@ -65,18 +65,18 @@ class TextInputMethodHandlerImpl implements TextInputMethodHandler {
   private configuration: Configuration | null = null;
   mEditable: ListenableEditingState;
   private mRestartInputPending: boolean = false;
-  private plugin: EditingStateWatcher;
+  private plugin: EditingStateWatcher | ESObject;
 
   private imcFlag: boolean = false;
 
-  constructor(plugin: TextInputPlugin) {
+  constructor(plugin: TextInputPlugin | ESObject) {
     this.textConfig = {
       inputAttribute: {
         textInputType: 0,
         enterKeyType: 1
       }};
     this.plugin = plugin;
-    this.mEditable = new ListenableEditingState();
+    this.mEditable = new ListenableEditingState(null , 0);
     this.inputMethodController = inputMethod.getController();
     this.inputTarget = new InputTarget(Type.NO_TARGET, 0);
   }
@@ -147,7 +147,7 @@ class TextInputMethodHandlerImpl implements TextInputMethodHandler {
       Log.e(TextInputMethodHandlerImpl.TAG, "Failed to attach:" + JSON.stringify(err));
     }
   }
-  
+
   setTextInputClient(client: number, configuration: Configuration | null): void {
     this.configuration = configuration;
     if(this.canShowTextInput()) {
@@ -156,7 +156,8 @@ class TextInputMethodHandlerImpl implements TextInputMethodHandler {
       this.inputTarget = new InputTarget(Type.NO_TARGET, client);
     }
     this.mEditable.removeEditingStateListener(this.plugin);
-    this.mEditable = new ListenableEditingState();
+
+    this.mEditable = new ListenableEditingState(this.plugin.textInputChannel, this.inputTarget.id);
 
     this.mRestartInputPending = true;
     this.mEditable.addEditingStateListener(this.plugin);
