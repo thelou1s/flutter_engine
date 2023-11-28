@@ -19,6 +19,8 @@ import MethodChannel, { MethodCallHandler, MethodResult } from '../../../plugin/
 import TextInputPlugin from '../../../plugin/editing/TextInputPlugin';
 import Log from '../../../util/Log';
 import DartExecutor from '../dart/DartExecutor';
+import inputMethod from '@ohos.inputMethod';
+import { DEFAULT } from '@ohos/hypium';
 
 const TAG = "TextInputChannel";
 
@@ -46,11 +48,11 @@ export default class TextInputChannel {
                          composingStart: number,
                          composingEnd: number): EditingState {
     let state: EditingState = {
-        text: text,
-        selectionBase: selectionStart,
-        selectionExtent: selectionEnd,
-        composingBase: composingStart,
-        composingExtent: composingEnd
+      text: text,
+      selectionBase: selectionStart,
+      selectionExtent: selectionEnd,
+      composingBase: composingStart,
+      composingExtent: composingEnd
     };
     return state;
   }
@@ -123,11 +125,11 @@ export default class TextInputChannel {
 }
 
 interface EditingState {
-    text: string;
-    selectionBase: number;
-    selectionExtent: number;
-    composingBase: number;
-    composingExtent: number;
+  text: string;
+  selectionBase: number;
+  selectionExtent: number;
+  composingBase: number;
+  composingExtent: number;
 }
 
 export interface TextInputMethodHandler {
@@ -154,6 +156,7 @@ export interface TextInputMethodHandler {
 export class Configuration {
   obscureText: boolean = false;
   autocorrect: boolean = false;
+  autofill: boolean = false;
   enableSuggestions: boolean = false;
   enableIMEPersonalizedLearning: boolean = false;
   enableDeltaModel: boolean = false;
@@ -169,23 +172,95 @@ export class Configuration {
               enableSuggestions: boolean,
               enableIMEPersonalizedLearning: boolean,
               enableDeltaModel: boolean,
+              textCapitalization:TextCapitalization,
               inputType: InputType,
               inputAction: Number,
-              actionLabel: String, ) {
+              actionLabel: String,
+              autofill :boolean,
+              contentListString:[],
+              fields: Configuration[]
+  ) {
+    this.obscureText = obscureText;
+    this.autocorrect = autocorrect;
+    this.enableSuggestions = enableSuggestions;
+    this.enableIMEPersonalizedLearning = enableIMEPersonalizedLearning;
+    this.textCapitalization = textCapitalization
+    this.enableDeltaModel = enableDeltaModel;
+    this.inputType = inputType;
+    this.inputAction = inputAction;
+    this.actionLabel = actionLabel;
+    this.autofill = autofill;
+    this.contentCommitMimeTypes = contentListString;
+    this.fields = fields
+
   }
-  getTextCapitalizationFromValue(encodedName: string): TextCapitalization {
-    let textKeys = [
-      TextCapitalization.CHARACTERS, TextCapitalization.WORDS,
-      TextCapitalization.SENTENCES, TextCapitalization.NONE
-    ];
-    for (let i = 0; i < textKeys.length; i++) {
-      let key = textKeys[i];
-      if (TextCapitalization[key] === encodedName) {
-        return key;
+  static getTextCapitalizationFromValue(encodedName: string): TextCapitalization {
+    let textKeys= ["CHARACTERS", "WORDS","SENTENCES", "NONE"];
+    for (let textKey of textKeys) {
+      if (TextCapitalization[textKey] === encodedName) {
+        return textKey as TextCapitalization;
       }
     }
     throw new Error("No such TextCapitalization: " + encodedName);
   }
+  private static inputActionFromTextInputAction(inputActionName:string):number{
+    switch(inputActionName){
+      case "TextInputAction.previous":
+        return inputMethod.EnterKeyType.PREVIOUS
+      case "TextInputAction.unspecified":
+        return inputMethod.EnterKeyType.UNSPECIFIED
+      case "TextInputAction.none":
+        return inputMethod.EnterKeyType.NONE
+      case "TextInputAction.go":
+        return inputMethod.EnterKeyType.GO
+      case "TextInputAction.search":
+        return inputMethod.EnterKeyType.SEARCH
+      case "TextInputAction.send":
+        return inputMethod.EnterKeyType.SEND
+      case "TextInputAction.next":
+        return inputMethod.EnterKeyType.NEXT
+      default:
+      // Present default key if bad input type is given.
+        return inputMethod.EnterKeyType.UNSPECIFIED
+
+    }
+  }
+  static fromJson(json:ESObject) {
+    const inputActionName:string = json.inputAction;
+    if (!inputActionName) {
+      throw new Error("Configuration JSON missing 'inputAction' property.");
+    }
+
+    let fields:Array<ESObject> = null;
+    if (json.fields !== null && json.fields !== undefined) {
+      fields = json.fields.map((field:ESObject):ESObject => Configuration.fromJson(field));
+    }
+
+    const inputAction:number = Configuration.inputActionFromTextInputAction(inputActionName);
+
+    // Build list of content commit mime types from the data in the JSON list.
+    const contentList:Array<ESObject> = [];
+    if (json.contentCommitMimeTypes !== null && json.contentCommitMimeTypes !== undefined) {
+      json.contentCommitMimeTypes.forEach((type:ESObject) => {
+        contentList.push(type);
+      });
+    }
+    return new Configuration(
+      json.obscureText ?? false,
+      json.autocorrect ?? true,
+      json.enableSuggestions ?? false,
+      json.enableIMEPersonalizedLearning ?? false,
+      json.enableDeltaModel ?? false,
+      Configuration.getTextCapitalizationFromValue(json.textCapitalization),
+      InputType.fromJson(json.inputType),
+      inputAction,
+      json.actionLabel ?? null,
+      json.autofill ?? null,
+      contentList as ESObject,
+      fields
+    );
+  }
+
 }
 
 enum TextCapitalization {
@@ -226,16 +301,10 @@ export class InputType {
   }
 
   static getTextInputTypeFromValue(encodedName: string): TextInputType {
-    let textKeys = [
-      TextInputType.TEXT, TextInputType.DATETIME, TextInputType.NAME,
-      TextInputType.POSTAL_ADDRESS, TextInputType.NUMBER, TextInputType.PHONE,
-      TextInputType.MULTILINE, TextInputType.EMAIL_ADDRESS, TextInputType.URL,
-      TextInputType.VISIBLE_PASSWORD, TextInputType.NONE
-    ];
-    for (let i = 0; i < textKeys.length; i++) {
-      let key = textKeys[i];
-      if (TextInputType[key] == encodedName) {
-        return key;
+    let textKeys = [  "TEXT", "DATETIME","NAME" , "POSTAL_ADDRESS", "NUMBER", "PHONE", "MULTILINE", "EMAIL_ADDRESS", "URL", "VISIBLE_PASSWORD", "NONE" ,];
+    for (let textKey of textKeys) {
+      if (TextInputType[textKey] === encodedName) {
+        return textKey as TextInputType;
       }
     }
     throw new Error("No such TextInputType: " + encodedName);
@@ -331,8 +400,9 @@ class TextInputCallback implements MethodCallHandler {
         break;
       case "TextInput.setClient":
         const textInputClientId: number = args[0] as number;
-      //TODO: parse configuration
-        const config: Configuration | null = null;
+        const jsonConfiguration :string = args[1] ;
+        const config: Configuration | null = Configuration.fromJson(jsonConfiguration);
+
         this.textInputMethodHandler.setClient(textInputClientId, config);
         result.success(null);
         break;
@@ -369,4 +439,5 @@ class TextInputCallback implements MethodCallHandler {
         break;
     }
   }
+
 }
