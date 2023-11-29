@@ -58,12 +58,12 @@ export default class RestorationChannel {
   // Holds the most current restoration data which may have been provided by the engine
   // via "setRestorationData" or by the framework via the method channel. This is the data the
   // framework should be restored to in case the app is terminated.
-  private restorationData: Uint8Array = new Uint8Array();
+  private restorationData: Uint8Array;
   private channel: MethodChannel | null = null;
   private pendingFrameworkRestorationChannelRequest: MethodResult | null = null;
   private engineHasProvidedData: boolean = false;
   private frameworkHasRequestedData: boolean = false;
-  private handler: MethodCallHandler = new RestorationChannelMethodCallHandler(this.restorationData);
+  private handler: MethodCallHandler;
 
   constructor(channelOrExecutor: MethodChannel | DartExecutor, waitForRestorationData: boolean) {
     if (channelOrExecutor instanceof MethodChannel) {
@@ -72,6 +72,8 @@ export default class RestorationChannel {
       this.channel = new MethodChannel(channelOrExecutor, RestorationChannel.CHANNEL_NAME, StandardMethodCodec.INSTANCE);
     }
     this.waitForRestorationData = waitForRestorationData;
+    this.restorationData = new Uint8Array(1).fill(0);
+    this.handler = new RestorationChannelMethodCallHandler(this.restorationData);
     this.channel.setMethodCallHandler(this.handler);
   }
 
@@ -121,7 +123,7 @@ export default class RestorationChannel {
    * state prior to the hot restart will get restored.
    */
   clearData() {
-    this.restorationData = new Uint8Array();
+    this.restorationData = new Uint8Array(1).fill(0);
   }
 }
 

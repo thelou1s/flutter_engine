@@ -135,7 +135,7 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
   onRestoreInstanceState(want: Want) {
     let frameworkState = want.parameters != null
       ? want.parameters[FRAMEWORK_RESTORATION_BUNDLE_KEY] as Uint8Array
-      : new Uint8Array();
+      : new Uint8Array(1).fill(0);
     if (this.host?.shouldRestoreAndSaveState()) {
       this.flutterEngine?.getRestorationChannel()?.setRestorationData(frameworkState);
     }
