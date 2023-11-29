@@ -231,7 +231,7 @@ export class Configuration {
       throw new Error("Configuration JSON missing 'inputAction' property.");
     }
 
-    let fields:Array<ESObject> = null;
+    let fields:Array<ESObject> = new Array();
     if (json.fields !== null && json.fields !== undefined) {
       fields = json.fields.map((field:ESObject):ESObject => Configuration.fromJson(field));
     }

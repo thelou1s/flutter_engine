@@ -22,7 +22,7 @@ import TextInputChannel from '../../embedding/engine/systemchannels/TextInputCha
 const TAG =  "ListenableEditingState";
 export class ListenableEditingState {
 
-  private TextInputChannel: TextInputChannel|null = null ;
+  private TextInputChannel: TextInputChannel | null = null ;
   private client: number = 0
   //Cache used to storage software keyboard input action
   private mStringCache: string;
@@ -45,7 +45,7 @@ export class ListenableEditingState {
   private mComposingEndWhenBeginBatchEdit: number = 0;
 
 
-  constructor(TextInputChannel:TextInputChannel,client:number) {
+  constructor(TextInputChannel:TextInputChannel | null,client:number) {
     this.TextInputChannel = TextInputChannel;
     this.client = client
     this.mStringCache = "";
@@ -240,6 +240,10 @@ export class ListenableEditingState {
   }
 
   handleFunctionKey(functionKey: inputMethod.FunctionKey): void {
+    if(!this.TextInputChannel)
+    {
+      return
+    }
     switch (functionKey.enterKeyType) {
       case inputMethod.EnterKeyType.PREVIOUS:
         this.TextInputChannel.previous(this.client);
