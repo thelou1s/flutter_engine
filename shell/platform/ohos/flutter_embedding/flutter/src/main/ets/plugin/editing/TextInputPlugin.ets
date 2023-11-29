@@ -76,7 +76,7 @@ class TextInputMethodHandlerImpl implements TextInputMethodHandler {
         enterKeyType: 1
       }};
     this.plugin = plugin;
-    this.mEditable = new ListenableEditingState(null , 0);
+    this.mEditable = new ListenableEditingState(null as ESObject, 0);
     this.inputMethodController = inputMethod.getController();
     this.inputTarget = new InputTarget(Type.NO_TARGET, 0);
   }

@@ -240,6 +240,8 @@ export class ListenableEditingState {
   }
 
   handleFunctionKey(functionKey: inputMethod.FunctionKey): void {
+    if(!this.TextInputChannel)
+      return
     switch (functionKey.enterKeyType) {
       case inputMethod.EnterKeyType.PREVIOUS:
         this.TextInputChannel.previous(this.client);
