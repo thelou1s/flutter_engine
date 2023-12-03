@@ -1,8 +1,8 @@
 diff --git a/BUILD.gn b/BUILD.gn
-index ebbd898ec9..c829d7bb3f 100644
+index ebbd898ec9..660dde475a 100644
 --- a/BUILD.gn
 +++ b/BUILD.gn
-@@ -26,7 +26,8 @@ import("gn/ios.gni")
+@@ -26,16 +26,21 @@ import("gn/ios.gni")
  
  # Skia public API, generally provided by :skia.
  config("skia_public") {
@@ -12,8 +12,11 @@ index ebbd898ec9..c829d7bb3f 100644
  
    defines = []
    cflags_objcc = []
-@@ -36,6 +37,10 @@ config("skia_public") {
-   if (is_fuchsia || is_linux) {
+   if (is_component_build) {
+     defines += [ "SKIA_DLL" ]
+   }
+-  if (is_fuchsia || is_linux) {
++  if (is_fuchsia || is_linux || is_ohos) {
      defines += [ "SK_R32_SHIFT=16" ]
    }
 +
@@ -77,6 +80,33 @@ index ebbd898ec9..c829d7bb3f 100644
  optional("fontmgr_custom") {
    enabled =
        skia_enable_fontmgr_custom_directory ||
+@@ -690,7 +733,7 @@ if (skia_compile_modules) {
+       sources += [ "tools/SkGetExecutablePath_win.cpp" ]
+     } else if (is_mac || is_ios) {
+       sources += [ "tools/SkGetExecutablePath_mac.cpp" ]
+-    } else if (is_linux || is_android) {
++    } else if (is_linux || is_android || is_ohos) {
+       sources += [ "tools/SkGetExecutablePath_linux.cpp" ]
+     }
+     if (is_win) {
+@@ -818,7 +861,7 @@ if (skia_compile_sksl_tests) {
+       sources += [ "tools/SkGetExecutablePath_win.cpp" ]
+     } else if (is_mac || is_ios) {
+       sources += [ "tools/SkGetExecutablePath_mac.cpp" ]
+-    } else if (is_linux || is_android) {
++    } else if (is_linux || is_android || is_ohos) {
+       sources += [ "tools/SkGetExecutablePath_linux.cpp" ]
+     }
+     if (is_win) {
+@@ -1077,7 +1120,7 @@ optional("gpu") {
+       libs += [ "EGL" ]
+     } else if (skia_use_webgl) {
+       sources += [ "src/gpu/ganesh/gl/webgl/GrGLMakeNativeInterface_webgl.cpp" ]
+-    } else if (is_linux && skia_use_x11) {
++    } else if ((is_linux || is_ohos) && skia_use_x11) {
+       sources += [
+         "src/gpu/ganesh/gl/glx/GrGLMakeGLXInterface.cpp",
+         "src/gpu/ganesh/gl/glx/GrGLMakeNativeInterface_glx.cpp",
 @@ -1092,8 +1135,16 @@ optional("gpu") {
        if (target_cpu != "arm64") {
          libs += [ "OpenGL32.lib" ]
@@ -104,8 +134,101 @@ index ebbd898ec9..c829d7bb3f 100644
      ":fontmgr_win_gdi",
      ":gpu",
      ":graphite",
+@@ -1559,7 +1611,7 @@ skia_component("skia") {
+     ]
+   }
+ 
+-  if (is_linux || is_wasm) {
++  if (is_linux || is_wasm || is_ohos) {
+     sources += [ "src/ports/SkDebug_stdio.cpp" ]
+     if (skia_use_egl) {
+       libs += [ "GLESv2" ]
+@@ -1962,7 +2014,7 @@ if (skia_enable_tools) {
+       if (is_android || skia_use_egl) {
+         sources += [ "tools/gpu/gl/egl/CreatePlatformGLTestContext_egl.cpp" ]
+         libs += [ "EGL" ]
+-      } else if (is_linux) {
++      } else if (is_linux || is_ohos) {
+         sources += [ "tools/gpu/gl/glx/CreatePlatformGLTestContext_glx.cpp" ]
+         libs += [
+           "GLU",
+@@ -2281,7 +2333,7 @@ if (skia_enable_tools) {
+     ]
+   }
+ 
+-  if (is_linux || is_mac || skia_enable_optimize_size) {
++  if (is_linux || is_mac || skia_enable_optimize_size || is_ohos) {
+     if (skia_enable_skottie) {
+       test_app("skottie_tool") {
+         deps = [ "modules/skottie:tool" ]
+@@ -2777,7 +2829,7 @@ if (skia_enable_tools) {
+         "tools/sk_app/android/surface_glue_android.h",
+       ]
+       libs += [ "android" ]
+-    } else if (is_linux) {
++    } else if (is_linux || is_ohos) {
+       sources += [
+         "tools/SkGetExecutablePath_linux.cpp",
+         "tools/sk_app/unix/RasterWindowContext_unix.cpp",
+@@ -2830,7 +2882,7 @@ if (skia_enable_tools) {
+       sources += [ "tools/sk_app/GLWindowContext.h" ]
+       if (is_android) {
+         sources += [ "tools/sk_app/android/GLWindowContext_android.cpp" ]
+-      } else if (is_linux) {
++      } else if (is_linux || is_ohos) {
+         sources += [ "tools/sk_app/unix/GLWindowContext_unix.cpp" ]
+       } else if (is_win) {
+         sources += [ "tools/sk_app/win/GLWindowContext_win.cpp" ]
+@@ -2855,7 +2907,7 @@ if (skia_enable_tools) {
+       sources += [ "tools/sk_app/VulkanWindowContext.h" ]
+       if (is_android) {
+         sources += [ "tools/sk_app/android/VulkanWindowContext_android.cpp" ]
+-      } else if (is_linux) {
++      } else if (is_linux || is_ohos) {
+         sources += [ "tools/sk_app/unix/VulkanWindowContext_unix.cpp" ]
+         libs += [ "X11-xcb" ]
+       } else if (is_win) {
+@@ -2887,7 +2939,7 @@ if (skia_enable_tools) {
+     if (skia_use_dawn) {
+       sources += [ "tools/sk_app/DawnWindowContext.cpp" ]
+       sources += [ "tools/sk_app/DawnWindowContext.h" ]
+-      if (is_linux) {
++      if (is_linux || is_ohos) {
+         if (dawn_enable_vulkan) {
+           sources += [ "tools/sk_app/unix/DawnVulkanWindowContext_unix.cpp" ]
+           defines = [ "VK_USE_PLATFORM_XCB_KHR" ]
+@@ -2931,7 +2983,7 @@ if (skia_enable_tools) {
+     }
+   }
+ 
+-  if (!skia_use_vulkan && (is_mac || is_linux || is_win)) {
++  if (!skia_use_vulkan && (is_mac || is_linux || is_win || is_ohos)) {
+     test_app("fiddle_examples") {
+       sources = [
+         "tools/fiddle/all_examples.cpp",
+@@ -3088,7 +3140,7 @@ if (skia_enable_tools) {
+     }
+   }
+ 
+-  if (skia_use_gl && !skia_use_angle && (is_linux || is_win || is_mac)) {
++  if (skia_use_gl && !skia_use_angle && (is_linux || is_win || is_mac || is_ohos)) {
+     test_app("HelloWorld") {
+       sources = [ "example/HelloWorld.cpp" ]
+       libs = []
+diff --git a/gn/BUILDCONFIG.gn b/gn/BUILDCONFIG.gn
+index 44f39c5aaa..c4eac1eb66 100644
+--- a/gn/BUILDCONFIG.gn
++++ b/gn/BUILDCONFIG.gn
+@@ -63,6 +63,7 @@ is_linux = current_os == "linux"
+ is_mac = current_os == "mac"
+ is_wasm = current_os == "wasm"
+ is_win = current_os == "win"
++is_ohos = current_os == "ohos"
+ 
+ # This is just to make the Dawn build files happy. Skia itself uses target_os = "linux"
+ # for ChromeOS, so this variable will not affect Skia proper.
 diff --git a/gn/skia.gni b/gn/skia.gni
-index b81c0dae54..af04cdacdf 100644
+index b81c0dae54..deb6451271 100644
 --- a/gn/skia.gni
 +++ b/gn/skia.gni
 @@ -20,6 +20,7 @@ declare_args() {
@@ -116,6 +239,35 @@ index b81c0dae54..af04cdacdf 100644
    skia_enable_gpu = true
    skia_enable_optimize_size = false
    skia_enable_pdf = !is_wasm
+@@ -46,9 +47,9 @@ declare_args() {
+   skia_use_expat = !is_wasm
+   skia_use_ffmpeg = false
+   skia_use_fixed_gamma_text = is_android
+-  skia_use_fontconfig = is_linux
++  skia_use_fontconfig = is_linux || is_ohos
+   skia_use_fonthost_mac = is_mac || is_ios
+-  skia_use_freetype = is_android || is_fuchsia || is_linux || is_wasm
++  skia_use_freetype = is_android || is_fuchsia || is_linux || is_wasm || is_ohos
+   skia_use_harfbuzz = true
+   skia_use_gl = !is_fuchsia
+   skia_use_icu = !is_fuchsia
+@@ -64,14 +65,14 @@ declare_args() {
+   skia_use_lua = is_skia_dev_build && !is_ios
+   skia_use_metal = false
+   skia_use_ndk_images = is_android && defined(ndk_api) && ndk_api >= 30
+-  skia_use_perfetto = is_linux || is_mac || is_android
++  skia_use_perfetto = is_linux || is_mac || is_android || is_ohos
+   skia_use_piet = false
+   skia_use_piex = !is_win && !is_wasm
+   skia_use_sfml = false
+   skia_use_webgl = is_wasm
+   skia_use_webgpu = is_wasm
+   skia_use_wuffs = true
+-  skia_use_x11 = is_linux
++  skia_use_x11 = is_linux || is_ohos
+   skia_use_xps = true
+   skia_enable_graphite = false
+   skia_use_zlib = true
 @@ -119,6 +120,8 @@ declare_args() {
  }
  
@@ -136,6 +288,37 @@ index b81c0dae54..af04cdacdf 100644
      skia_fontmgr_factory = ":fontmgr_empty_factory"
    } else if (is_android && skia_enable_fontmgr_android) {
      skia_fontmgr_factory = ":fontmgr_android_factory"
+diff --git a/gn/skia/BUILD.gn b/gn/skia/BUILD.gn
+index b43526fe1f..fb34289da7 100644
+--- a/gn/skia/BUILD.gn
++++ b/gn/skia/BUILD.gn
+@@ -235,7 +235,7 @@ config("default") {
+     }
+   }
+ 
+-  if (is_linux) {
++  if (is_linux || is_ohos) {
+     libs += [ "pthread" ]
+   }
+ 
+@@ -333,7 +333,7 @@ config("default") {
+       ldflags += [ "-fsanitize=$sanitizers" ]
+     }
+ 
+-    if (is_linux) {
++    if (is_linux || is_ohos) {
+       cflags_cc += [ "-stdlib=libc++" ]
+       ldflags += [ "-stdlib=libc++" ]
+     }
+@@ -685,7 +685,7 @@ config("executable") {
+     ]
+   } else if (is_mac) {
+     ldflags = [ "-Wl,-rpath,@loader_path/." ]
+-  } else if (is_linux) {
++  } else if (is_linux || is_ohos) {
+     ldflags = [
+       "-rdynamic",
+       "-Wl,-rpath,\$ORIGIN",
 diff --git a/src/core/SkCanvas.cpp b/src/core/SkCanvas.cpp
 index ab23b24edd..c5f714712b 100644
 --- a/src/core/SkCanvas.cpp

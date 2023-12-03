@@ -1,0 +1,48 @@
+diff --cc build/config/BUILDCONFIG.gn
+index bd3476a,ab4252a..0000000
+--- a/build/config/BUILDCONFIG.gn
++++ b/build/config/BUILDCONFIG.gn
+@@@ -34,9 -34,9 +34,8 @@@
+  # When writing build files, to do something only for the host:
+  #   if (current_toolchain == host_toolchain) { ...
+  
+--
+  if (target_os == "") {
+--  target_os = "ohos"
+++  target_os = host_os
+  }
+  
+  if (target_cpu == "") {
+@@@ -57,11 -57,8 +56,8 @@@ if (current_cpu == "") 
+  if (current_os == "") {
+    if (host_os == "win") {
+      current_os = "win"
+-   } else if (host_os == "mac" && (target_os == "ohos" || target_os == "linux")) {
+-     current_os = "ohos"
+--  } else {
+-     #current_os = target_os
+-     current_os = host_os
+++  }  else {
++     current_os = target_os
+    }
+  }
+  
+diff --cc build/config/ohos/pkg_config.gni
+index cb7a4b3,3708ffc..0000000
+--- a/build/config/ohos/pkg_config.gni
++++ b/build/config/ohos/pkg_config.gni
+@@@ -127,7 -127,13 +127,5 @@@ template("pkg_config") 
+    }
+  }
+  
+ -<<<<<<< Updated upstream
+--#OHOS_NDK_ROOT = "//third_party/ohos_tools/ndk/linux/4.0/native"
+--#OHOS_NDK_ROOT = "//third_party/ohos_tools/ndk/linux/4.0/native"
+  OHOS_NDK_ROOT = "//build/ohos/ohos-sysroot"
+ -OHOS_NDK_LIB = "$OHOS_NDK_ROOT/usr/aarch64-linux-ohos"
+ -=======
+ -OHOS_NDK_ROOT = "//build/ohos/ohos-sysroot"
+--OHOS_NDK_LIB = "$OHOS_NDK_ROOT/usr/aarch64-linux-ohos"
+ -
+ ->>>>>>> Stashed changes
+++OHOS_NDK_LIB = "$OHOS_NDK_ROOT/usr/aarch64-linux-ohos"
