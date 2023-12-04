@@ -1,48 +1,54 @@
-diff --cc runtime/BUILD.gn
-index 7f89f9fcd06,57184dee228..00000000000
+diff --git a/runtime/BUILD.gn b/runtime/BUILD.gn
+index 7f89f9fcd06..cd5494e7b33 100644
 --- a/runtime/BUILD.gn
 +++ b/runtime/BUILD.gn
-@@@ -104,7 -100,7 +100,6 @@@ config("dart_os_config") 
-      defines += [ "DART_TARGET_OS_LINUX" ]
-    } else if (target_os == "ohos") {
-      defines += [ "DART_TARGET_OS_OHOS" ]
---    print("DART  TARGET OS OHOS")
-    } else if (target_os == "mac") {
-      defines += [ "DART_TARGET_OS_MACOS" ]
-    } else if (target_os == "win") {
-diff --cc runtime/bin/BUILD.gn
-index 14548125acb,3ff723b7bbf..00000000000
+@@ -87,11 +87,6 @@ config("dart_precompiler_config") {
+ 
+ config("dart_os_config") {
+   defines = []
+-  if (target_os == "linux" && !is_mac) {
+-    target_os = "ohos"
+-  } else if (is_mac){
+-    target_os = "mac"
+-  }
+   print("DART  TARGET OS: "+target_os )
+   if (target_os == "android") {
+     defines += [ "DART_TARGET_OS_ANDROID" ]
+@@ -104,7 +99,9 @@ config("dart_os_config") {
+     defines += [ "DART_TARGET_OS_LINUX" ]
+   } else if (target_os == "ohos") {
+     defines += [ "DART_TARGET_OS_OHOS" ]
+-    print("DART  TARGET OS OHOS")
++    if (is_ohos) {
++      defines += [ "DART_RUNTIME_OS_OHOS" ]
++    }
+   } else if (target_os == "mac") {
+     defines += [ "DART_TARGET_OS_MACOS" ]
+   } else if (target_os == "win") {
+diff --git a/runtime/bin/BUILD.gn b/runtime/bin/BUILD.gn
+index 14548125acb..2b758ae2db9 100644
 --- a/runtime/bin/BUILD.gn
 +++ b/runtime/bin/BUILD.gn
-@@@ -37,9 -38,6 +37,7 @@@ config("libdart_builtin_config") 
-      is_linux = false
-    }
-  
--   print("dart runtime is_linux:" ,is_linux)
--   print("dart runtime is_win:" ,is_win)
--   print("dart runtime is_ohos:" , is_ohos)
-++
-    if(is_ohos && !is_win){
-        libs +=[
-          "hilog_ndk.z"
-diff --cc runtime/platform/globals.h
-index f8a861e6c54,c19c00606a1..00000000000
+@@ -37,9 +37,6 @@ config("libdart_builtin_config") {
+     is_linux = false
+   }
+ 
+-  print("dart runtime is_linux:" ,is_linux)
+-  print("dart runtime is_win:" ,is_win)
+-  print("dart runtime is_ohos:" , is_ohos)
+   if(is_ohos && !is_win){
+       libs +=[
+         "hilog_ndk.z"
+diff --git a/runtime/platform/globals.h b/runtime/platform/globals.h
+index f8a861e6c54..ca859e2b421 100644
 --- a/runtime/platform/globals.h
 +++ b/runtime/platform/globals.h
-@@@ -131,6 -122,15 +122,15 @@@
-  // Windows, both 32- and 64-bit, regardless of the check for _WIN32.
-  #define DART_HOST_OS_WINDOWS 1
-  
- -#elif defined(DART_TARGET_OS_OHOS) && !defined(_WIN32)
-++#elif defined(DART_TARGET_OS_OHOS) && !defiend(DART_TARGET_OS_LINUX)
-+ 
-+ #define DART_HOST_OS_OHOS 1
-+ 
-+ #elif defined(__linux__) || defined(__FreeBSD__)
-+ 
-+ // Generic Linux.
-+ #define DART_HOST_OS_LINUX 1
-+ 
-  #elif defined(__Fuchsia__)
-  #define DART_HOST_OS_FUCHSIA
-  
+@@ -108,7 +108,7 @@
+ // Check for Android first, to determine its difference from Linux.
+ #define DART_HOST_OS_ANDROID 1
+ 
+-#elif defined(DART_TARGET_OS_OHOS) && !defined(_WIN32)
++#elif defined(DART_TARGET_OS_OHOS) && defined(DART_RUNTIME_OS_OHOS)
+ 
+ #define DART_HOST_OS_OHOS 1
+ 
