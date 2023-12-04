@@ -81,6 +81,6 @@
         "name": "zlib",
         "target": "./src/third_party/zlib",
         "type": "patch",
-        "file_path": "../flutter/attachment/repos/zlib.patch"
+        "file_path": "../../flutter/attachment/repos/zlib.patch"
     }
 ]

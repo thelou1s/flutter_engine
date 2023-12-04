@@ -12,6 +12,6 @@
 # limitations under the License.
 #! /bin/bash
 
-python3 ./src/flutter/attachment/scripts/ohos_reverse_patch.py $1
+python3 ./src/flutter/attachment/scripts/ohos_reverse_patch.py $1 $2
 git -C ./src/flutter checkout master && git -C ./src/flutter  pull origin master 
-python3 ./src/flutter/attachment/scripts/ohos_setup.py $1
+gclient sync
