@@ -62,6 +62,9 @@ Flutter Engine
    
 6. 更新代码：在engine目录，执行`./update_engine.sh`(Linux/Mac平台)或`update_engine.bat`(Windows平台)
 
+## FAQ
+1. 运行项目工程报Member notfound:'isOhos'的错误：请确保src/third_party/dart目录下应用了所有的dart patch（补丁位于src/flutter/attachment/repos目录，可使用git apply应用patch）应用patch后重新编译engine
+
 ## embedding层代码构建指导
 
 1. 编辑shell/platform/ohos/flutter_embedding/local.properties：

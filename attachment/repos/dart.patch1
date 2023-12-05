@@ -1,25 +1,3 @@
-diff --git a/.gitignore b/.gitignore
-index 3c7338f1ac8..dc54d947c56 100644
---- a/.gitignore
-+++ b/.gitignore
-@@ -76,7 +76,7 @@ packages
- pubspec.lock
- 
- # The top level package file (this is auto-generated per checkout).
--/.dart_tool/package_config.json
-+#/.dart_tool/package_config.json
- 
- # Local pub storage
- .pub
-@@ -100,7 +100,7 @@ tools/xcodebuild
- /outline.dill
- /generated/
- /crash_logs/
--/build/config/gclient_args.gni
-+#/build/config/gclient_args.gni
- /pkg/front_end/testcases/old_dills/
- logs/logs.json
- logs/results.json
 diff --git a/BUILD.gn b/BUILD.gn
 index a25f379b0ff..c413327b217 100644
 --- a/BUILD.gn
@@ -102,14 +80,7 @@ index 36c7e9f4fb4..00a1cb64be8 100644
      default_warning_flags += [ "-Wno-type-limits" ]
    }
  
-diff --git a/build/config/gclient_args.gni b/build/config/gclient_args.gni
-new file mode 100755
-index 00000000000..69d89776479
---- /dev/null
-+++ b/build/config/gclient_args.gni
-@@ -0,0 +1,2 @@
-+# Generated from 'DEPS'
-+checkout_llvm = false
+
 \ No newline at end of file
 diff --git a/build/config/sanitizers/sanitizers.gni b/build/config/sanitizers/sanitizers.gni
 index c7da74b09fe..8c11b3401dc 100644
