@@ -1,0 +1,56 @@
+diff --git a/build/config/BUILDCONFIG.gn b/build/config/BUILDCONFIG.gn
+index bd3476a..f1c88b9 100644
+--- a/build/config/BUILDCONFIG.gn
++++ b/build/config/BUILDCONFIG.gn
+@@ -36,7 +36,7 @@
+ 
+ 
+ if (target_os == "") {
+-  target_os = "ohos"
++  target_os = host_os
+ }
+ 
+ if (target_cpu == "") {
+@@ -57,11 +57,8 @@ if (current_cpu == "") {
+ if (current_os == "") {
+   if (host_os == "win") {
+     current_os = "win"
+-  } else if (host_os == "mac" && (target_os == "ohos" || target_os == "linux")) {
+-    current_os = "ohos"
+   } else {
+-    #current_os = target_os
+-    current_os = host_os
++    current_os = target_os
+   }
+ }
+ 
+@@ -261,27 +258,13 @@ if (current_os == "win") {
+   is_posix = true
+   is_win = false
+   is_wasm = false
+-} else if (current_os == "linux" && target_os == "ohos") {
+-  target_os="linux"
++} else if (current_os == "ohos") {
+   is_android = false
+   is_chromeos = false
+   is_fuchsia = false
+   is_fuchsia_host = false
+   is_ios = false
+-  is_linux = true
+-  is_ohos  = true
+-  is_mac = false
+-  is_posix = true
+-  is_win = false
+-  is_wasm = false
+-} else if ((current_os == "ohos" || current_os == "linux") && host_os == "mac") {
+-  target_os="linux"
+-  is_android = false
+-  is_chromeos = false
+-  is_fuchsia = false
+-  is_fuchsia_host = false
+-  is_ios = false
+-  is_linux = true
++  is_linux = false
+   is_ohos  = true
+   is_mac = false
+   is_posix = true

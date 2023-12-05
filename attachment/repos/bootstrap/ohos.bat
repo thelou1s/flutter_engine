@@ -15,7 +15,7 @@
 setlocal EnableDelayedExpansion
 
 call python .\src\flutter\tools\gn --unoptimized --runtime-mode=debug --ohos --ohos-cpu=arm64
-call python .\src\flutter\tools\gn --runtime-mode=release --ohos --unoptimized --ohos-cpu=arm64
+call python .\src\flutter\tools\gn --runtime-mode=release --ohos --ohos-cpu=arm64
 ninja -C .\src\out\ohos_debug_unopt_arm64
 ninja -C .\src\out\ohos_release_arm64
 
