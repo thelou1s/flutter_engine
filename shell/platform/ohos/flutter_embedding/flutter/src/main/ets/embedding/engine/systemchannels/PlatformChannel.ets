@@ -129,21 +129,16 @@ export default class PlatformChannel {
 
   getClipboardContentFormatFromValue(encodedName: string): ClipboardContentFormat {
     let clipboardFormats : string[]= [ClipboardContentFormat.PLAIN_TEXT];
-    for (let i = 0; i < clipboardFormats.length; i++) {
-      let format = clipboardFormats[i];
-      if (ClipboardContentFormat[format] === encodedName) {
-        return ClipboardContentFormat[format];
-      }
+    if (clipboardFormats.includes(encodedName as ClipboardContentFormat)) {
+      return encodedName as ClipboardContentFormat;
     }
     return ClipboardContentFormat.PLAIN_TEXT;
   }
+
   getSystemUiOverlayFromValue(encodedName: string): SystemUiOverlay {
     let systemUiOverlays : string[] = [SystemUiOverlay.TOP_OVERLAYS, SystemUiOverlay.BOTTOM_OVERLAYS];
-    for (let i = 0; i < systemUiOverlays.length; i++) {
-      let overlay = systemUiOverlays[i];
-      if (SystemUiOverlay[overlay] === encodedName) {
-        return SystemUiOverlay[overlay];
-      }
+    if (systemUiOverlays.includes(encodedName as SystemUiOverlay)) {
+      return encodedName as SystemUiOverlay;
     }
     throw new Error("No such SystemUiOverlay: " + encodedName);
   }
@@ -153,36 +148,27 @@ export default class PlatformChannel {
       SystemUiMode.LEAN_BACK, SystemUiMode.IMMERSIVE,
       SystemUiMode.IMMERSIVE_STICKY, SystemUiMode.EDGE_TO_EDGE
     ];
-    for (let i = 0; i < systemUiModes.length; i++) {
-      let mode = systemUiModes[i];
-      if (SystemUiMode[mode] === encodedName) {
-        return SystemUiMode[mode];
-      }
+    if (systemUiModes.includes(encodedName as SystemUiMode)) {
+      return encodedName as SystemUiMode;
     }
     throw new Error("No such SystemUiOverlay: " + encodedName);
   }
 
   getBrightnessFromValue(encodedName: string): Brightness {
     let brightnesses : string[] = [Brightness.LIGHT, Brightness.DARK];
-    for (let i = 0; i < brightnesses.length; i++) {
-      let brightness = brightnesses[i];
-      if (Brightness[brightness] === encodedName) {
-        return Brightness[brightness];
-      }
+    if (brightnesses.includes(encodedName as Brightness)) {
+      return encodedName as Brightness;
     }
     throw new Error("No such Brightness: " + encodedName);
   }
 
   getDeviceOrientationFromValue(encodedName: string): DeviceOrientation {
-    let deviceOrientations: string[] = [
+    let deviceOrientations: DeviceOrientation[] = [
       DeviceOrientation.PORTRAIT_UP, DeviceOrientation.PORTRAIT_DOWN,
       DeviceOrientation.LANDSCAPE_LEFT, DeviceOrientation.LANDSCAPE_RIGHT
     ];
-    for (let i = 0; i < deviceOrientations.length; i++) {
-      let orientation = deviceOrientations[i];
-      if (DeviceOrientation[orientation] === encodedName) {
-        return DeviceOrientation[orientation];
-      }
+    if (deviceOrientations.includes(encodedName as DeviceOrientation)) {
+      return encodedName as DeviceOrientation;
     }
     throw new Error("No such DeviceOrientation: " + encodedName);
   }
