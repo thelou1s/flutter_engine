@@ -66,7 +66,7 @@ class TextInputMethodHandlerImpl implements TextInputMethodHandler {
   mEditable: ListenableEditingState;
   private mRestartInputPending: boolean = false;
   private plugin: EditingStateWatcher | ESObject;
-
+  private keyboardStatus: inputMethod.KeyboardStatus = KeyboardStatus.NONE;
   private imcFlag: boolean = false;
 
   constructor(plugin: TextInputPlugin | ESObject) {
@@ -82,11 +82,16 @@ class TextInputMethodHandlerImpl implements TextInputMethodHandler {
   }
 
   show(): void {
+    if(this.keyboardStatus == KeyboardStatus.SHOW){
+      return;
+    }
     this.showTextInput();
+    this.keyboardStatus = KeyboardStatus.SHOW;
   }
 
   hide(): void {
     this.hideTextInput();
+    this.keyboardStatus = KeyboardStatus.HIDE;
   }
 
   requestAutofill(): void {
@@ -252,6 +257,13 @@ enum Type {
   VIRTUAL_DISPLAY_PLATFORM_VIEW,
   PHYSICAL_DISPLAY_PLATFORM_VIEW,
 }
+
+enum KeyboardStatus {
+  NONE = 0,
+  HIDE = 1,
+  SHOW = 2,
+}
+
 
 export class InputTarget {
   type: Type;
