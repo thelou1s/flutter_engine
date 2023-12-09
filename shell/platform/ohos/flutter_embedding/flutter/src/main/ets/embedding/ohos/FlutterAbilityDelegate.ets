@@ -260,7 +260,7 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
   onCreate() {
     this.ensureAlive();
     if (this.shouldDispatchAppLifecycleState()) {
-      this.flutterEngine?.getLifecycleChannel()?.appIsInactive();
+      this.flutterEngine?.getLifecycleChannel()?.appIsResumed();
     }
   }
 
@@ -304,6 +304,7 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
 
   onBackground() {
     if (this.shouldDispatchAppLifecycleState()) {
+      this.flutterEngine?.getLifecycleChannel()?.noWindowsAreFocused();
       this.flutterEngine?.getLifecycleChannel()?.appIsPaused();
     }
   }
