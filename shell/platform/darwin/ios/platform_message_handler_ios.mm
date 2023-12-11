@@ -16,7 +16,7 @@ static uint64_t platform_message_counter = 1;
 @end
 
 @interface FLTSerialTaskQueue : NSObject <FlutterTaskQueue>
-@property(nonatomic, strong) dispatch_queue_t queue;
+@property(nonatomic, assign) dispatch_queue_t queue;
 @end
 
 @implementation FLTSerialTaskQueue
