@@ -137,7 +137,7 @@ void OhosMain::Init(napi_env env, napi_callback_info info) {
   };
   settings.log_message_callback = [](const std::string& tag,
                                      const std::string& message) {
-    FML_DLOG(INFO) << tag << " " << message;
+    LOGI("%{public}s %{public}s", tag.c_str(), message.c_str());
   };
 
   g_flutter_main.reset(new OhosMain(settings));

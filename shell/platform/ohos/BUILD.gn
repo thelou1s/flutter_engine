@@ -195,6 +195,10 @@ executable("flutter_ohos_unittests") {
 shared_library("flutter") {
   deps = [ ":flutter_ohos_src" ]
 
+  if (flutter_runtime_mode == "profile") {
+    deps += [ "//flutter/shell/vmservice:vmservice_snapshot" ]
+  }
+
   ldflags = ["--rtlib=compiler-rt",
   "-fuse-ld=lld",
   "-static-libstdc++",
@@ -221,7 +225,6 @@ shared_library("flutter") {
   ldflags += ["-lm"]
   ldflags += ["-lpthread"]
   ldflags += ["-lpixelmap_ndk.z"]
-
 
   public_configs = [ "//flutter:config" ]
 }
