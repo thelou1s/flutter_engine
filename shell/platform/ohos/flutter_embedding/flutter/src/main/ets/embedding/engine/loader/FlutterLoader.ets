@@ -25,6 +25,8 @@ import StringUtils from '../../../util/StringUtils';
 import ApplicationInfoLoader from './ApplicationInfoLoader';
 import bundleManager from '@ohos.bundle.bundleManager';
 import fs from '@ohos.file.fs';
+import { BusinessError } from '@ohos.base';
+import data_preferences from '@ohos.data.preferences';
 
 const TAG = "FlutterLoader";
 
@@ -95,10 +97,45 @@ export default class FlutterLoader {
     Log.d(TAG, "flutterLoader end init")
   }
 
+  private async isNeedCopyResource(): Promise<boolean> {
+    let bundleFlags = bundleManager.BundleFlag.GET_BUNDLE_INFO_DEFAULT;
+    try {
+      if (this.context != null) {
+        let bundleInfo = await bundleManager.getBundleInfoForSelf(bundleFlags);
+        let key = bundleInfo.name + '.bundleInfoPreferences'
+        let preferences: data_preferences.Preferences = await data_preferences.getPreferences(this.context, key);
+        let storeInstallTime = await preferences.get("installTime", 0);
+        let storeUpdateTime = await preferences.get("updateTime", 0);
+        if (storeInstallTime != bundleInfo.installTime || storeUpdateTime != bundleInfo.updateTime) {
+          await preferences.put("installTime", bundleInfo.installTime);
+          await preferences.put("updateTime", bundleInfo.updateTime);
+          await preferences.flush();
+          return true;
+        }
+      }
+
+      return false;
+    } catch (err) {
+      let message = (err as BusinessError).message;
+      Log.i(TAG, 'Judge is need copy resource : %{public}s', message);
+      return true;
+    }
+  }
+
   private async copyResource(context: common.Context) {
+    let copyFlag = await this.isNeedCopyResource();
+    if (!copyFlag) {
+      return;
+    }
+
     let filePath = context.filesDir + FILE_SEPARATOR + this.flutterApplicationInfo!.flutterAssetsDir
-    if (!fs.accessSync(filePath + FILE_SEPARATOR + DEFAULT_KERNEL_BLOB) && this.context != null) {
+    if (this.context != null) {
       Log.d(TAG, "start copyResource")
+      if (fs.accessSync(filePath + FILE_SEPARATOR + DEFAULT_KERNEL_BLOB)) {
+        Log.d(TAG, "hap has changed, start delete previous file")
+        fs.rmdirSync(filePath);
+      }
+
       fs.mkdirSync(filePath)
 
       let icudtlBuffer = await this.context.resourceManager.getRawFileContent(this.flutterApplicationInfo!.flutterAssetsDir + "/icudtl.dat")
