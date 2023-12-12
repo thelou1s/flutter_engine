@@ -104,7 +104,7 @@ export default class FlutterEngine implements EngineLifecycleListener{
   }
 
   async init(context: common.Context, dartVmArgs: Array<string> | null, automaticallyRegisterPlugins: boolean,
-             waitForRestorationData: boolean, group: FlutterEngineGroup | null) {
+             waitForRestorationData: boolean, group: FlutterEngineGroup | null, plugins: List<FlutterPlugin> | null) {
     if (!this.flutterNapi.isAttached()) {
       await this.flutterLoader.startInitialization(context)
       this.flutterLoader.ensureInitializationComplete(dartVmArgs);
@@ -134,6 +134,10 @@ export default class FlutterEngine implements EngineLifecycleListener{
 
     this.pluginRegistry = new FlutterEngineConnectionRegistry(context.getApplicationContext(), this, this.flutterLoader, group!);
     this.localizationPlugin.sendLocaleToFlutter();
+
+    if (automaticallyRegisterPlugins && plugins) {
+      GeneratedPluginRegister.registerGeneratedPlugins(this, plugins);
+    }
   }
 
   private attachToNapi(): void {
@@ -151,7 +155,9 @@ export default class FlutterEngine implements EngineLifecycleListener{
               initialRoute: string,
               dartEntrypointArgs: Array<string>,
               platformViewsController: PlatformViewsController,
-              automaticallyRegisterPlugins: boolean, waitForRestorationData: boolean) {
+              automaticallyRegisterPlugins: boolean,
+              waitForRestorationData: boolean,
+              plugins: List<FlutterPlugin> | null) {
     if (!this.isAttachedToNapi()) {
       throw new Error(
         "Spawn can only be called on a fully constructed FlutterEngine");
@@ -169,7 +175,7 @@ export default class FlutterEngine implements EngineLifecycleListener{
       newFlutterNapi,
       platformViewsController
     );
-    await flutterEngine.init(context, null, automaticallyRegisterPlugins, waitForRestorationData, null)
+    await flutterEngine.init(context, null, automaticallyRegisterPlugins, waitForRestorationData, null, plugins)
     return flutterEngine
   }
 

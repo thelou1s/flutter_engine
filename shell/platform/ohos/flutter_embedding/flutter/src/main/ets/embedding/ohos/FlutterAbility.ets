@@ -39,6 +39,7 @@ import {
   DVModelEvents,
   DVModelParameters } from '../../view/DynamicView/dynamicView';
 import StringUtils from '../../util/StringUtils';
+import List from '@ohos.util.List';
 
 const TAG = "FlutterAbility";
 const EVENT_BACK_PRESS = 'EVENT_BACK_PRESS';
@@ -331,6 +332,11 @@ export class FlutterAbility extends UIAbility implements Host {
       return false;
     }
     return true;
+  }
+
+  getPlugins(): List<FlutterPlugin>{
+    // Subclasses should override this function.
+    return new List()
   }
 
   getCachedEngineId(): string {

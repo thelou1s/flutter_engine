@@ -20,6 +20,8 @@ import FlutterInjector from '../../FlutterInjector'
 import { DartEntrypoint } from './dart/DartExecutor'
 import PlatformViewsController from '../../plugin/platform/PlatformViewsController'
 import ArrayList from '@ohos.util.ArrayList'
+import { FlutterPlugin } from './plugins/FlutterPlugin'
+import List from '@ohos.util.List';
 
 export default class FlutterEngineGroup {
   private activeEngines: ArrayList<FlutterEngine> = new ArrayList<FlutterEngine>();
@@ -45,6 +47,7 @@ export default class FlutterEngineGroup {
     let platformViewsController: PlatformViewsController | null = options.getPlatformViewsController();
     let automaticallyRegisterPlugins: boolean = options.getAutomaticallyRegisterPlugins();
     let waitForRestorationData: boolean = options.getWaitForRestorationData();
+    let plugins: List<FlutterPlugin>| null = options.getPlugins()
 
     if (dartEntrypoint == null) {
       dartEntrypoint = DartEntrypoint.createDefault();
@@ -59,7 +62,8 @@ export default class FlutterEngineGroup {
       await engine.init(context, null, // String[]. The Dart VM has already started, this arguments will have no effect.
         automaticallyRegisterPlugins, // boolean.
         waitForRestorationData, // boolean.
-        this)
+        null,
+        plugins)
       if (initialRoute != null) {
         engine.getNavigationChannel()?.setInitialRoute(initialRoute);
       }
@@ -119,6 +123,7 @@ export class Options {
   private platformViewsController: PlatformViewsController | null = null;
   private automaticallyRegisterPlugins: boolean = true;
   private waitForRestorationData: boolean = false;
+  private plugins: List<FlutterPlugin> | null = null;
 
   constructor(context: common.Context) {
     this.context = context;
@@ -152,6 +157,10 @@ export class Options {
     return this.platformViewsController;
   }
 
+  getPlugins(): List<FlutterPlugin> | null {
+    return this.plugins;
+  }
+
   setDartEntrypoint(dartEntrypoint: DartEntrypoint): Options {
     this.dartEntrypoint = dartEntrypoint;
     return this;
@@ -179,6 +188,11 @@ export class Options {
 
   setPlatformViewsController(platformViewsController: PlatformViewsController): Options {
     this.platformViewsController = platformViewsController;
+    return this;
+  }
+
+  setPlugins(plugins: List<FlutterPlugin>): Options {
+    this.plugins = plugins;
     return this;
   }
 }
