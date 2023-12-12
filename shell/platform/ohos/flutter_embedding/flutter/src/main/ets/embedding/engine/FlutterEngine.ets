@@ -79,8 +79,7 @@ export default class FlutterEngine implements EngineLifecycleListener{
    * 5、初始化flutterNapi
    * 6、engineLifecycleListeners
    */
-  constructor(context: common.Context, flutterLoader: FlutterLoader | null, flutterNapi: FlutterNapi | null, platformViewsController: PlatformViewsController) {
-    const injector: FlutterInjector = FlutterInjector.getInstance();
+  constructor(context: common.Context, flutterLoader: FlutterLoader | null, flutterNapi: FlutterNapi | null, platformViewsController: PlatformViewsController | null) {    const injector: FlutterInjector = FlutterInjector.getInstance();
 
     if(flutterNapi == null){
       flutterNapi = FlutterInjector.getInstance().getFlutterNapi();
