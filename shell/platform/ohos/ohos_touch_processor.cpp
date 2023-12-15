@@ -79,8 +79,8 @@ void OhosTouchProcessor::HandleTouchEvent(
         touchEvent->touchPoints[index].timeStamp / MSEC_PER_SECOND;
     pointerData.change =
         getPointerChangeForAction(touchEvent->touchPoints[index].type);
-    pointerData.physical_y = touchEvent->touchPoints[index].screenY;
-    pointerData.physical_x = touchEvent->touchPoints[index].screenX;
+    pointerData.physical_y = touchEvent->touchPoints[index].y;
+    pointerData.physical_x = touchEvent->touchPoints[index].x;
     // Delta will be generated in pointer_data_packet_converter.cc.
     pointerData.physical_delta_x = 0.0;
     pointerData.physical_delta_y = 0.0;
@@ -123,6 +123,9 @@ void OhosTouchProcessor::HandleTouchEvent(
     LOGD("Touch Info : screenx = %{public}f, screeny = %{public}f",
          touchEvent->touchPoints[index].screenX,
          touchEvent->touchPoints[index].screenY);
+    LOGD("Touch Info pointerData : x = %{public}f, y = %{public}f",
+         pointerData.physical_x,
+         pointerData.physical_y);
     LOGD(
         "vtimeStamp = %{public}ld, isPressed = %{public}d toolType = "
         "%{public}d",

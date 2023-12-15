@@ -54,9 +54,13 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
   private isFlutterEngineFromHost: boolean = false;
   private engineGroup?: FlutterEngineGroup;
   private settings?: Settings;
+  private isHost:boolean = false;
 
-  constructor(host: Host) {
+  constructor(host?: Host) {
     this.host = host;
+    if (this.host) {
+      this.isHost = true;
+    }
   }
 
   /**
@@ -99,9 +103,10 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
     let initialRoute = this.host?.getInitialRoute();
     if (initialRoute == null && this.host != null) {
       initialRoute = this.maybeGetInitialRouteFromIntent(this.host.getWant());
-      if (initialRoute == null) {
-        initialRoute = FlutterAbilityLaunchConfigs.DEFAULT_INITIAL_ROUTE;
-      }
+
+    }
+    if (initialRoute == null) {
+      initialRoute = FlutterAbilityLaunchConfigs.DEFAULT_INITIAL_ROUTE;
     }
     const libraryUri = this.host?.getDartEntrypointLibraryUri();
     Log.d(TAG, "Executing Dart entrypoint: " + this.host?.getDartEntrypointFunctionName() + ", library uri: " + libraryUri == null ? "\"\"" : libraryUri + ", and sending initial route: " + initialRoute);
@@ -197,9 +202,10 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
         "No preferred FlutterEngine was provided. Creating a new FlutterEngine for this FlutterAbility.");
 
     let group = this.engineGroup;
-    if (group == null && this.context != null && this.host != null) {
+    if (group == null && this.context != null) {
       group = new FlutterEngineGroup();
-      await group.checkLoader(this.context, this.host.getFlutterShellArgs().toArray() ?? []);
+      const flutterShellArgs = this.host? this.host.getFlutterShellArgs(): new FlutterShellArgs();
+      await group.checkLoader(this.context, flutterShellArgs.toArray() ?? []);
       this.engineGroup = group;
     }
     if (this.context) {
@@ -222,13 +228,13 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
     let initialRoute = this.host?.getInitialRoute();
     if (initialRoute == null && this.host != null) {
       initialRoute = this.maybeGetInitialRouteFromIntent(this.host.getWant());
-      if (initialRoute == null) {
-        initialRoute = FlutterAbilityLaunchConfigs.DEFAULT_INITIAL_ROUTE;
-      }
+    }
+    if (initialRoute == null) {
+      initialRoute = FlutterAbilityLaunchConfigs.DEFAULT_INITIAL_ROUTE;
     }
     return options
       .setDartEntrypoint(dartEntrypoint)
-      .setInitialRoute(initialRoute ?? '')
+      .setInitialRoute(initialRoute)
       .setDartEntrypointArgs(this.host?.getDartEntrypointArgs() ?? []);
   }
 
@@ -314,6 +320,9 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
    */
 
   shouldDispatchAppLifecycleState(): boolean {
+    if (!this.isHost) {
+      return this.isAttached;
+    }
     if (this.host == null) {
       return false;
     }
@@ -321,7 +330,7 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
   }
 
   ensureAlive() {
-    if (this.host == null) {
+    if (this.isHost && this.host == null) {
       throw new Error("Cannot execute method on a destroyed FlutterAbilityDelegate.");
     }
   }
