@@ -60,6 +60,14 @@ This warehouse is based on the extension of Flutter's official engine warehouse 
    
 6. Update project: In the engine directory, execute `./update_engine.sh` (Linux/Mac platform) or `update_engine.bat` (Windows platform)
 
+## FAQ:
+1. When running the project, an error of Member notfound:'isOhos' is reported: Please ensure that all dart patches are applied in the src/third_party/dart directory (the patches are located in the src/flutter/attachment/repos directory, and you can use git apply to apply the patch). Recompile the engine after patching
+   
+2. Prompt Permission denied: Execute chmod +x <script file> to add execution permissions
+
+3. Compile the engine in debug/release/profile mode separately: edit ohos.sh (Linux and Mac platforms) under the config function, or ohos.bat (Windows platform) to configure the corresponding compilation mode, and execute `make`
+
+
 ## Embedding layer code construction guide
 
 1. Edit shell/platform/ohos/flutter_embedding/local.properties:

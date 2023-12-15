@@ -65,6 +65,10 @@ Flutter Engine
 ## FAQ
 1. 运行项目工程报Member notfound:'isOhos'的错误：请确保src/third_party/dart目录下应用了所有的dart patch（补丁位于src/flutter/attachment/repos目录，可使用git apply应用patch）应用patch后重新编译engine
 
+2. 提示Permission denied: 执行chmod +x <脚本文件> 添加执行权限
+
+3. 单独编译debug/release/profile模式的engine：编辑ohos.sh(Linux和Mac平台)在config函数下，或ohos.bat(Windows平台)配置对应的编译模式，执行`make`
+
 ## embedding层代码构建指导
 
 1. 编辑shell/platform/ohos/flutter_embedding/local.properties：

@@ -35,7 +35,7 @@ import AbilityControlSurface from './plugins/ability/AbilityControlSurface';
 import ExclusiveAppComponent from '../ohos/ExclusiveAppComponent';
 import FlutterEngineGroup from './FlutterEngineGroup';
 
-const TAG = "FlutterEngineCxnRegstry";
+const TAG = "FlutterEngineCxnRegistry";
 
 export default class FlutterEngineConnectionRegistry implements PluginRegistry, AbilityControlSurface {
   // PluginRegistry
