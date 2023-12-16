@@ -88,5 +88,5 @@
         "target": "./src/third_party/boringssl",
         "type": "patch",
         "file_path": "../../flutter/attachment/repos/boringssl.patch"
-    },
+    }
 ]
