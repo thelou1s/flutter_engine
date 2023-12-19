@@ -20,7 +20,6 @@ import TextInputPlugin from '../../../plugin/editing/TextInputPlugin';
 import Log from '../../../util/Log';
 import DartExecutor from '../dart/DartExecutor';
 import inputMethod from '@ohos.inputMethod';
-import { DEFAULT } from '@ohos/hypium';
 
 const TAG = "TextInputChannel";
 
