@@ -164,7 +164,6 @@ class TextInputMethodHandlerImpl implements TextInputMethodHandler {
         this.textConfig.inputAttribute.enterKeyType = configuration.inputAction as ESObject;
       }
     }
-    this.configuration = configuration;
     if(this.canShowTextInput()) {
       this.inputTarget = new InputTarget(Type.FRAMEWORK_CLIENT, client);
     } else {
