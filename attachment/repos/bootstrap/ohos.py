@@ -29,11 +29,8 @@ from datetime import datetime
 SUPPORT_BUILD_NAMES = ("clean", "config", "har", "compile", "zip")
 SUPPORT_BUILD_TYPES = ("debug", "profile", "release")
 DIR_ROOT = os.path.abspath(os.path.join(sys.argv[0], os.pardir))
-OS_NAME = platform.system().lower().replace("darwin", "mac")
-PATH_SEP = ";" if "win" in OS_NAME else ":"
-OHOS_SDK_HOME = os.getenv("OHOS_SDK_HOME")
-if not OHOS_SDK_HOME:
-    OHOS_SDK_HOME = "%s/openharmony" % os.getenv("HOS_SDK_HOME")
+OS_NAME = platform.system().lower()
+PATH_SEP = ";" if OS_NAME.startswith("win") else ":"
 
 logging.basicConfig(
     format="%(levelname)s:%(asctime)s: %(message)s",
@@ -63,7 +60,7 @@ class BuildInfo:
         buildType="release",
         targetOS="ohos",
         targetArch="arm64",
-        targetTriple="aarch64-linux-ohos",
+        targetTriple="arm64-%s-ohos" % OS_NAME,
     ):
         self.buildType = buildType
         self.targetOS = targetOS
@@ -106,16 +103,28 @@ def engineClean(buildInfo):
         shutil.rmtree(target, ignore_errors=True)
 
 
-# 指定engine编译的配置参数
-def engineConfig(buildInfo, extraParam=""):
-    sdkInt = 9
-    for dir in os.listdir(OHOS_SDK_HOME):
-        try:
-            tmpInt = int(dir)
-            sdkInt = max(sdkInt, tmpInt)
-        except:
-            logging.warning("Parse int error, dir=%s" % dir)
-    OHOS_NDK_HOME = os.path.join(OHOS_SDK_HOME, str(sdkInt), "native")
+def getNdkHome():
+    OHOS_NDK_HOME = os.getenv("OHOS_NDK_HOME")
+    if not OHOS_NDK_HOME:
+        OHOS_SDK_HOME = os.getenv("OHOS_SDK_HOME")
+        if not OHOS_SDK_HOME:
+            OHOS_SDK_HOME = "%s/openharmony" % os.getenv("HOS_SDK_HOME")
+        sdkInt = 0
+        if os.path.exists(OHOS_SDK_HOME):
+            for dir in os.listdir(OHOS_SDK_HOME):
+                try:
+                    tmpInt = int(dir)
+                    sdkInt = max(sdkInt, tmpInt)
+                except:
+                    logging.warning("Parse int error, dir=%s" % dir)
+        if sdkInt == 0:
+            logging.error(
+                "Ohos sdkInt parse failed, please config the correct environment variable."
+                " Such as: 'export OHOS_SDK_HOME=~/ohos/sdk/openharmony'."
+            )
+            exit(20)
+        OHOS_NDK_HOME = os.path.join(OHOS_SDK_HOME, str(sdkInt), "native")
+
     logging.info("OHOS_NDK_HOME = %s" % OHOS_NDK_HOME)
     if (
         (not os.path.exists(OHOS_NDK_HOME))
@@ -127,10 +136,15 @@ def engineConfig(buildInfo, extraParam=""):
             """
     Please set the environment variables for HarmonyOS SDK to "HOS_SDK_HOME" or "OHOS_SDK_HOME".
     We will use both native/llvm and native/sysroot.
-    Please ensure that the file "llvm/bin/lang" exists and is executable."""
+    Please ensure that the file "native/llvm/bin/clang" exists and is executable."""
         )
         exit(10)
+    return OHOS_NDK_HOME
 
+
+# 指定engine编译的配置参数
+def engineConfig(buildInfo, extraParam=""):
+    OHOS_NDK_HOME = getNdkHome()
     # export PATH=$OHOS_NDK_HOME/build-tools/cmake/bin:$OHOS_NDK_HOME/llvm/bin:$PATH
     lastPath = os.getenv("PATH")
     os.environ["PATH"] = (
@@ -281,7 +295,7 @@ def addParseParam(parser):
         "-n",
         "--name",
         nargs="+",
-        default=["config", "compile", "har"],
+        default=[],
         choices=SUPPORT_BUILD_NAMES,
         help="Provide build names in %s." % str(SUPPORT_BUILD_NAMES),
     )
@@ -314,7 +328,7 @@ def updateCode(args):
         runCommand("git -C %s add -A" % dir)
         runCommand("git -C %s stash save 'Auto stash save.'" % dir)
         runCommand("git -C %s checkout %s" % (dir, args.branch))
-        runCommand("git -C %s pull --rebase" % dir)
+        runCommand("git -C %s pull --rebase" % dir, checkCode=False)
         runCommand("git -C %s stash pop" % dir)
         runCommand("gclient sync --force")
 
@@ -329,7 +343,7 @@ def checkEnvironment():
 
 
 def buildByNameAndType(args):
-    buildNames = args.name if not args.branch else []
+    buildNames = args.name if args.branch or args.name else ["config", "compile", "har"]
     buildTypes = args.type
     for buildType in SUPPORT_BUILD_TYPES:
         if not buildType in buildTypes:
