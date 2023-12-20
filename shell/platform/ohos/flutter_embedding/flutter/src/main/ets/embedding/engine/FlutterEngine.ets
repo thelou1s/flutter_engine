@@ -39,6 +39,10 @@ import AccessibilityChannel from './systemchannels/AccessibilityChannel';
 import LocalizationPlugin from '../../plugin/localization/LocalizationPlugin'
 import SettingsChannel from './systemchannels/SettingsChannel';
 import PlatformViewsController from '../../plugin/platform/PlatformViewsController';
+import { FlutterPlugin } from './plugins/FlutterPlugin';
+import List from '@ohos.util.List';
+import GeneratedPluginRegister from './plugins/util/GeneratedPluginRegister';
+
 
 const TAG = "FlutterEngine";
 
