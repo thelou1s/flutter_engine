@@ -20,7 +20,6 @@ This warehouse is based on the extension of Flutter's official engine warehouse 
 
    ```
     sudo apt install python3
-    sudo apt install make
     sudo apt install pkg-config
     sudo apt install ninja-build
    ```
@@ -53,19 +52,22 @@ This warehouse is based on the extension of Flutter's official engine warehouse 
 
 3. Synchronize code: In the engine directory, execute `gclient sync`; here the engine source code, official packages repository will be synchronized, and the ohos_setup task will be executed;
 
-4. Download sdk: Download ohos-sdk-full in [the daily build](http://ci.openharmony.cn/workbench/cicd/dailybuild/dailylist), create a new folder ndk/linux/4.0 in the engine root directory, unzip the native folder in ohos-sdk-full and place it in ndk/linux/4.0 in folder;
-(For mac environment, please download mac-sdk-full or mac-sdk-m1-full, and the placement directory is ndk/mac/4.0；No need to download OpenHarmony SDK in Windows environment)
+4. Download sdk: Download ohos-sdk-full in [the daily build](http://ci.openharmony.cn/workbench/cicd/dailybuild/dailylist), configure the following environment variables:
 
-5. Start building: In the engine directory, execute `make` to start building the flutter engine that supports ohos devices.
+```sh
+export OHOS_SDK_HOME=<ohos-sdk-full>
+```
+
+5. Start building: In the engine directory, execute `./ohos` to start building the flutter engine that supports ohos devices.
    
-6. Update project: In the engine directory, execute `./update_engine.sh` (Linux/Mac platform) or `update_engine.bat` (Windows platform)
+6. Update project: In the engine directory, execute `./ohos -b master`
 
 ## FAQ:
 1. When running the project, an error of Member notfound:'isOhos' is reported: Please ensure that all dart patches are applied in the src/third_party/dart directory (the patches are located in the src/flutter/attachment/repos directory, and you can use git apply to apply the patch). Recompile the engine after patching
    
 2. Prompt Permission denied: Execute chmod +x <script file> to add execution permissions
 
-3. Compile the engine in debug/release/profile mode separately: edit ohos.sh (Linux and Mac platforms) under the config function, or ohos.bat (Windows platform) to configure the corresponding compilation mode, and execute `make`
+3. Compile the engine in debug/release/profile mode separately: `ohos -t debug|release|profile`
 
 
 ## Embedding layer code construction guide
@@ -88,3 +90,5 @@ This warehouse is based on the extension of Flutter's official engine warehouse 
 3. The har file output path is: shell/platform/ohos/flutter_embedding/flutter/build
 
 ps: If you are using the Beta version of DevEco Studio and encounter the error "must have required property 'compatibleSdkVersion', location: build-profile.json5:17:11" when compiling the project, please refer to the "DevEco Studio Environment Configuration Guide." docx》Chapter '6 Creating Projects and Running Hello World' [Configuration Plugin] Modify the shell/platform/ohos/flutter_embedding/hvigor/hvigor-config.json5 file.
+
+[hvigor-dependencies-config](shell/platform/ohos/flutter_embedding/dependencies/hvigor-dependencies-config.md)
