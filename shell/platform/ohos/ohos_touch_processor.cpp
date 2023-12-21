@@ -114,24 +114,6 @@ void OhosTouchProcessor::HandleTouchEvent(
     pointerData.size = touchEvent->touchPoints[index].size;
     pointerData.scale = 1.0;
     pointerData.rotation = 0.0;
-    LOGD(
-        "Touch Info:dots[%{public}d] id %{public}d x = %{public}f, y = "
-        "%{public}f type %{public}d",
-        static_cast<int>(index), touchEvent->touchPoints[index].id,
-        touchEvent->touchPoints[index].x, touchEvent->touchPoints[index].y,
-        touchEvent->touchPoints[index].type);
-    LOGD("Touch Info : screenx = %{public}f, screeny = %{public}f",
-         touchEvent->touchPoints[index].screenX,
-         touchEvent->touchPoints[index].screenY);
-    LOGD("Touch Info pointerData : x = %{public}f, y = %{public}f",
-         pointerData.physical_x,
-         pointerData.physical_y);
-    LOGD(
-        "vtimeStamp = %{public}ld, isPressed = %{public}d toolType = "
-        "%{public}d",
-        touchEvent->touchPoints[index].timeStamp,
-        touchEvent->touchPoints[index].isPressed, toolType);
-
     packet->SetPointerData(index, pointerData);
   }
   auto ohos_shell_holder = reinterpret_cast<OHOSShellHolder*>(shell_holderID);

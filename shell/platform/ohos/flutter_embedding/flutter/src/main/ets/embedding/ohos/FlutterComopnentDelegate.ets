@@ -19,18 +19,26 @@ import window from '@ohos.window';
 import { ViewportMetrics } from './FlutterAbility';
 import {
   BuilderParams,
-  DVModel, DVModelChildren, DVModelEvents, DVModelParameters } from '../../view/DynamicView/dynamicView';
+  DVModel,
+  DVModelChildren,
+  DVModelEvents,
+  DVModelParameters
+} from '../../view/DynamicView/dynamicView';
 import display from '@ohos.display';
 import { RootDvModeManager } from '../../plugin/platform/RootDvModelManager';
 import { FlutterPlugin } from '../engine/plugins/FlutterPlugin';
+import { BuildXComponentStruct } from '../../component/XComponentStruct';
 
 export class FlutterComponentDelegate {
-  private context:common.UIAbilityContext
+  private context: common.UIAbilityContext
+
   private delegate?: FlutterAbilityDelegate | null;
+
   private mainWindow?: window.Window;
+
   private viewportMetrics = new ViewportMetrics();
 
-  constructor(context:common.UIAbilityContext) {
+  constructor(context: common.UIAbilityContext) {
     this.context = context;
     this.delegate = new FlutterAbilityDelegate();
   }
@@ -48,15 +56,18 @@ export class FlutterComponentDelegate {
       new DVModel("xComponent", params, new DVModelEvents(), new DVModelChildren(), BuildXComponentStruct);
     RootDvModeManager.addDvModel(xComponentModel);
     this.mainWindow = await window.getLastWindow(this.context);
-    this.mainWindow?.on('windowSizeChange', (data) => {
+    this.mainWindow?.on(
+      'windowSizeChange', (data) => {
       this.onWindowPropertiesUpdated();
     });
 
-    this.mainWindow?.on('avoidAreaChange', (data) => {
+    this.mainWindow?.on(
+      'avoidAreaChange', (data) => {
       this.onWindowPropertiesUpdated();
     });
 
-    this.mainWindow?.on('keyboardHeightChange', (data) => {
+    this.mainWindow?.on(
+      'keyboardHeightChange', (data) => {
       this.onWindowPropertiesUpdated();
     });
     this.onWindowPropertiesUpdated();
@@ -65,7 +76,7 @@ export class FlutterComponentDelegate {
     this?.delegate?.onForeground();
   }
 
-  private onWindowPropertiesUpdated(){
+  private onWindowPropertiesUpdated() {
     if (this.delegate == null || !this.delegate.isAttached) {
       return;
     }
@@ -78,8 +89,6 @@ export class FlutterComponentDelegate {
     }
     if (properties!.windowRect.height < this.viewportMetrics.physicalHeight) {
       this.viewportMetrics.physicalHeight = properties!.windowRect.height;
-
-
     }
 
     this.viewportMetrics.physicalViewPaddingTop = systemAvoidArea!.topRect.height
@@ -101,7 +110,8 @@ export class FlutterComponentDelegate {
   }
 
   private updateViewportMetrics() {
-    this?.delegate?.getFlutterNapi()?.setViewportMetrics(this.viewportMetrics.devicePixelRatio,
+    this?.delegate?.getFlutterNapi()?.setViewportMetrics(
+      this.viewportMetrics.devicePixelRatio,
       this.viewportMetrics.physicalWidth,
       this.viewportMetrics.physicalHeight,
       this.viewportMetrics.physicalViewPaddingTop,
@@ -119,14 +129,15 @@ export class FlutterComponentDelegate {
       this.viewportMetrics.physicalTouchSlop,
       new Array(0),
       new Array(0),
-      new Array(0))
+      new Array(0)
+    )
   }
 
   addPlugin(plugin: FlutterPlugin): void {
     this.delegate?.addPlugin(plugin)
   }
 
-  release():void {
+  release(): void {
     if (this?.delegate != null) {
       this?.delegate?.onDestroy();
       this?.delegate?.release();
@@ -134,28 +145,9 @@ export class FlutterComponentDelegate {
     }
   }
 
-  updateView(width:number, height:number):void {
+  updateView(width: number, height: number): void {
     this.viewportMetrics.physicalWidth = width;
     this.viewportMetrics.physicalHeight = height;
     this.updateViewportMetrics();
   }
-}
-
-@Component
-struct XComponentStruct {
-  private context:ESObject;
-  dvModelParams: DVModelParameters = new DVModelParameters();
-
-  build() {
-    XComponent({ id: (this.dvModelParams as Record<string, ESObject>)["xComponentId"], type: 'texture', libraryname: 'flutter'})
-      .onLoad((context) => {
-        this.context = context;
-      })
-      .onDestroy(() => {
-      })
-  }
-}
-
-@Builder function BuildXComponentStruct(buildParams: BuilderParams) {
-  XComponentStruct({dvModelParams: buildParams.params});
 }
