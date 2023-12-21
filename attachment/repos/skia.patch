@@ -1,5 +1,5 @@
 diff --git a/BUILD.gn b/BUILD.gn
-index ebbd898ec9..660dde475a 100644
+index ebbd898ec9..2d4257e8d7 100644
 --- a/BUILD.gn
 +++ b/BUILD.gn
 @@ -26,16 +26,21 @@ import("gn/ios.gni")
@@ -134,7 +134,15 @@ index ebbd898ec9..660dde475a 100644
      ":fontmgr_win_gdi",
      ":gpu",
      ":graphite",
-@@ -1559,7 +1611,7 @@ skia_component("skia") {
+@@ -1529,6 +1581,7 @@ skia_component("skia") {
+     libs += [
+       "Ole32.lib",
+       "OleAut32.lib",
++      "OpenGL32.lib",
+     ]
+ 
+     if (!skia_enable_winuwp) {
+@@ -1559,7 +1612,7 @@ skia_component("skia") {
      ]
    }
  
@@ -143,7 +151,7 @@ index ebbd898ec9..660dde475a 100644
      sources += [ "src/ports/SkDebug_stdio.cpp" ]
      if (skia_use_egl) {
        libs += [ "GLESv2" ]
-@@ -1962,7 +2014,7 @@ if (skia_enable_tools) {
+@@ -1962,7 +2015,7 @@ if (skia_enable_tools) {
        if (is_android || skia_use_egl) {
          sources += [ "tools/gpu/gl/egl/CreatePlatformGLTestContext_egl.cpp" ]
          libs += [ "EGL" ]
@@ -152,7 +160,7 @@ index ebbd898ec9..660dde475a 100644
          sources += [ "tools/gpu/gl/glx/CreatePlatformGLTestContext_glx.cpp" ]
          libs += [
            "GLU",
-@@ -2281,7 +2333,7 @@ if (skia_enable_tools) {
+@@ -2281,7 +2334,7 @@ if (skia_enable_tools) {
      ]
    }
  
@@ -161,7 +169,7 @@ index ebbd898ec9..660dde475a 100644
      if (skia_enable_skottie) {
        test_app("skottie_tool") {
          deps = [ "modules/skottie:tool" ]
-@@ -2777,7 +2829,7 @@ if (skia_enable_tools) {
+@@ -2777,7 +2830,7 @@ if (skia_enable_tools) {
          "tools/sk_app/android/surface_glue_android.h",
        ]
        libs += [ "android" ]
@@ -170,7 +178,7 @@ index ebbd898ec9..660dde475a 100644
        sources += [
          "tools/SkGetExecutablePath_linux.cpp",
          "tools/sk_app/unix/RasterWindowContext_unix.cpp",
-@@ -2830,7 +2882,7 @@ if (skia_enable_tools) {
+@@ -2830,7 +2883,7 @@ if (skia_enable_tools) {
        sources += [ "tools/sk_app/GLWindowContext.h" ]
        if (is_android) {
          sources += [ "tools/sk_app/android/GLWindowContext_android.cpp" ]
@@ -179,7 +187,7 @@ index ebbd898ec9..660dde475a 100644
          sources += [ "tools/sk_app/unix/GLWindowContext_unix.cpp" ]
        } else if (is_win) {
          sources += [ "tools/sk_app/win/GLWindowContext_win.cpp" ]
-@@ -2855,7 +2907,7 @@ if (skia_enable_tools) {
+@@ -2855,7 +2908,7 @@ if (skia_enable_tools) {
        sources += [ "tools/sk_app/VulkanWindowContext.h" ]
        if (is_android) {
          sources += [ "tools/sk_app/android/VulkanWindowContext_android.cpp" ]
@@ -188,7 +196,7 @@ index ebbd898ec9..660dde475a 100644
          sources += [ "tools/sk_app/unix/VulkanWindowContext_unix.cpp" ]
          libs += [ "X11-xcb" ]
        } else if (is_win) {
-@@ -2887,7 +2939,7 @@ if (skia_enable_tools) {
+@@ -2887,7 +2940,7 @@ if (skia_enable_tools) {
      if (skia_use_dawn) {
        sources += [ "tools/sk_app/DawnWindowContext.cpp" ]
        sources += [ "tools/sk_app/DawnWindowContext.h" ]
@@ -197,7 +205,7 @@ index ebbd898ec9..660dde475a 100644
          if (dawn_enable_vulkan) {
            sources += [ "tools/sk_app/unix/DawnVulkanWindowContext_unix.cpp" ]
            defines = [ "VK_USE_PLATFORM_XCB_KHR" ]
-@@ -2931,7 +2983,7 @@ if (skia_enable_tools) {
+@@ -2931,7 +2984,7 @@ if (skia_enable_tools) {
      }
    }
  
@@ -206,7 +214,7 @@ index ebbd898ec9..660dde475a 100644
      test_app("fiddle_examples") {
        sources = [
          "tools/fiddle/all_examples.cpp",
-@@ -3088,7 +3140,7 @@ if (skia_enable_tools) {
+@@ -3088,7 +3141,7 @@ if (skia_enable_tools) {
      }
    }
  
