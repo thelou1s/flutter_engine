@@ -431,6 +431,10 @@ export class FlutterAbility extends UIAbility implements Host {
       callback(err, -1);
     }
   }
+
+  getFlutterEngine(): FlutterEngine | null {
+    return this.delegate?.flutterEngine || null;
+  }
 }
 
 export class ViewportMetrics {
