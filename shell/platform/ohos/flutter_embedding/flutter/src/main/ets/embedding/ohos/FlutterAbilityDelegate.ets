@@ -35,6 +35,8 @@ import FlutterEngineGroup, { Options } from '../engine/FlutterEngineGroup';
 import MouseCursorPlugin, { MouseCursorViewDelegate } from '../../plugin/mouse/MouseCursorPlugin';
 import Settings from './Settings';
 import FlutterNapi from '../engine/FlutterNapi';
+import List from '@ohos.util.List';
+import GeneratedPluginRegister from '../engine/plugins/util/GeneratedPluginRegister';
 
 const TAG = "FlutterAbilityDelegate";
 const PLUGINS_RESTORATION_BUNDLE_KEY = "plugins";
@@ -86,6 +88,10 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
 
     //configureFlutterEngine
     this.isAttached = true;
+    const plugins = this.host?.getPlugins()
+    if (plugins) {
+      GeneratedPluginRegister.registerGeneratedPlugins(this.flutterEngine!, plugins);
+    }
     Log.d(TAG, "onAttach end start loadcontent")
     this.host?.loadContent()
     if (this.flutterEngine) {
@@ -462,6 +468,9 @@ interface Host extends FlutterEngineProvider, FlutterEngineConfigurator, Platfor
   getWant(): Want;
 
   shouldRestoreAndSaveState(): boolean;
+
+  /** Return the plugins */
+  getPlugins(): List<FlutterPlugin>;
 }
 
 export { Host, FlutterAbilityDelegate }
