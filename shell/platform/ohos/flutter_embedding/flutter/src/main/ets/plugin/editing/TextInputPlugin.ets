@@ -154,7 +154,16 @@ class TextInputMethodHandlerImpl implements TextInputMethodHandler {
   }
 
   setTextInputClient(client: number, configuration: Configuration | null): void {
-    this.configuration = configuration;
+    const INPUT_TYPE_NAME = ['NONE', 'TEXT', 'MULTILINE', 'NUMBER', 'PHONE','DATETIME','EMAIL_ADDRESS','URL','VISIBLE_PASSWORD']
+    if(configuration)
+    {
+      this.configuration = configuration;
+      if(configuration.inputType)
+      {
+        this.textConfig.inputAttribute.textInputType =INPUT_TYPE_NAME.indexOf(configuration.inputType.type)
+        this.textConfig.inputAttribute.enterKeyType = configuration.inputAction as ESObject;
+      }
+    }
     if(this.canShowTextInput()) {
       this.inputTarget = new InputTarget(Type.FRAMEWORK_CLIENT, client);
     } else {
