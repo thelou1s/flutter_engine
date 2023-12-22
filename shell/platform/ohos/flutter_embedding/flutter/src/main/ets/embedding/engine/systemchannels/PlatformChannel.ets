@@ -34,7 +34,7 @@ export default class PlatformChannel {
     this.channel.setMethodCallHandler(callback);
   }
 
-  setPlatformMessageHandler(platformMessageHandler: PlatformMessageHandler): void {
+  setPlatformMessageHandler(platformMessageHandler: PlatformMessageHandler | null): void {
     this.platformMessageHandler = platformMessageHandler;
   }
 
