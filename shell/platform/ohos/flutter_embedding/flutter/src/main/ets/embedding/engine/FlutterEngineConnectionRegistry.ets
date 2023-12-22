@@ -53,9 +53,9 @@ export default class FlutterEngineConnectionRegistry implements PluginRegistry, 
   private exclusiveAbility: ExclusiveAppComponent<UIAbility> | null = null;
   private abilityPluginBinding: FlutterEngineAbilityPluginBinding | null = null;
 
-  constructor(appContext: common.Context, flutterEngine: FlutterEngine, flutterLoader: FlutterLoader, group: FlutterEngineGroup) {
+  constructor(appContext: common.Context, flutterEngine: FlutterEngine, flutterLoader: FlutterLoader) {
     this.flutterEngine = flutterEngine;
-    this.pluginBinding = new FlutterPluginBinding(appContext, this.flutterEngine.getDartExecutor(), new DefaultFlutterAssets(flutterLoader), group, this.flutterEngine.getPlatformViewsController()?.getRegistry());
+    this.pluginBinding = new FlutterPluginBinding(appContext, flutterEngine, flutterEngine.getDartExecutor(), new DefaultFlutterAssets(flutterLoader), flutterEngine.getPlatformViewsController()?.getRegistry());
   }
 
   add(plugin: FlutterPlugin): void {
