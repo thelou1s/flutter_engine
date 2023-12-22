@@ -17,7 +17,7 @@ import common from '@ohos.app.ability.common';
 import { BinaryMessenger } from '../../../plugin/common/BinaryMessenger';
 import PlatformViewFactory from '../../../plugin/platform/PlatformViewFactory';
 import PlatformViewRegistry from '../../../plugin/platform/PlatformViewRegistry';
-import FlutterEngineGroup from '../FlutterEngineGroup';
+import FlutterEngine from '../FlutterEngine';
 
 export interface FlutterPlugin {
   //获取唯一的类名 类似安卓的Class<? extends FlutterPlugin ts无法实现只能用户自定义
@@ -49,21 +49,25 @@ export interface FlutterPlugin {
 
 export class FlutterPluginBinding {
   private applicationContext: common.Context;
+  private flutterEngine: FlutterEngine;
   private binaryMessenger: BinaryMessenger;
   private flutterAssets: FlutterAssets;
-  private group: FlutterEngineGroup;
   private platformViewRegistry: PlatformViewRegistry;
 
-  constructor(applicationContext: common.Context, binaryMessenger: BinaryMessenger, flutterAssets: FlutterAssets, group: FlutterEngineGroup, platformViewRegistry?: PlatformViewRegistry) {
+  constructor(applicationContext: common.Context, flutterEngine: FlutterEngine, binaryMessenger: BinaryMessenger, flutterAssets: FlutterAssets, platformViewRegistry?: PlatformViewRegistry) {
     this.applicationContext = applicationContext;
+    this.flutterEngine = flutterEngine;
     this.binaryMessenger = binaryMessenger;
     this.flutterAssets = flutterAssets;
-    this.group = group;
     this.platformViewRegistry = platformViewRegistry ?? new EmptyPlatformViewRegistry();
   }
 
   getApplicationContext(): common.Context {
     return this.applicationContext;
+  }
+
+  getFlutterEngine(): FlutterEngine {
+    return this.flutterEngine;
   }
 
   getBinaryMessenger(): BinaryMessenger {
@@ -72,10 +76,6 @@ export class FlutterPluginBinding {
 
   getFlutterAssets(): FlutterAssets {
     return this.flutterAssets;
-  }
-
-  getEngineGroup(): FlutterEngineGroup {
-    return this.group;
   }
 
   public getPlatformViewRegistry(): PlatformViewRegistry {
