@@ -70,6 +70,8 @@ export OHOS_SDK_HOME=<ohos-sdk-full>
 
 3. 单独编译debug/release/profile模式的engine：`./ohos -t debug|release|profile`
 
+4. 查看帮助：`./ohos -h`
+
 ## embedding层代码构建指导
 
 1. 编辑shell/platform/ohos/flutter_embedding/local.properties：

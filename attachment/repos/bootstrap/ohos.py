@@ -168,9 +168,8 @@ def engineConfig(buildInfo, extraParam=""):
         + "--embedder-for-target "
         + "--disable-desktop-embeddings "
         + "--no-build-embedder-examples "
-        + "--enable-unittests "
         + "--verbose "
-        + extraParam,
+        + extraParam.replace("\\", ""),
         checkCode=False,
         timeout=600,
     )
@@ -297,7 +296,7 @@ def addParseParam(parser):
         nargs="+",
         default=[],
         choices=SUPPORT_BUILD_NAMES,
-        help="Provide build names in %s." % str(SUPPORT_BUILD_NAMES),
+        help="Provide build names.",
     )
     parser.add_argument(
         "-t",
@@ -305,7 +304,7 @@ def addParseParam(parser):
         nargs="+",
         default=SUPPORT_BUILD_TYPES,
         choices=SUPPORT_BUILD_TYPES,
-        help="Provide build types in %s." % str(SUPPORT_BUILD_TYPES),
+        help="Provide build types.",
     )
     parser.add_argument(
         "-b",
@@ -317,7 +316,7 @@ def addParseParam(parser):
         "--gn-extra-param",
         nargs="?",
         default="",
-        help="Pass extra param to src/flutter/tools/gn.",
+        help="Extra param to src/flutter/tools/gn. Such as: -g \"\\--enable-unittests\"",
     )
 
 
@@ -367,10 +366,10 @@ def buildByNameAndType(args):
 
 
 def main():
-    checkEnvironment()
     parser = argparse.ArgumentParser()
     addParseParam(parser)
     args = parser.parse_args()
+    checkEnvironment()
     updateCode(args)
     buildByNameAndType(args)
     logging.info("main() finish.")

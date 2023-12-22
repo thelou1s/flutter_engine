@@ -67,7 +67,9 @@ export OHOS_SDK_HOME=<ohos-sdk-full>
    
 2. Prompt Permission denied: Execute chmod +x <script file> to add execution permissions
 
-3. Compile the engine in debug/release/profile mode separately: `ohos -t debug|release|profile`
+3. Compile the engine in debug/release/profile mode separately: `./ohos -t debug|release|profile`
+
+4. See help: `./ohos -h`
 
 
 ## Embedding layer code construction guide
