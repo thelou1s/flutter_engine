@@ -82,6 +82,10 @@ export default class PlatformPlugin {
       })
     }
   }
+
+  public destroy() {
+    this.callback.platformChannel?.setPlatformMessageHandler(null);
+  }
 }
 
 export interface PlatformPluginDelegate {
