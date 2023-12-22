@@ -20,6 +20,9 @@ import util from '@ohos.util'
  */
 export default class StringUtils {
   static stringToArrayBuffer(str: string): ArrayBuffer {
+    if(str.length == 0){
+      return new ArrayBuffer(0);
+    }
     let textEncoder = new util.TextEncoder("utf-8");
     return textEncoder.encodeInto(str).buffer;
   }
