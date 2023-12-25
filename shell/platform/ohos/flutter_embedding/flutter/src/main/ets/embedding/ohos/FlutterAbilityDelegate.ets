@@ -471,6 +471,9 @@ interface Host extends FlutterEngineProvider, FlutterEngineConfigurator, Platfor
 
   /** Return the plugins */
   getPlugins(): List<FlutterPlugin>;
+
+  /* Return the ExclusiveAppComponent */
+  getExclusiveAppComponent(): ExclusiveAppComponent<UIAbility> | null
 }
 
 export { Host, FlutterAbilityDelegate }
