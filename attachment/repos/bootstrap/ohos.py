@@ -48,6 +48,7 @@ def safeGetPath(filePath, isDirectory=True):
     return os.path.abspath(filePath)
 
 
+TIME_STR = datetime.now().strftime("%H%M")
 DIR_OUTPUTS = safeGetPath(
     "%s/outputs/%s" % (DIR_ROOT, datetime.now().strftime("%Y%m%d"))
 )
@@ -266,27 +267,13 @@ def zipFiles(buildInfo):
     fileIn = os.path.abspath("%s/src/out/%s" % (DIR_ROOT, outputName))
     fileName = "%s-%s-%s-%s" % (
         outputName,
-        datetime.now().strftime("%H%M"),
+        TIME_STR,
         OS_NAME,
         platform.machine(),
     )
     prefixInZip = os.path.join("src", "out", outputName)
     dirArray = ["obj", "exe.unstripped", "so.unstripped"]
     zipFileDir(fileIn, fileName, prefixInZip, excludeDir=dirArray)
-
-
-def stashChanges():
-    dir_root = "src/flutter/attachment"
-    config_file = "%s/scripts/config.json" % dir_root
-    cache = []
-    with open(config_file) as json_file:
-        data = json.load(json_file)
-        for task in data:
-            dir = os.path.join(task["target"])
-            if task["type"] == "patch" and not dir in cache:
-                cache.append(dir)
-                runCommand("git -C %s add -A" % dir)
-                runCommand("git -C %s stash save 'Auto stash save'" % dir)
 
 
 def addParseParam(parser):
@@ -316,20 +303,18 @@ def addParseParam(parser):
         "--gn-extra-param",
         nargs="?",
         default="",
-        help="Extra param to src/flutter/tools/gn. Such as: -g \"\\--enable-unittests\"",
+        help='Extra param to src/flutter/tools/gn. Such as: -g "\\--enable-unittests"',
     )
 
 
 def updateCode(args):
     if args.branch:
-        stashChanges()
         dir = os.path.join("src", "flutter")
         runCommand("git -C %s add -A" % dir)
         runCommand("git -C %s stash save 'Auto stash save.'" % dir)
         runCommand("git -C %s checkout %s" % (dir, args.branch))
         runCommand("git -C %s pull --rebase" % dir, checkCode=False)
-        runCommand("git -C %s stash pop" % dir)
-        runCommand("gclient sync --force")
+        runCommand("python3 src/flutter/attachment/scripts/ohos_setup.py")
 
 
 def checkEnvironment():
