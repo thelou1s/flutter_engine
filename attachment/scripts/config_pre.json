@@ -5,10 +5,22 @@
         "type": "files"
     },
     {
-        "name": "dart",
+        "name": "dart0",
         "target": "./src/third_party/dart",
         "type": "patch",
-        "file_path": "../../flutter/attachment/repos/dart.patch"
+        "file_path": "../../flutter/attachment/repos/dart.patch0"
+    },
+	{
+        "name": "dart1",
+        "target": "./src/third_party/dart",
+        "type": "patch",
+        "file_path": "../../flutter/attachment/repos/dart.patch1"
+    },
+    {
+        "name": "dart2",
+        "target": "./src/third_party/dart",
+        "type": "patch",
+        "file_path": "../../flutter/attachment/repos/dart.patch2"
     },
     {
         "name": "skia",
@@ -33,5 +45,18 @@
         "target": "./src/third_party/libcxx",
         "type": "patch",
         "file_path": "../../flutter/attachment/repos/libcxx.bin"
+    }
+	,
+    {
+        "name": "zlib",
+        "target": "./src/third_party/zlib",
+        "type": "patch",
+        "file_path": "../../flutter/attachment/repos/zlib.patch"
+    },
+	{
+        "name": "boringssl",
+        "target": "./src/third_party/boringssl",
+        "type": "patch",
+        "file_path": "../../flutter/attachment/repos/boringssl.patch"
     }
 ]
