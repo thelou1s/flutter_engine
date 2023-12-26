@@ -17,6 +17,12 @@ import StringUtils from '../../util/StringUtils';
 import MessageCodec from './MessageCodec';
 import MethodCodec from './MethodCodec';
 import StringCodec from './StringCodec';
+import TreeMap from '@ohos.util.TreeMap';
+import HashMap from '@ohos.util.HashMap';
+import LightWeightMap from '@ohos.util.LightWeightMap';
+import PlainArray from '@ohos.util.PlainArray';  
+import List from '@ohos.util.List';
+import LinkedList from '@ohos.util.LinkedList';  
 
 /**
  * A {@link MethodCodec} using UTF-8 encoded JSON method calls and result envelopes.
@@ -35,7 +41,7 @@ export default class JSONMessageCodec implements MessageCodec<Object> {
     if (message == null) {
       return StringUtils.stringToArrayBuffer("");
     }
-    return StringCodec.INSTANCE.encodeMessage(JSON.stringify(message));
+    return StringCodec.INSTANCE.encodeMessage(JSON.stringify(this.toBaseData(message)));
   }
 
   decodeMessage(message: ArrayBuffer): ESObject {
@@ -47,6 +53,23 @@ export default class JSONMessageCodec implements MessageCodec<Object> {
       return JSON.parse(jsonStr);
     } catch (e) {
       throw new Error("Invalid JSON");
+    }
+  }
+
+  toBaseData(message: ESObject): ESObject {
+    if (message == null || message == undefined) {
+        return "";
+    } else if (message instanceof List || message instanceof LinkedList) {
+        return message.convertToArray();
+    } else if (message instanceof Map || message instanceof HashMap || message instanceof TreeMap
+        || message instanceof LightWeightMap || message instanceof PlainArray) {
+        let messageObj: ESObject = {};
+        message.forEach((value: ESObject, key: ESObject) => {
+          messageObj[this.toBaseData(key)] = this.toBaseData(value);
+        });
+        return messageObj;
+    } else {
+        return message;
     }
   }
 }
