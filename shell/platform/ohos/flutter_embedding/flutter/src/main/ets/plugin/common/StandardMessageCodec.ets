@@ -155,7 +155,8 @@ export default class StandardMessageCodec implements MessageCodec<ESObject> {
             this.writeAlignment(stream, 8);
             value.forEach(item => stream.writeFloat64(item, true));
         } else if (value instanceof Array || value instanceof Int8Array || value instanceof Int16Array
-            || value instanceof Uint16Array || value instanceof Uint32Array) {
+            || value instanceof Uint16Array || value instanceof Uint32Array || value instanceof List
+            || value instanceof LinkedList) {
             stream.writeInt8(StandardMessageCodec.LIST)
             this.writeSize(stream, value.length);
             value.forEach((item: ESObject): void => this.writeValue(stream, item));
@@ -168,7 +169,8 @@ export default class StandardMessageCodec implements MessageCodec<ESObject> {
             });
         } else if(value instanceof HashMap || value instanceof TreeMap || value instanceof LightWeightMap
             || value instanceof PlainArray) {
-            this.writeValue(stream, value.length);
+            stream.writeInt8(StandardMessageCodec.MAP);
+            this.writeSize(stream, value.length);
             value.forEach((value: ESObject, key: ESObject) => {
                 this.writeValue(stream, key);
                 this.writeValue(stream, value);
