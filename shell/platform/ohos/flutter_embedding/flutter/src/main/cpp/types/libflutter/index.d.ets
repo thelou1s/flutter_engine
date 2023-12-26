@@ -21,9 +21,9 @@ import FlutterNapi from '../../../ets/embedding/engine/FlutterNapi';
 export const getContext: (a: number) => napiContext;
 
 export class napiContext {
-  onPageShow();
+  onPageShow(): void;
 
-  onPageHide();
+  onPageHide(): void;
 }
 
 /**

@@ -17,7 +17,7 @@ import FlutterEngine from '../engine/FlutterEngine';
 
 export default interface FlutterEngineConfigurator {
   
-  configureFlutterEngine(flutterEngine: FlutterEngine);
+  configureFlutterEngine(flutterEngine: FlutterEngine): void;
 
-  cleanUpFlutterEngine(flutterEngine: FlutterEngine);
+  cleanUpFlutterEngine(flutterEngine: FlutterEngine): void;
 }

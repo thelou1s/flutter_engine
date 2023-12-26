@@ -37,6 +37,7 @@ import Settings from './Settings';
 import FlutterNapi from '../engine/FlutterNapi';
 import List from '@ohos.util.List';
 import GeneratedPluginRegister from '../engine/plugins/util/GeneratedPluginRegister';
+import { UIContext } from '@ohos.arkui.UIContext';
 
 const TAG = "FlutterAbilityDelegate";
 const PLUGINS_RESTORATION_BUNDLE_KEY = "plugins";
@@ -52,6 +53,7 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
   flutterEngine?: FlutterEngine | null;
   platformPlugin?: PlatformPlugin;
   private context?: common.Context;
+  private uiContext?: UIContext | undefined;
   private textInputPlugin?: TextInputPlugin;
   private isFlutterEngineFromHost: boolean = false;
   private engineGroup?: FlutterEngineGroup;
@@ -410,7 +412,16 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
   }
 
   sendSettings(): void {
-    this.settings?.sendSettings()
+    if (this.uiContext != undefined) {
+      this.settings?.sendSettings(this.uiContext.getMediaQuery());
+    } else {
+      Log.e(TAG, "UIContext is null, cannot send Settings!");
+    }
+
+  }
+
+  setUIContext(uiContext: UIContext | undefined): void {
+    this.uiContext = uiContext;
   }
 }
 
@@ -426,7 +437,7 @@ interface Host extends FlutterEngineProvider, FlutterEngineConfigurator, Platfor
 
   shouldDispatchAppLifecycleState(): boolean;
 
-  detachFromFlutterEngine();
+  detachFromFlutterEngine(): void;
 
   shouldAttachEngineToActivity(): boolean;
 
