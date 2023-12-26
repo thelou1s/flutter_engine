@@ -153,14 +153,15 @@ def engineConfig(buildInfo, extraParam=""):
         + "%s%s" % (os.path.join(OHOS_NDK_HOME, "build-tools", "llvm", "bin"), PATH_SEP)
         + lastPath
     )
-
+    unixCommand = ""
+    if (platform.system() != "Windows"):
+        unixCommand = ("--target-sysroot %s " % os.path.join(OHOS_NDK_HOME, "sysroot")
+        + "--target-toolchain %s " % os.path.join(OHOS_NDK_HOME, "llvm")
+        + "--target-triple %s " % buildInfo.targetTriple)
     OPT = "--unoptimized --no-lto " if buildInfo.buildType == "debug" else ""
     runCommand(
         "%s " % os.path.join("src", "flutter", "tools", "gn")
-        + "--target-sysroot %s " % os.path.join(OHOS_NDK_HOME, "sysroot")
-        + "--target-toolchain %s " % os.path.join(OHOS_NDK_HOME, "llvm")
-        + "--target-triple %s " % buildInfo.targetTriple
-        + "--ohos "
+        + "--ohos " + unixCommand
         + "--ohos-cpu %s " % buildInfo.targetArch
         + "--runtime-mode %s " % buildInfo.buildType
         + OPT
