@@ -170,7 +170,7 @@ export default class StandardMessageCodec implements MessageCodec<ESObject> {
         } else if(value instanceof HashMap || value instanceof TreeMap || value instanceof LightWeightMap
             || value instanceof PlainArray) {
             stream.writeInt8(StandardMessageCodec.MAP);
-            this.writeValue(stream, value.length);
+            this.writeSize(stream, value.length);
             value.forEach((value: ESObject, key: ESObject) => {
                 this.writeValue(stream, key);
                 this.writeValue(stream, value);
