@@ -15,7 +15,11 @@
 
 import SettingsChannel, { PlatformBrightness } from '../engine/systemchannels/SettingsChannel'
 import I18n from '@ohos.i18n'
+import Log from '../../util/Log';
+import { MediaQuery } from '@ohos.arkui.UIContext';
 
+
+const TAG = "Settings";
 export default class Settings {
   settingsChannel: SettingsChannel | null;
 
@@ -23,13 +27,25 @@ export default class Settings {
     this.settingsChannel = settingsChannel;
   }
 
-  sendSettings(): void {
+  sendSettings(mediaQuery: MediaQuery): void {
     this.settingsChannel?.startMessage()
       .setAlwaysUse24HourFormat(I18n.System.is24HourClock())
       .setTextScaleFactor(1.0)
       .setNativeSpellCheckServiceDefined(false)
       .setBrieflyShowPassword(false)
-      .setPlatformBrightness(PlatformBrightness.LIGHT)
+      .setPlatformBrightness(this.getDarkMode(mediaQuery))
       .send();
+  }
+
+  getDarkMode(mediaQuery: MediaQuery): PlatformBrightness {
+
+    let listener = mediaQuery.matchMediaSync('(dark-mode: true)');
+    if (listener.matches) {
+      Log.i(TAG,"return dark");
+      return PlatformBrightness.DARK;
+    } else {
+      Log.i(TAG,"return light");
+      return PlatformBrightness.LIGHT;
+    }
   }
 }

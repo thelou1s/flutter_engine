@@ -29,7 +29,12 @@ export default class StringUtils {
 
   static arrayBufferToString(buffer: ArrayBuffer): string {
     let textDecoder = util.TextDecoder.create('utf-8', { ignoreBOM : true })
-    return textDecoder.decode(new Uint8Array(buffer))
+    return textDecoder.decode(new Uint8Array(buffer));
+  }
+
+  static uint8ArrayToString(buffer: Uint8Array): string {
+    let textDecoder = util.TextDecoder.create('utf-8', { ignoreBOM : true })
+    return textDecoder.decodeWithStream(buffer);
   }
 
   static isNotEmpty(str: string): boolean {

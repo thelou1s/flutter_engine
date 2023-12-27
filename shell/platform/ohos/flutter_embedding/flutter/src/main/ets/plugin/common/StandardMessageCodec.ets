@@ -272,8 +272,8 @@ export default class StandardMessageCodec implements MessageCodec<ESObject> {
                 result = buffer.readFloat64(true)
                 break;
             case StandardMessageCodec.STRING: {
-                let bytes = this.readBytes(buffer);
-                result = StringUtils.arrayBufferToString(bytes.buffer);
+                let bytes: Uint8Array = this.readBytes(buffer);
+                result = StringUtils.uint8ArrayToString(bytes);
                 break;
             }
             case StandardMessageCodec.UINT8_ARRAY: {

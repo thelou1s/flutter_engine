@@ -86,7 +86,7 @@ export class FlutterAbility extends UIAbility implements Host {
    */
   async onCreate(want: Want, launchParam: AbilityConstant.LaunchParam) {
     Log.i(TAG, "bundleCodeDir=" + this.context.bundleCodeDir);
-    // globalThis.flutterAbility = this
+
     this.displayInfo = display.getDefaultDisplaySync();
     this.viewportMetrics.devicePixelRatio = this.displayInfo?.densityPixels
 
@@ -95,14 +95,13 @@ export class FlutterAbility extends UIAbility implements Host {
     Log.i(TAG, 'onAttach end');
     this?.delegate?.platformPlugin?.setUIAbilityContext(this.context);
     this?.delegate?.onRestoreInstanceState(want);
-    this?.delegate?.sendSettings();
 
     if (this.stillAttachedForEvent("onCreate")) {
       this.delegate?.onCreate();
     }
 
     console.log('MyAbility onCreate');
-    // globalThis.applicationContext = this.context.getApplicationContext();
+
     this.context.eventHub.on(EVENT_BACK_PRESS, () => {
       this.delegate?.flutterEngine?.getNavigationChannel()?.popRoute();
     });
@@ -183,6 +182,12 @@ export class FlutterAbility extends UIAbility implements Host {
           Log.e(TAG, 'Failed to load the content. Cause: %{public}s', JSON.stringify(err) ?? '');
           return;
         }
+
+        let mainWindow = this.windowStage?.getMainWindowSync();
+        let _UIContext = mainWindow?.getUIContext();
+        this.delegate?.setUIContext(_UIContext);
+        this.delegate?.sendSettings();
+
         this.onWindowPropertiesUpdated();
         Log.i(TAG, 'Succeeded in loading the content. Data: %{public}s', JSON.stringify(data) ?? '');
       });
