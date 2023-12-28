@@ -295,7 +295,7 @@ export class FlutterAbility extends UIAbility implements Host {
     return false;
   }
 
-  shouldAttachEngineToActivity(): boolean {
+  shouldAttachEngineToAbility(): boolean {
     return true;
   }
 
