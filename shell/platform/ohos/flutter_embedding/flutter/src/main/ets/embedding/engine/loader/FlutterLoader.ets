@@ -88,6 +88,8 @@ export default class FlutterLoader {
     Log.d(TAG, "context.bundleCodeDir=" + context.bundleCodeDir)
     if (this.flutterApplicationInfo!.isDebugMode) {
       await this.copyResource(context)
+    } else {
+      await this.copyICU(context)
     }
     this.initResult = new InitResult(
       `${context.filesDir}/`,
@@ -119,6 +121,21 @@ export default class FlutterLoader {
       let message = (err as BusinessError).message;
       Log.i(TAG, 'Judge is need copy resource : %{public}s', message);
       return true;
+    }
+  }
+
+  private async copyICU(context: common.Context) {
+    let copyFlag = await this.isNeedCopyResource();
+    if (!copyFlag) {
+      return;
+    }
+    let filePath = context.filesDir + FILE_SEPARATOR + this.flutterApplicationInfo!.flutterAssetsDir
+    if (this.context != null) {
+      fs.mkdirSync(filePath)
+      let icudtlBuffer = await this.context.resourceManager.getRawFileContent(this.flutterApplicationInfo!.flutterAssetsDir + "/icudtl.dat")
+      let icudtlFile = fs.openSync(filePath + FILE_SEPARATOR + "/icudtl.dat", fs.OpenMode.READ_WRITE | fs.OpenMode.CREATE)
+      fs.writeSync(icudtlFile.fd, icudtlBuffer.buffer)
+      Log.d(TAG, "copyICU end")
     }
   }
 
@@ -197,6 +214,8 @@ export default class FlutterLoader {
           + this.flutterApplicationInfo!.nativeLibraryDir
           + FILE_SEPARATOR
           + this.flutterApplicationInfo!.aotSharedLibraryName);
+      const snapshotAssetPath = this.initResult!.dataDirPath + FILE_SEPARATOR + this.flutterApplicationInfo!.flutterAssetsDir;
+      shellArgs.push("--icu-data-file-path=" + snapshotAssetPath + "/icudtl.dat")
       if (this.flutterApplicationInfo!.isProfile) {
         shellArgs.push("--" + AOT_VMSERVICE_SHARED_LIBRARY_NAME + "=" + VMSERVICE_SNAPSHOT_LIBRARY);
       }
