@@ -77,6 +77,10 @@ export class FlutterAbility extends UIAbility implements Host {
   private viewportMetrics = new ViewportMetrics();
   private displayInfo?: display.Display;
 
+  pagePath(): string {
+    return "pages/Index"
+  }
+
   /**
    * onCreate
    * 1、create and attach delegate
@@ -177,7 +181,7 @@ export class FlutterAbility extends UIAbility implements Host {
         new DVModel("xComponent", params, new DVModelEvents(), new DVModelChildren(), BuildXComponentStruct);
       RootDvModeManager.addDvModel(xComponentModel);
 
-      this.windowStage?.loadContent('pages/Index', (err, data) => {
+      this.windowStage?.loadContent(this.pagePath(), (err, data) => {
         if (err.code) {
           Log.e(TAG, 'Failed to load the content. Cause: %{public}s', JSON.stringify(err) ?? '');
           return;
