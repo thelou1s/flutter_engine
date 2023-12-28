@@ -259,9 +259,8 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
       // Notify plugins that they are no longer attached to an Ability.
       Log.d(TAG, "Detaching FlutterEngine from the Ability");
       this.flutterEngine?.getAbilityControlSurface()?.detachFromAbility();
-    } else {
-      this.isAttached = false;
     }
+      this.isAttached = false;
   }
 
   onLowMemory(): void {
