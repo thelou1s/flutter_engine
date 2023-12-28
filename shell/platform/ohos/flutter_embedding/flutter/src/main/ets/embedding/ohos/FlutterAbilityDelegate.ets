@@ -78,8 +78,8 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
     if (this.flutterEngine == null) {
       await this.setupFlutterEngine();
     }
-    //shouldAttachEngineToActivity
-    if (this.host?.shouldAttachEngineToActivity()) {
+    //shouldAttachEngineToAbility
+    if (this.host?.shouldAttachEngineToAbility()) {
       // Notify any plugins that are currently attached to our FlutterEngine that they
       // are now attached to an Ability.
       Log.d(TAG, "Attaching FlutterEngine to the Ability that owns this delegate.");
@@ -255,10 +255,12 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
   }
 
   onDetach() {
-    if (this.host?.shouldAttachEngineToActivity()) {
-      // Notify plugins that they are no longer attached to an Activity.
+    if (this.host?.shouldAttachEngineToAbility()) {
+      // Notify plugins that they are no longer attached to an Ability.
       Log.d(TAG, "Detaching FlutterEngine from the Ability");
       this.flutterEngine?.getAbilityControlSurface()?.detachFromAbility();
+    } else {
+      this.isAttached = false;
     }
   }
 
@@ -350,17 +352,17 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
   detachFromFlutterEngine() {
     if (this.host?.shouldDestroyEngineWithHost()) {
       // The host owns the engine and should never have its engine taken by another exclusive
-      // activity.
+      // ability.
       throw new Error(
         "The internal FlutterEngine created by "
           + this.host
-          + " has been attached to by another activity. To persist a FlutterEngine beyond the "
+          + " has been attached to by another Ability. To persist a FlutterEngine beyond the "
           + "ownership of this ablity, explicitly create a FlutterEngine");
     }
 
     // Default, but customizable, behavior is for the host to call {@link #onDetach}
     // deterministically as to not mix more events during the lifecycle of the next exclusive
-    // activity.
+    // ability.
     this.host?.detachFromFlutterEngine();
   }
 
@@ -368,7 +370,7 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
     const ability = this.host?.getAbility();
     if (ability == null) {
       throw new Error(
-        "FlutterActivityAndFragmentDelegate's getAppComponent should only "
+        "FlutterAbilityAndFragmentDelegate's getAppComponent should only "
           + "be queried after onAttach, when the host's ability should always be non-null");
     }
     return ability;
@@ -384,7 +386,7 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
         this.flutterEngine?.getNavigationChannel()?.pushRouteInformation(initialRoute);
       }
     } else {
-      Log.w(TAG, "onNewIntent() invoked before FlutterFragment was attached to an Activity.");
+      Log.w(TAG, "onNewIntent() invoked before FlutterFragment was attached to an Ability.");
     }
   }
 
@@ -394,7 +396,7 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
     if (this.host?.shouldRestoreAndSaveState()) {
       wantParam[FRAMEWORK_RESTORATION_BUNDLE_KEY] = this.flutterEngine!.getRestorationChannel()!.getRestorationData();
     }
-    if (this.host?.shouldAttachEngineToActivity()) {
+    if (this.host?.shouldAttachEngineToAbility()) {
       const plugins:Record<string, Object> = {}
       const result = this.flutterEngine?.getAbilityControlSurface()?.onSaveState(reason, plugins);
       wantParam[PLUGINS_RESTORATION_BUNDLE_KEY] = plugins;
@@ -439,7 +441,7 @@ interface Host extends FlutterEngineProvider, FlutterEngineConfigurator, Platfor
 
   detachFromFlutterEngine(): void;
 
-  shouldAttachEngineToActivity(): boolean;
+  shouldAttachEngineToAbility(): boolean;
 
   getCachedEngineId(): string;
 
