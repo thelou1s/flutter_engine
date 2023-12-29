@@ -63,6 +63,10 @@ export OHOS_SDK_HOME=<ohos-sdk-full>
    
 6. 更新代码：在engine目录，执行`./ohos -b master`
 
+## Engine构建产物
+
+  [构建产物](https://docs.qq.com/sheet/DUnljRVBYUWZKZEtF?tab=BB08J2)
+
 ## FAQ
 1. 运行项目工程报Member notfound:'isOhos'的错误：请确保src/third_party/dart目录下应用了所有的dart patch（补丁位于src/flutter/attachment/repos目录，可使用git apply应用patch）应用patch后重新编译engine
 
