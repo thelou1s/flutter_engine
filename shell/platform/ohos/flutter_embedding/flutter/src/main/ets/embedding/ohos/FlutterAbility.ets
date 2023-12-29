@@ -41,6 +41,8 @@ import {
 import StringUtils from '../../util/StringUtils';
 import List from '@ohos.util.List';
 import ExclusiveAppComponent from './ExclusiveAppComponent';
+import errorManager from '@ohos.app.ability.errorManager';
+import appRecovery from '@ohos.app.ability.appRecovery';
 
 const TAG = "FlutterAbility";
 const EVENT_BACK_PRESS = 'EVENT_BACK_PRESS';
@@ -76,6 +78,7 @@ export class FlutterAbility extends UIAbility implements Host {
   private mainWindow?: window.Window;
   private viewportMetrics = new ViewportMetrics();
   private displayInfo?: display.Display;
+  private errorManagerId:number = 0;
 
   pagePath(): string {
     return "pages/Index"
@@ -109,6 +112,14 @@ export class FlutterAbility extends UIAbility implements Host {
     this.context.eventHub.on(EVENT_BACK_PRESS, () => {
       this.delegate?.flutterEngine?.getNavigationChannel()?.popRoute();
     });
+    let observer:errorManager.ErrorObserver = {
+      onUnhandledException(errorMsg) {
+        console.log("onUnhandledException, errorMsg:", errorMsg);
+        appRecovery.saveAppState();
+        appRecovery.restartApp();
+      }
+    }
+    this.errorManagerId = errorManager.on('error', observer);
   }
 
   onDestroy() {
@@ -116,6 +127,11 @@ export class FlutterAbility extends UIAbility implements Host {
     if (this.stillAttachedForEvent("onDestroy")) {
       this?.delegate?.onDestroy();
     }
+    errorManager.off('error', this.errorManagerId);
+  }
+
+  onSaveState(reason: AbilityConstant.StateType, wantParam: Record<string, Object>): AbilityConstant.OnSaveResult {
+    return this?.delegate?.onSaveState(reason, wantParam) ?? AbilityConstant.OnSaveResult.ALL_REJECT;
   }
 
   /**
