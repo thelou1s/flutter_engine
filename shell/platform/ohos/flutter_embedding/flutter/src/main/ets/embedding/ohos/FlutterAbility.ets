@@ -219,6 +219,10 @@ export class FlutterAbility extends UIAbility implements Host {
     }
   }
 
+  onNewWant(want: Want, launchParams: AbilityConstant.LaunchParam): void {
+    this?.delegate?.onNewWant(want,launchParams)
+  }
+
   onFlutterEngineReady(): void {
 
   }
