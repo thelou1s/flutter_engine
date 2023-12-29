@@ -58,7 +58,7 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
   private isFlutterEngineFromHost: boolean = false;
   private engineGroup?: FlutterEngineGroup;
   private settings?: Settings;
-  private isHost:boolean = false;
+  private isHost: boolean = false;
 
   constructor(host?: Host) {
     this.host = host;
@@ -140,18 +140,37 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
     return '';
   }
 
-
   /**
    * 通过参数，配置flutterEngine
    * @param want
    */
   onRestoreInstanceState(want: Want) {
-    let frameworkState = want.parameters != null
-      ? want.parameters[FRAMEWORK_RESTORATION_BUNDLE_KEY] as Uint8Array
-      : new Uint8Array(1).fill(0);
+    let frameworkState: Uint8Array = this.getRestorationData(want.parameters as Record<string, Object>);
     if (this.host?.shouldRestoreAndSaveState()) {
       this.flutterEngine?.getRestorationChannel()?.setRestorationData(frameworkState);
     }
+  }
+
+  private getRestorationData(wantParam: Record<string, Object>): Uint8Array {
+    let result: Uint8Array = new Uint8Array(1).fill(0);
+    if (wantParam == null) {
+      return result;
+    }
+    if (wantParam[FRAMEWORK_RESTORATION_BUNDLE_KEY] == undefined) {
+      return result
+    }
+    if (typeof wantParam[FRAMEWORK_RESTORATION_BUNDLE_KEY] == 'object') {
+      let data: Record<string, ESObject> = wantParam[FRAMEWORK_RESTORATION_BUNDLE_KEY] as Record<string,
+      ESObject>;
+      let byteArray: Array<number> = new Array;
+      Object.keys(data).forEach(
+        key => {
+          byteArray.push(data[key]);
+        }
+      );
+      result = Uint8Array.from(byteArray);
+    }
+    return result;
   }
 
   /**
@@ -212,7 +231,7 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
     let group = this.engineGroup;
     if (group == null && this.context != null) {
       group = new FlutterEngineGroup();
-      const flutterShellArgs = this.host? this.host.getFlutterShellArgs(): new FlutterShellArgs();
+      const flutterShellArgs = this.host ? this.host.getFlutterShellArgs() : new FlutterShellArgs();
       await group.checkLoader(this.context, flutterShellArgs.toArray() ?? []);
       this.engineGroup = group;
     }
