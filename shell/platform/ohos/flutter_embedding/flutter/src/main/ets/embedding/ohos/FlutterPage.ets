@@ -54,7 +54,7 @@ export struct FlutterPage {
         })
         .onDestroy(() => {
           Log.d(TAG, "XComponent onDestroy ");
-          this.flutterView?.OnSurfaceDestroyed()
+          this.flutterView?.onSurfaceDestroyed()
         })
       DynamicView({
         model: this.rootDvModel,
