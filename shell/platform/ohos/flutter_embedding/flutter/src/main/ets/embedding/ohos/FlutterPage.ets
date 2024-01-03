@@ -14,30 +14,64 @@
 */
 import { PlatformViewWrapper } from '../../plugin/platform/PlatformViewWrapper';
 import { RootDvModeManager } from '../../plugin/platform/RootDvModelManager';
-import { DVModel,
+import Log from '../../util/Log';
+import {
+  DVModel,
   DVModelChildren,
   DVModelContainer,
   DVModelEvents,
-  DVModelParameters, DynamicView } from '../../view/DynamicView/dynamicView';
+  DVModelParameters,
+  DynamicView
+} from '../../view/DynamicView/dynamicView';
 import { createDVModelFromJson } from '../../view/DynamicView/dynamicViewJson';
+import { FlutterView } from '../../view/FlutterView';
+import KeyEventChannel from '../engine/systemchannels/KeyEventChannel';
+import FlutterManager from './FlutterManager';
+
+const TAG = "FlutterPage";
 
 /**
  * 基础page组件，承载XComponent组件
  */
 @Component
 export struct FlutterPage {
-  @State message: string = 'Hello World';
+  @State rootDvModel: DVModel | undefined = undefined
+  @Prop viewId: string = ""
+  private flutterView?: FlutterView | null
 
-  @State rootDvModel: DVModelContainer = RootDvModeManager.getRootDvMode();
+  aboutToAppear() {
+    this.flutterView = FlutterManager.getInstance().getFlutterView(this.viewId);
+    this.rootDvModel = this.flutterView!!.getDVModel()
+  }
 
   build() {
-    DynamicView({
-      model: this.rootDvModel.model as DVModel,
-      params: this.rootDvModel.model.params as DVModelParameters,
-      events: this.rootDvModel.model.events as DVModelEvents,
-      children: this.rootDvModel.model.children as DVModelChildren,
-      customBuilder: this.rootDvModel.model.builder as ($$: Record<"params",DVModelParameters >) => void
-      //customBuilder: this.rootDvModel.model.builder as ($$: { params: DVModelParameters }) => void
+    Stack() {
+      XComponent({ id: this.viewId, type: 'texture', libraryname: 'flutter' })
+        .focusable(true)
+        .onLoad((context) => {
+          this.flutterView?.onSurfaceCreated()
+          Log.d(TAG, "XComponent onLoad ");
+        })
+        .onDestroy(() => {
+          Log.d(TAG, "XComponent onDestroy ");
+          this.flutterView?.OnSurfaceDestroyed()
+        })
+      DynamicView({
+        model: this.rootDvModel,
+        params: this.rootDvModel!!.params as DVModelParameters,
+        events: this.rootDvModel!!.events as DVModelEvents,
+        children: this.rootDvModel!!.children as DVModelChildren,
+        customBuilder: this.rootDvModel!!.builder as ($$: Record<"params", DVModelParameters>) => void
+        //customBuilder: this.rootDvModel.model.builder as ($$: { params: DVModelParameters }) => void
+      })
+    }
+    .onAreaChange((oldValue: Area, newValue: Area) => {
+      Log.d(TAG, "onAreaChange ");
+      this.flutterView?.onAreaChange(newValue)
+    })
+    .onKeyEvent((event: KeyEvent) => {
+      Log.d(TAG, "onKeyEvent " + event.type);
+      this.flutterView?.onKeyEvent(event)
     })
   }
 }

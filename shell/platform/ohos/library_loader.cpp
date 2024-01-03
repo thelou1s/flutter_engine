@@ -101,6 +101,12 @@ static napi_value Init(napi_env env, napi_value exports) {
       DECLARE_NAPI_FUNCTION(
           "nativeGetSystemLanguages",
           flutter::PlatformViewOHOSNapi::nativeGetSystemLanguages),
+      DECLARE_NAPI_FUNCTION(
+          "nativeXComponentAttachFlutterEngine",
+          flutter::PlatformViewOHOSNapi::nativeXComponentAttachFlutterEngine),
+      DECLARE_NAPI_FUNCTION(
+          "nativeXComponentDetachFlutterEngine",
+          flutter::PlatformViewOHOSNapi::nativeXComponentDetachFlutterEngine),
 
   };
   napi_define_properties(env, exports, sizeof(desc) / sizeof(desc[0]), desc);

@@ -209,6 +209,12 @@ OHOSShellHolder::OHOSShellHolder(
   is_valid_ = shell_ != nullptr;
 }
 
+OHOSShellHolder::~OHOSShellHolder() {
+  FML_LOG(INFO) << "MHN enter ~OHOSShellHolder()";
+  shell_.reset();
+  thread_host_.reset();
+}
+
 bool OHOSShellHolder::IsValid() const {
   return is_valid_;
 }

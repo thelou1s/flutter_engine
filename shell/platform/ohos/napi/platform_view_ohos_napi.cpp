@@ -26,6 +26,7 @@
 #include "flutter/shell/platform/ohos/ohos_shell_holder.h"
 #include "flutter/shell/platform/ohos/surface/ohos_native_window.h"
 #include "unicode/uchar.h"
+#include "flutter/shell/platform/ohos/ohos_xcomponent_adapter.h"
 
 #define OHOS_SHELL_HOLDER (reinterpret_cast<OHOSShellHolder*>(shell_holder))
 namespace flutter {
@@ -1442,6 +1443,86 @@ void PlatformViewOHOSNapi::SurfaceDestroyed(int64_t shell_holder) {
 void PlatformViewOHOSNapi::SetPlatformTaskRunner(
     fml::RefPtr<fml::TaskRunner> platform_task_runner) {
   platform_task_runner_ = platform_task_runner;
+}
+
+/**
+ * @brief   xcomponent与flutter引擎绑定
+ * @note
+ * @param  nativeShellHolderId: number
+ * @param  xcomponentId: number
+ * @return void
+ */
+napi_value PlatformViewOHOSNapi::nativeXComponentAttachFlutterEngine(
+    napi_env env,
+    napi_callback_info info){
+    napi_status ret;
+    size_t argc = 2;
+    napi_value args[2] = {nullptr};
+    int64_t xcomponent_id;
+    int64_t shell_holder;
+    ret = napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (ret != napi_ok) {
+        FML_DLOG(ERROR) << "nativeXComponentAttachFlutterEngine napi_get_cb_info error:"
+                        << ret;
+        return nullptr;
+    }
+    ret = napi_get_value_int64(env, args[0], &xcomponent_id);
+    if (ret != napi_ok) {
+        FML_DLOG(ERROR) << "nativeXComponentAttachFlutterEngine xcomponent_id napi_get_value_int64 error";
+        return nullptr;
+    }
+    ret = napi_get_value_int64(env, args[1], &shell_holder);
+    if (ret != napi_ok) {
+        FML_DLOG(ERROR) << "nativeXComponentAttachFlutterEngine shell_holder napi_get_value_int64 error";
+        return nullptr;
+    }
+    std::string xcomponent_id_str = std::to_string(xcomponent_id);
+    std::string shell_holder_str = std::to_string(shell_holder);
+
+    LOGD("nativeXComponentAttachFlutterEngine xcomponent_id: %{public}ld , shell_holder: %{public}ld ",
+         xcomponent_id, shell_holder);
+
+    XComponentAdapter::GetInstance()->AttachFlutterEngine(xcomponent_id_str,
+                                                          shell_holder_str);
+    return nullptr;
+}
+/**
+ * @brief xcomponent解除flutter引擎绑定
+ * @note
+ * @param  nativeShellHolderId: number
+ * @param  xcomponentId: number
+ * @return napi_value
+ */
+napi_value PlatformViewOHOSNapi::nativeXComponentDetachFlutterEngine(
+    napi_env env,
+    napi_callback_info info){
+    napi_status ret;
+    size_t argc = 2;
+    napi_value args[2] = {nullptr};
+    int64_t xcomponent_id;
+    int64_t shell_holder;
+    ret = napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
+    if (ret != napi_ok) {
+        FML_DLOG(ERROR) << "nativeXComponentAttachFlutterEngine napi_get_cb_info error:"
+                        << ret;
+        return nullptr;
+    }
+    ret = napi_get_value_int64(env, args[0], &xcomponent_id);
+    if (ret != napi_ok) {
+        FML_DLOG(ERROR) << "nativeXComponentAttachFlutterEngine xcomponent_id napi_get_value_int64 error";
+        return nullptr;
+    }
+    ret = napi_get_value_int64(env, args[1], &shell_holder);
+    if (ret != napi_ok) {
+        FML_DLOG(ERROR) << "nativeXComponentAttachFlutterEngine shell_holder napi_get_value_int64 error";
+        return nullptr;
+    }
+    std::string xcomponent_id_str = std::to_string(xcomponent_id);
+
+    LOGD("nativeXComponentDetachFlutterEngine xcomponent_id: %{public}ld",
+         xcomponent_id);
+    XComponentAdapter::GetInstance()->DetachFlutterEngine(xcomponent_id_str);
+    return nullptr;
 }
 
 }  // namespace flutter

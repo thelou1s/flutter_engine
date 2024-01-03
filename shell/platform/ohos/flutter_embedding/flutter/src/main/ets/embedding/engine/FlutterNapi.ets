@@ -353,6 +353,26 @@ export default class FlutterNapi {
     }
     flutter.nativeGetSystemLanguages(this.nativeShellHolderId!, systemLanguages);
   }
+
+  /**
+   * xcomponet绑定flutterEngine
+   * @param xcomponentId
+   */
+  xComponentAttachFlutterEngine(xcomponentId: number) {
+    flutter.nativeXComponentAttachFlutterEngine(xcomponentId, this.nativeShellHolderId!);
+  }
+
+  /**
+   * xcomponet解除绑定flutterEngine
+   * @param xcomponentId
+   */
+  xComponentDetachFlutterEngine(xcomponentId: number) {
+    flutter.nativeXComponentDetachFlutterEngine(xcomponentId, this.nativeShellHolderId!);
+  }
+
+  detachFromNativeAndReleaseResources() {
+    flutter.nativeDestroy(this.nativeShellHolderId!!);
+  }
 }
 
 export interface AccessibilityDelegate {
