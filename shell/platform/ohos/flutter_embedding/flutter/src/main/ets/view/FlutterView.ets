@@ -139,7 +139,7 @@ export class FlutterView {
     }
   }
 
-  OnSurfaceDestroyed() {
+  onSurfaceDestroyed() {
     this.isSurfaceAvailableForRendering = false;
     if (this.isAttachedToFlutterEngine()) {
       this.flutterEngine!!.getFlutterNapi().xComponentDetachFlutterEngine(Number(this.id))
