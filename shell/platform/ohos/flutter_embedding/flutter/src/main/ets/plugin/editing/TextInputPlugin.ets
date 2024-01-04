@@ -227,6 +227,18 @@ class TextInputMethodHandlerImpl implements TextInputMethodHandler {
     }
 
     try {
+      this.inputMethodController.on('sendKeyboardStatus', () => {
+        if(this.keyboardStatus == KeyboardStatus.HIDE) {
+          this.plugin.textInputChannel.onConnectionClosed(this.inputTarget.id);
+        }
+      })
+    } catch (err) {
+      Log.e(TextInputMethodHandlerImpl.TAG, "Failed to subscribe sendKeyboardStatus:" + JSON.stringify(err));
+      this.cancelListenKeyBoardEvent();
+      return;
+    }
+
+    try {
       this.inputMethodController.on('selectByRange', (range: inputMethod.Range) => {
         this.mEditable.handleSelectByRange(range);
       })

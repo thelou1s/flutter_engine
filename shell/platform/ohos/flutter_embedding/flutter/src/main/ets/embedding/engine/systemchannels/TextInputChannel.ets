@@ -117,6 +117,11 @@ export default class TextInputChannel {
     this.channel.invokeMethod("TextInputClient.performAction", [inputClientId, "TextInputAction.commitContent"]);
   }
 
+  onConnectionClosed(inputClientId: number): void {
+    Log.d(TAG, "Sending 'onConnectionClosed' message.");
+    this.channel.invokeMethod("TextInputClient.onConnectionClosed", [inputClientId]);
+  }
+
   performPrivateCommand(inputClientId: number, action: string, data: ESObject) {
 
   }
