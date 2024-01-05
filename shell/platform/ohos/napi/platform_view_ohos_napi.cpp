@@ -31,9 +31,7 @@
 #define OHOS_SHELL_HOLDER (reinterpret_cast<OHOSShellHolder*>(shell_holder))
 namespace flutter {
 
-int64_t PlatformViewOHOSNapi::shell_holder_value;
 napi_env PlatformViewOHOSNapi::env_;
-napi_ref PlatformViewOHOSNapi::ref_napi_obj_;
 std::vector<std::string> PlatformViewOHOSNapi::system_languages;
 
 /**
@@ -413,7 +411,7 @@ void PlatformViewOHOSNapi::DecodeImage(int64_t imageGeneratorAddress,
   FML_DLOG(INFO) << "start decodeImage";
   platform_task_runner_->PostTask(fml::MakeCopyable(
       [imageGeneratorAddress_ = imageGeneratorAddress,
-       inputData_ = std::move(inputData), dataSize_ = dataSize]() mutable {
+       inputData_ = std::move(inputData), dataSize_ = dataSize, this]() mutable {
         napi_value callbackParam[2];
 
         callbackParam[0] =
@@ -447,10 +445,10 @@ napi_value PlatformViewOHOSNapi::nativeAttach(napi_env env,
   if (status != napi_ok) {
     FML_DLOG(ERROR) << "nativeAttach Failed to get napiObjec info";
   }
-  napi_create_reference(env, argv[0], 1, &ref_napi_obj_);
 
   std::shared_ptr<PlatformViewOHOSNapi> napi_facade =
       std::make_shared<PlatformViewOHOSNapi>(env);
+  napi_create_reference(env, argv[0], 1, &(napi_facade->ref_napi_obj_));
 
   uv_loop_t* platform_loop = nullptr;
   status = napi_get_uv_event_loop(env, &platform_loop);
@@ -461,10 +459,10 @@ napi_value PlatformViewOHOSNapi::nativeAttach(napi_env env,
   auto shell_holder = std::make_unique<OHOSShellHolder>(
       OhosMain::Get().GetSettings(), napi_facade, platform_loop);
   if (shell_holder->IsValid()) {
-    PlatformViewOHOSNapi::shell_holder_value =
+    int64_t shell_holder_value =
         reinterpret_cast<int64_t>(shell_holder.get());
     FML_DLOG(INFO) << "PlatformViewOHOSNapi shell_holder:"
-                   << PlatformViewOHOSNapi::shell_holder_value;
+                   << shell_holder_value;
     napi_value id;
     napi_create_int64(env, reinterpret_cast<int64_t>(shell_holder.release()),
                       &id);
@@ -1417,10 +1415,6 @@ napi_value PlatformViewOHOSNapi::nativeGetSystemLanguages(
   }
   system_languages = local_languages;
   return nullptr;
-}
-
-int64_t PlatformViewOHOSNapi::GetShellHolder() {
-  return PlatformViewOHOSNapi::shell_holder_value;
 }
 
 void PlatformViewOHOSNapi::SurfaceCreated(int64_t shell_holder, void* window) {

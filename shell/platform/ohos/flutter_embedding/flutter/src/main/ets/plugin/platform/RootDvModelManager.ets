@@ -18,6 +18,7 @@ import { DVModel,
   DVModelContainer,
   DVModelEvents,
   DVModelParameters } from '../../view/DynamicView/dynamicView';
+import Log from '../../util/Log';
 
 export class RootDvModeManager {
   private static model: DVModel = new DVModel("Stack", new DVModelParameters(), new DVModelEvents(), new DVModelChildren(), null);
@@ -30,5 +31,6 @@ export class RootDvModeManager {
 
   public static addDvModel(model: DVModel): void {
     RootDvModeManager.container.model.children.push(model);
+    Log.i("flutter RootDvModeManager", 'DVModel: %{public}s', JSON.stringify(RootDvModeManager.container.model.children) ?? '');
   }
 }
