@@ -26,6 +26,7 @@ import Log from '../../util/Log';
 import { FlutterView } from '../../view/FlutterView';
 import FlutterManager from './FlutterManager';
 import window from '@ohos.window';
+import FlutterEngineConfigurator from './FlutterEngineConfigurator';
 
 const TAG = "FlutterEntry";
 
@@ -38,6 +39,7 @@ export default class FlutterEntry implements Host {
   private context: Context;
   private windowStage: window.WindowStage | null = null
   private parameters: ESObject = {};
+  private engineConfigurator: FlutterEngineConfigurator | null = null
 
   constructor(context: Context, params: ESObject = {}) {
     this.context = context;
@@ -76,6 +78,10 @@ export default class FlutterEntry implements Host {
         Log.i(TAG, 'windowStage background.');
         break;
     }
+  }
+
+  setFlutterEngineConfigurator(configurator: FlutterEngineConfigurator) {
+    this.engineConfigurator = configurator;
   }
 
   getFlutterView(): FlutterView {
@@ -212,11 +218,15 @@ export default class FlutterEntry implements Host {
   }
 
   configureFlutterEngine(flutterEngine: FlutterEngine) {
-
+    if (this.engineConfigurator) {
+      this.engineConfigurator.configureFlutterEngine(flutterEngine)
+    }
   }
 
   cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
-
+    if (this.engineConfigurator) {
+      this.engineConfigurator.cleanUpFlutterEngine(flutterEngine)
+    }
   }
 
   popSystemNavigator(): boolean {
