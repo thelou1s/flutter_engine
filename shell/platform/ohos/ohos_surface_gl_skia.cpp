@@ -45,7 +45,10 @@ OhosSurfaceGLSkia::OhosSurfaceGLSkia(
   FML_LOG(INFO) << "OhosSurfaceGLSkia constructor end";
 }
 
-OhosSurfaceGLSkia::~OhosSurfaceGLSkia() = default;
+OhosSurfaceGLSkia::~OhosSurfaceGLSkia() {
+  eglMakeCurrent(eglGetCurrentDisplay(), EGL_NO_SURFACE, EGL_NO_SURFACE,
+                 EGL_NO_CONTEXT);
+}
 
 void OhosSurfaceGLSkia::TeardownOnScreenContext() {
   // When the onscreen surface is destroyed, the context and the surface
@@ -107,10 +110,11 @@ bool OhosSurfaceGLSkia::ResourceContextMakeCurrent() {
 }
 
 bool OhosSurfaceGLSkia::ResourceContextClearCurrent() {
-  FML_DCHECK(IsValid());
-  EGLBoolean result = eglMakeCurrent(eglGetCurrentDisplay(), EGL_NO_SURFACE,
-                                     EGL_NO_SURFACE, EGL_NO_CONTEXT);
-  return result == EGL_TRUE;
+  // FML_DCHECK(IsValid());
+  // EGLBoolean result = eglMakeCurrent(eglGetCurrentDisplay(), EGL_NO_SURFACE,
+  //                                    EGL_NO_SURFACE, EGL_NO_CONTEXT);
+  // return result == EGL_TRUE;
+  return true;
 }
 
 bool OhosSurfaceGLSkia::SetNativeWindow(fml::RefPtr<OHOSNativeWindow> window) {

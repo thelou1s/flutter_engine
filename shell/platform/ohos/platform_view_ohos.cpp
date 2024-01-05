@@ -169,6 +169,7 @@ void PlatformViewOHOS::NotifyChanged(const SkISize& size) {
 // |PlatformView|
 void PlatformViewOHOS::NotifyDestroyed() {
   LOGI("PlatformViewOHOS NotifyDestroyed enter");
+  PlatformView::NotifyDestroyed();
   if (ohos_surface_) {
     fml::AutoResetWaitableEvent latch;
     fml::TaskRunner::RunNowOrPostTask(
