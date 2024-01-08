@@ -33,8 +33,8 @@ const TAG = "FlutterEntry";
 export default class FlutterEntry implements Host {
   private static ARG_SHOULD_ATTACH_ENGINE_TO_ABILITY: string =  "should_attach_engine_to_ability";
 
-  private uiAbility: UIAbility | null = null
-  private delegate: FlutterAbilityAndEntryDelegate | null = null
+  protected uiAbility: UIAbility | null = null
+  protected delegate: FlutterAbilityAndEntryDelegate | null = null
   private flutterView: FlutterView | null = null
   private context: Context;
   private windowStage: window.WindowStage | null = null
@@ -105,7 +105,7 @@ export default class FlutterEntry implements Host {
     }
     if (this.delegate != null) {
       this.delegate?.onDetach();
-      this.delegate?.onDestroy();
+      this.delegate?.release()
     }
   }
 

@@ -47,9 +47,14 @@ const EVENT_BACK_PRESS = 'EVENT_BACK_PRESS';
  */
 export class FlutterAbility extends UIAbility implements Host {
   private delegate?: FlutterAbilityAndEntryDelegate | null;
-  private flutterView?: FlutterView | null;
+  private flutterView: FlutterView | null = null;
   private mainWindow?: window.Window | null;
   private errorManagerId:number = 0;
+
+  getFlutterView(): FlutterView | null {
+    return this.flutterView;
+  }
+
   pagePath(): string {
     return "pages/Index"
   }
@@ -97,15 +102,18 @@ export class FlutterAbility extends UIAbility implements Host {
   onDestroy() {
     FlutterManager.getInstance().popUIAbility(this);
     this.context.eventHub.off(EVENT_BACK_PRESS);
-    if (this.stillAttachedForEvent("onDestroy")) {
-      this?.delegate?.onDestroy();
-    }
     errorManager.off('error', this.errorManagerId);
 
     if (this.flutterView != null) {
       this.flutterView.onDestroy()
       this.flutterView = null;
     }
+
+    if (this.stillAttachedForEvent("onDestroy")) {
+      this?.delegate?.onDetach();
+    }
+
+    this.release()
   }
   
   onSaveState(reason: AbilityConstant.StateType, wantParam: Record<string, Object>): AbilityConstant.OnSaveResult {
@@ -144,7 +152,7 @@ export class FlutterAbility extends UIAbility implements Host {
         }
       });
 
-      this.flutterView = this.delegate?.createView(this.context)
+      this.flutterView = this.delegate!!.createView(this.context)
       Log.e(TAG, 'onWindowStageCreate:' +  this.flutterView!!.getId());
       let storage: LocalStorage = new LocalStorage();
       storage.setOrCreate("viewId", this.flutterView!!.getId())
