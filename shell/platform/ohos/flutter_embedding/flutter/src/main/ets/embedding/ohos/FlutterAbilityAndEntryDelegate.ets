@@ -285,6 +285,7 @@ class FlutterAbilityAndEntryDelegate implements ExclusiveAppComponent<UIAbility>
     this.host = null;
     this.flutterEngine = null;
     this.textInputPlugin = undefined;
+    this.platformPlugin = undefined;
   }
 
   onDetach() {
@@ -300,8 +301,12 @@ class FlutterAbilityAndEntryDelegate implements ExclusiveAppComponent<UIAbility>
       this.flutterEngine?.getLifecycleChannel()?.appIsDetached();
     }
 
-    if(this.textInputPlugin){
+    if (this.textInputPlugin) {
       this.textInputPlugin?.detach();
+    }
+
+    if (this.platformPlugin) {
+      this.platformPlugin.destroy();
     }
 
     // Destroy our FlutterEngine if we're not set to retain it.
