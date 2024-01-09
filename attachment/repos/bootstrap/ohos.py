@@ -26,12 +26,12 @@ import sys
 import zipfile
 from datetime import datetime
 
-SUPPORT_BUILD_NAMES = ("clean", "config", "har", "compile", "zip")
+SUPPORT_BUILD_NAMES = ("clean", "config", "har", "compile", "zip", "zip2")
 SUPPORT_BUILD_TYPES = ("debug", "profile", "release")
 DIR_ROOT = os.path.abspath(os.path.join(sys.argv[0], os.pardir))
 OS_NAME = platform.system().lower()
-PATH_SEP = ";" if OS_NAME.startswith("win") else ":"
-
+IS_WINDOWS = OS_NAME.startswith("win")
+PATH_SEP = ";" if IS_WINDOWS else ":"
 logging.basicConfig(
     format="%(levelname)s:%(asctime)s: %(message)s",
     datefmt="%Y-%d-%m %H:%M:%S",
@@ -48,7 +48,7 @@ def safeGetPath(filePath, isDirectory=True):
     return os.path.abspath(filePath)
 
 
-TIME_STR = datetime.now().strftime("%H%M")
+TIME_STR = datetime.now().strftime("%Y%m%d-%H%M")
 DIR_OUTPUTS = safeGetPath(
     "%s/outputs/%s" % (DIR_ROOT, datetime.now().strftime("%Y%m%d"))
 )
@@ -154,17 +154,20 @@ def engineConfig(buildInfo, extraParam=""):
         + lastPath
     )
     unixCommand = ""
-    if (platform.system() != "Windows"):
-        unixCommand = ("--target-sysroot %s " % os.path.join(OHOS_NDK_HOME, "sysroot")
-        + "--target-toolchain %s " % os.path.join(OHOS_NDK_HOME, "llvm")
-        + "--target-triple %s " % buildInfo.targetTriple)
+    if not IS_WINDOWS:
+        unixCommand = (
+            "--target-sysroot %s " % os.path.join(OHOS_NDK_HOME, "sysroot")
+            + "--target-toolchain %s " % os.path.join(OHOS_NDK_HOME, "llvm")
+            + "--target-triple %s " % buildInfo.targetTriple
+        )
     OPT = "--unoptimized --no-lto " if buildInfo.buildType == "debug" else ""
     runCommand(
         "%s " % os.path.join("src", "flutter", "tools", "gn")
-        + "--ohos " + unixCommand
+        + "--ohos "
         + "--ohos-cpu %s " % buildInfo.targetArch
         + "--runtime-mode %s " % buildInfo.buildType
         + OPT
+        + unixCommand
         + "--no-goma "
         + "--no-prebuilt-dart-sdk "
         + "--embedder-for-target "
@@ -227,22 +230,30 @@ def harBuild(buildInfo):
     )
 
 
-def isPathValid(filepath, filename, includeDir, excludeDir):
-    for dir in includeDir:
-        if dir in filepath:
+def isPathValid(filepath, filename, includes, excludes):
+    fileOrigin = filepath + os.path.sep + filename
+    for regex in includes:
+        if re.search(regex, fileOrigin):
             return True
-    if includeDir != []:
+    if includes != []:
         return False
-    for dir in excludeDir:
-        if dir in filepath:
+    for regex in excludes:
+        if re.search(regex, fileOrigin):
             return False
     return True
 
 
-def zipFileDir(fileIn, fileName, prefixInZip="", includeDir=[], excludeDir=[]):
+def zipFileDir(
+    fileIn,
+    fileName,
+    prefixInZip="",
+    includes=[],
+    excludes=[],
+    useZip2=False,
+):
     logging.info(
-        "fileIn= %s, fileName= %s, prefixInZip= %s, includeDir= %s, excludeDir= %s"
-        % (fileIn, fileName, prefixInZip, includeDir, excludeDir)
+        "fileIn= %s, fileName= %s, prefixInZip= %s, includes= %s, excludes= %s"
+        % (fileIn, fileName, prefixInZip, includes, excludes)
     )
     fileOut1 = os.path.abspath("%s/%s.zip" % (DIR_OUTPUTS, fileName))
     fileOut2 = os.path.abspath("%s/%s-unstripped.zip" % (DIR_OUTPUTS, fileName))
@@ -252,29 +263,42 @@ def zipFileDir(fileIn, fileName, prefixInZip="", includeDir=[], excludeDir=[]):
                 fpath = path.replace(fileIn, "")[1:]
                 pPath = prefixInZip + os.sep + fpath
                 for filename in filenames:
-                    if isPathValid(fpath, filename, includeDir, excludeDir):
-                        zip1.write(
-                            os.path.join(path, filename), os.path.join(pPath, filename)
-                        )
-                    else:
-                        zip2.write(
-                            os.path.join(path, filename), os.path.join(pPath, filename)
-                        )
+                    path1 = os.path.join(path, filename)
+                    path2 = os.path.join(pPath, filename)
+                    if isPathValid(fpath, filename, includes, excludes):
+                        zip1.write(path1, path2)
+                    elif useZip2:
+                        zip2.write(path1, path2)
+
+    if not useZip2:
+        os.remove(fileOut2)
 
 
-def zipFiles(buildInfo):
+def zipFiles(buildInfo, useZip2=False):
     logging.info("zipFiles buildInfo=%s" % buildInfo)
+    sdkInt = int(getNdkHome()[-9:-7])
     outputName = getOutput(buildInfo)
     fileIn = os.path.abspath("%s/src/out/%s" % (DIR_ROOT, outputName))
-    fileName = "%s-%s-%s-%s" % (
-        outputName,
-        TIME_STR,
+    fileName = "ohos_api%s_%s-%s-%s-%s" % (
+        sdkInt,
+        buildInfo.buildType,
         OS_NAME,
         platform.machine(),
+        TIME_STR,
     )
     prefixInZip = os.path.join("src", "out", outputName)
-    dirArray = ["obj", "exe.unstripped", "so.unstripped"]
-    zipFileDir(fileIn, fileName, prefixInZip, excludeDir=dirArray)
+    if IS_WINDOWS:
+        excludes = [
+            ".*\.ilk",
+            ".*\.pdb",
+        ]
+    else:
+        excludes = [
+            "obj",
+            "exe.unstripped",
+            "so.unstripped",
+        ]
+    zipFileDir(fileIn, fileName, prefixInZip, excludes=excludes, useZip2=useZip2)
 
 
 def addParseParam(parser):
@@ -347,19 +371,22 @@ def buildByNameAndType(args):
                 engineCompile(buildInfo)
             elif "zip" == buildName:
                 zipFiles(buildInfo)
+            elif "zip2" == buildName:
+                zipFiles(buildInfo, True)
             else:
                 logging.warning("Other name=%s" % buildName)
 
 
-def main():
+def ohos_main():
     parser = argparse.ArgumentParser()
     addParseParam(parser)
     args = parser.parse_args()
     checkEnvironment()
     updateCode(args)
     buildByNameAndType(args)
-    logging.info("main() finish.")
+    logging.info("ohos_main() finish.")
     return 0
 
 
-exit(main())
+if __name__ == "__main__":
+    exit(ohos_main())
