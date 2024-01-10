@@ -616,6 +616,8 @@ napi_value PlatformViewOHOSNapi::nativeSpawn(napi_env env, napi_callback_info in
   }
 
   std::shared_ptr<PlatformViewOHOSNapi> napi_facade = std::make_shared<PlatformViewOHOSNapi>(env);
+  napi_create_reference(env, args[5], 1, &(napi_facade->ref_napi_obj_));
+
   auto spawned_shell_holder = OHOS_SHELL_HOLDER->Spawn(
       napi_facade, entrypoint, libraryUrl, initial_route, entrypoint_args);
 

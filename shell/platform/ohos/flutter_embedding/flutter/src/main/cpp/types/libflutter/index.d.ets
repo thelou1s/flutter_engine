@@ -52,7 +52,8 @@ export const nativeSpawn: (
   entrypointFunctionName: string,
   pathToEntrypointFunction: string,
   initialRoute: string,
-  entrypointArgs: Array<string>
+  entrypointArgs: Array<string>,
+  napi: FlutterNapi
 ) => number;
 
 export const nativeRunBundleAndSnapshotFromLibrary: (
