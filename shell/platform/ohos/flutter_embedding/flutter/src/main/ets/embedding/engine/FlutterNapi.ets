@@ -219,8 +219,8 @@ export default class FlutterNapi {
   }
 
   spawn(entrypointFunctionName: string, pathToEntrypointFunction: string, initialRoute: string, entrypointArgs: Array<string>): FlutterNapi {
-    let shellHolderId: number = flutter.nativeSpawn(this.nativeShellHolderId, entrypointFunctionName, pathToEntrypointFunction, initialRoute, entrypointArgs)
     let flutterNapi = new FlutterNapi()
+    let shellHolderId: number = flutter.nativeSpawn(this.nativeShellHolderId, entrypointFunctionName, pathToEntrypointFunction, initialRoute, entrypointArgs, flutterNapi)
     flutterNapi.nativeShellHolderId = shellHolderId
     return flutterNapi;
   }
