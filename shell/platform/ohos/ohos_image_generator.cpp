@@ -157,11 +157,13 @@ napi_value OHOSImageGenerator::NativeImageDecodeCallback(
       napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
   if (status != napi_ok) {
     LOGE("NativeImageDecodeCallback napi_get_cb_info error");
+    generator->native_callback_latch_.Signal();
     return nullptr;
   }
 
   if (argc != 4) {
     FML_LOG(ERROR) << "argc is error";
+    generator->native_callback_latch_.Signal();
     return nullptr;
   }
 
@@ -197,6 +199,7 @@ napi_value OHOSImageGenerator::NativeImageDecodeCallback(
   int ret = OHOS::Media::OH_AccessPixels(g_env, args[3], (void**)&pixel_lock);
   if (ret != 0) {
     FML_DLOG(ERROR) << "Failed to lock pixels, error=" << ret;
+    generator->native_callback_latch_.Signal();
     return nullptr;
   }
   // pixel_lock, g_env_ =g_env , resultout
