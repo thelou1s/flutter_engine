@@ -197,6 +197,7 @@ napi_value OHOSImageGenerator::NativeImageDecodeCallback(
   int ret = OHOS::Media::OH_AccessPixels(g_env, args[3], (void**)&pixel_lock);
   if (ret != 0) {
     FML_DLOG(ERROR) << "Failed to lock pixels, error=" << ret;
+    generator->native_callback_latch_.Signal();
     return nullptr;
   }
   // pixel_lock, g_env_ =g_env , resultout
