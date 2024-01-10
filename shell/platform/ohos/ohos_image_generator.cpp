@@ -157,11 +157,13 @@ napi_value OHOSImageGenerator::NativeImageDecodeCallback(
       napi_get_cb_info(env, info, &argc, args, nullptr, nullptr);
   if (status != napi_ok) {
     LOGE("NativeImageDecodeCallback napi_get_cb_info error");
+    generator->native_callback_latch_.Signal();
     return nullptr;
   }
 
   if (argc != 4) {
     FML_LOG(ERROR) << "argc is error";
+    generator->native_callback_latch_.Signal();
     return nullptr;
   }
 
