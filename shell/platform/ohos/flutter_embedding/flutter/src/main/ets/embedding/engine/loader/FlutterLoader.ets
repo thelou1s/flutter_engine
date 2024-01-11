@@ -51,6 +51,8 @@ const AOT_VMSERVICE_SHARED_LIBRARY_NAME = "aot-vmservice-shared-library-name";
 //文件路径分隔符
 const FILE_SEPARATOR = "/";
 
+const TIMESTAMP_PREFIX = "res_timestamp-";
+
 /**
  * 定位在hap包中的flutter资源，并且加载flutter native library.
  */
@@ -83,9 +85,6 @@ export default class FlutterLoader {
     this.initStartTimestampMillis = Date.now();
     this.context = context;
     this.flutterApplicationInfo = ApplicationInfoLoader.load(context);
-    Log.d(TAG, "context.filesDir=" + context.filesDir)
-    Log.d(TAG, "context.cacheDir=" + context.cacheDir)
-    Log.d(TAG, "context.bundleCodeDir=" + context.bundleCodeDir)
     if (this.flutterApplicationInfo!.isDebugMode) {
       await this.copyResource(context)
     } else {
@@ -99,53 +98,36 @@ export default class FlutterLoader {
     Log.d(TAG, "flutterLoader end init")
   }
 
-  private async isNeedCopyResource(): Promise<boolean> {
-    let bundleFlags = bundleManager.BundleFlag.GET_BUNDLE_INFO_DEFAULT;
-    try {
-      if (this.context != null) {
-        let bundleInfo = await bundleManager.getBundleInfoForSelf(bundleFlags);
-        let key = bundleInfo.name + '.bundleInfoPreferences'
-        let preferences: data_preferences.Preferences = await data_preferences.getPreferences(this.context, key);
-        let storeInstallTime = await preferences.get("installTime", 0);
-        let storeUpdateTime = await preferences.get("updateTime", 0);
-        if (storeInstallTime != bundleInfo.installTime || storeUpdateTime != bundleInfo.updateTime) {
-          await preferences.put("installTime", bundleInfo.installTime);
-          await preferences.put("updateTime", bundleInfo.updateTime);
-          await preferences.flush();
-          return true;
-        }
-      }
-
-      return false;
-    } catch (err) {
-      let message = (err as BusinessError).message;
-      Log.i(TAG, 'Judge is need copy resource : %{public}s', message);
-      return true;
-    }
-  }
-
   private async copyICU(context: common.Context) {
-    let copyFlag = await this.isNeedCopyResource();
-    if (!copyFlag) {
+    let filePath = context.filesDir + FILE_SEPARATOR + this.flutterApplicationInfo!.flutterAssetsDir
+    const timestamp = await this.checkTimestamp(filePath);
+    if (timestamp == null) {
+      Log.d(TAG, "no need copyICU")
       return;
     }
-    let filePath = context.filesDir + FILE_SEPARATOR + this.flutterApplicationInfo!.flutterAssetsDir
     if (this.context != null) {
+      Log.d(TAG, "start copyICU")
+      if (fs.accessSync(filePath)) {
+        fs.rmdirSync(filePath);
+      }
       fs.mkdirSync(filePath)
       let icudtlBuffer = await this.context.resourceManager.getRawFileContent(this.flutterApplicationInfo!.flutterAssetsDir + "/icudtl.dat")
       let icudtlFile = fs.openSync(filePath + FILE_SEPARATOR + "/icudtl.dat", fs.OpenMode.READ_WRITE | fs.OpenMode.CREATE)
       fs.writeSync(icudtlFile.fd, icudtlBuffer.buffer)
+      if (timestamp != null) {
+        fs.openSync(filePath + FILE_SEPARATOR + timestamp, fs.OpenMode.READ_ONLY | fs.OpenMode.CREATE)
+      }
       Log.d(TAG, "copyICU end")
     }
   }
 
   private async copyResource(context: common.Context) {
-    let copyFlag = await this.isNeedCopyResource();
-    if (!copyFlag) {
+    let filePath = context.filesDir + FILE_SEPARATOR + this.flutterApplicationInfo!.flutterAssetsDir
+    const timestamp = await this.checkTimestamp(filePath);
+    if (timestamp == null) {
+      Log.d(TAG, "no need copyResource")
       return;
     }
-
-    let filePath = context.filesDir + FILE_SEPARATOR + this.flutterApplicationInfo!.flutterAssetsDir
     if (this.context != null) {
       Log.d(TAG, "start copyResource")
       if (fs.accessSync(filePath + FILE_SEPARATOR + DEFAULT_KERNEL_BLOB)) {
@@ -170,6 +152,10 @@ export default class FlutterLoader {
       let isolateBuffer = await this.context.resourceManager.getRawFileContent(this.flutterApplicationInfo!.flutterAssetsDir + FILE_SEPARATOR + this.flutterApplicationInfo!.isolateSnapshotData)
       let isolateFile = fs.openSync(filePath + FILE_SEPARATOR + this.flutterApplicationInfo!.isolateSnapshotData, fs.OpenMode.READ_WRITE | fs.OpenMode.CREATE)
       fs.writeSync(isolateFile.fd, isolateBuffer.buffer)
+
+      if (timestamp != null) {
+        fs.openSync(filePath + FILE_SEPARATOR + timestamp, fs.OpenMode.READ_ONLY | fs.OpenMode.CREATE)
+      }
       Log.d(TAG, "copyResource end")
     } else {
       Log.d(TAG, "no copyResource")
@@ -258,6 +244,36 @@ export default class FlutterLoader {
   fullAssetPathFrom(filePath: string): string {
     return this.flutterApplicationInfo == null ? "" : this.flutterApplicationInfo!.flutterAssetsDir + "/" + filePath;
   }
+
+  private async checkTimestamp(dataDir: string) : Promise<string | null> {
+    let bundleInfo = await bundleManager.getBundleInfoForSelf(bundleManager.BundleFlag.GET_BUNDLE_INFO_DEFAULT);
+    const expectedTimestamp = TIMESTAMP_PREFIX + bundleInfo.versionCode + "-" + bundleInfo.updateTime;
+    const existingTimestamps = this.getExistingTimestamps(dataDir);
+    if (existingTimestamps == null) {
+      Log.i(TAG, "No extracted resources found");
+      return expectedTimestamp;
+    }
+
+    if (existingTimestamps.length == 1) {
+      Log.i(TAG, "Found extracted resources " + existingTimestamps[0]);
+    }
+
+    if (existingTimestamps.length != 1 || !(expectedTimestamp == existingTimestamps[0])) {
+      Log.i(TAG, "Resource version mismatch " + expectedTimestamp);
+      return expectedTimestamp;
+    }
+
+    return null;
+  }
+
+  private getExistingTimestamps(dataDir: string): string[] {
+    return fs.accessSync(dataDir) ? fs.listFileSync(dataDir, {
+      filter: {
+        displayName: [`${TIMESTAMP_PREFIX}*`]
+      }
+    }) : new Array();
+  }
+
 }
 
 class InitResult {
