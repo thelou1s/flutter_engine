@@ -156,7 +156,7 @@ export interface MethodResult {
   notImplemented: () => void;
 }
 
-class IncomingResultHandler implements BinaryReply {
+export class IncomingResultHandler implements BinaryReply {
   private callback: MethodResult;
   private codec: MethodCodec;
 
@@ -182,7 +182,7 @@ class IncomingResultHandler implements BinaryReply {
   }
 }
 
-class IncomingMethodCallHandler implements BinaryMessageHandler {
+export class IncomingMethodCallHandler implements BinaryMessageHandler {
   private handler: MethodCallHandler;
   private codec: MethodCodec;
 
