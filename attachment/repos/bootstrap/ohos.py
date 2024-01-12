@@ -104,8 +104,28 @@ def engineClean(buildInfo):
         shutil.rmtree(target, ignore_errors=True)
 
 
+def findFile(path, search, results):
+    if not os.path.exists(path):
+        return
+    for item in os.listdir(path):
+        cur_path = os.path.join(path, item)
+        if os.path.isdir(cur_path):
+            if cur_path.endswith(search):
+                results.append(cur_path)
+            findFile(os.path.join(path, item), search, results)
+
+
+def findNativeInCurrentDir():
+    os_dir = "mac" if OS_NAME == "darwin" else OS_NAME
+    dirs = []
+    findFile(os.path.join("ndk", os_dir), "native", dirs)
+    return dirs[0] if len(dirs) != 0 else ""
+
+
 def getNdkHome():
     OHOS_NDK_HOME = os.getenv("OHOS_NDK_HOME")
+    if not OHOS_NDK_HOME:
+        OHOS_NDK_HOME = findNativeInCurrentDir()
     if not OHOS_NDK_HOME:
         OHOS_SDK_HOME = os.getenv("OHOS_SDK_HOME")
         if not OHOS_SDK_HOME:
