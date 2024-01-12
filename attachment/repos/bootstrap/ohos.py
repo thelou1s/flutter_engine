@@ -111,7 +111,7 @@ def findFile(path, search, results):
         cur_path = os.path.join(path, item)
         if os.path.isdir(cur_path):
             if cur_path.endswith(search):
-                results.append(cur_path)
+                results.append(os.path.abspath(cur_path))
             findFile(os.path.join(path, item), search, results)
 
 
@@ -171,6 +171,7 @@ def engineConfig(buildInfo, extraParam=""):
     os.environ["PATH"] = (
         "%s%s" % (os.path.join(OHOS_NDK_HOME, "build-tools", "cmake", "bin"), PATH_SEP)
         + "%s%s" % (os.path.join(OHOS_NDK_HOME, "build-tools", "llvm", "bin"), PATH_SEP)
+        + "%s%s" % (os.path.abspath("depot_tools"), PATH_SEP)
         + lastPath
     )
     unixCommand = ""
