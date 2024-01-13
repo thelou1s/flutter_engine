@@ -19,6 +19,7 @@ import display from '@ohos.display';
 import FlutterManager from '../embedding/ohos/FlutterManager';
 import window from '@ohos.window';
 import KeyboardManager from '../embedding/ohos/KeyboardManager';
+import MouseCursorPlugin from '../plugin/mouse/MouseCursorPlugin';
 
 const TAG = "FlutterView";
 
@@ -50,6 +51,7 @@ export class FlutterView {
   private displayInfo?: display.Display;
   private keyboardManager: KeyboardManager | null = null;
   private mainWindow: window.Window
+  private mouseCursorPlugin?: MouseCursorPlugin;
 
   constructor(viewId: string, context: Context) {
     this.id = viewId
@@ -116,6 +118,8 @@ export class FlutterView {
     this.flutterEngine?.getFlutterNapi()?.updateRefreshRate(this.displayInfo!.refreshRate)
     flutterEngine.getPlatformViewsController()?.attachToView(this);
     this.updateViewportMetrics()
+    let windowId = this.mainWindow?.getWindowProperties()?.id
+    this.mouseCursorPlugin = new MouseCursorPlugin(windowId, this.flutterEngine?.getMouseCursorChannel()!);
   }
 
   detachFromFlutterEngine(): void {
