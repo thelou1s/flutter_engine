@@ -85,15 +85,16 @@ def doTask(task, log=False):
         pass
 
 
-def parse_config(config_file="{}/scripts/config.json".format(ROOT)):
+def parse_config(config_file="{}/scripts/config.json".format(ROOT), useStash=True):
     log = False
     if (len(sys.argv) > 1): 
       if(sys.argv[1] == '-v'):
         log = True
     with open(config_file) as json_file:
         data = json.load(json_file)
-        for task in data:
-            stashChanges(task, log)
+        if useStash:
+            for task in data:
+                stashChanges(task, log)
         for task in data:
             doTask(task, log)
 
