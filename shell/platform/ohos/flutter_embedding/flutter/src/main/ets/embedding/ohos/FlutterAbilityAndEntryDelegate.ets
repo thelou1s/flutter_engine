@@ -32,7 +32,6 @@ import { FlutterPlugin } from '../engine/plugins/FlutterPlugin';
 import FlutterEngineCache from '../engine/FlutterEngineCache';
 import FlutterEngineGroupCache from '../engine/FlutterEngineGroupCache';
 import FlutterEngineGroup, { Options } from '../engine/FlutterEngineGroup';
-import MouseCursorPlugin, { MouseCursorViewDelegate } from '../../plugin/mouse/MouseCursorPlugin';
 import Settings from './Settings';
 import FlutterNapi from '../engine/FlutterNapi';
 import List from '@ohos.util.List';
@@ -62,7 +61,6 @@ class FlutterAbilityAndEntryDelegate implements ExclusiveAppComponent<UIAbility>
   private settings?: Settings;
   private isHost:boolean = false;
   private flutterView?: FlutterView
-  private mouseCursorPlugin?: MouseCursorPlugin;
 
   constructor(host?: Host) {
     this.host = host;
@@ -100,7 +98,6 @@ class FlutterAbilityAndEntryDelegate implements ExclusiveAppComponent<UIAbility>
     if (this.flutterEngine) {
       this.textInputPlugin = new TextInputPlugin(this.flutterEngine.getTextInputChannel()!);
       this.platformPlugin = new PlatformPlugin(this.flutterEngine.getPlatformChannel()!, this.context);
-      this.mouseCursorPlugin = new MouseCursorPlugin(this.host!, this.flutterEngine.getMouseCursorChannel()!);
       this.settings = new Settings(this.flutterEngine.getSettingsChannel()!);
       this.flutterEngine.getSystemLanguages();
     }
@@ -486,7 +483,7 @@ class FlutterAbilityAndEntryDelegate implements ExclusiveAppComponent<UIAbility>
 /**
  * FlutterAbility句柄
  */
-interface Host extends FlutterEngineProvider, FlutterEngineConfigurator, PlatformPluginDelegate , MouseCursorViewDelegate {
+interface Host extends FlutterEngineProvider, FlutterEngineConfigurator, PlatformPluginDelegate {
 
   getAbility(): UIAbility;
 

@@ -17,37 +17,35 @@ import MouseCursorChannel, { MouseCursorMethodHandler } from '../../embedding/en
 import pointer from '@ohos.multimodalInput.pointer';
 import HashMap from '@ohos.util.HashMap';
 import Log from '../../util/Log';
-import { AsyncCallback } from '@ohos.base';
 
 const TAG: string = "MouseCursorPlugin";
 export default class MouseCursorPlugin implements MouseCursorMethodHandler{
-  private mView: MouseCursorViewDelegate;
 
   private mouseCursorChannel: MouseCursorChannel;
 
   private systemCursorConstants: HashMap<string, pointer.PointerStyle> | null = null;
 
-  constructor(mouseCursorView: MouseCursorViewDelegate, mouseCursorChannel: MouseCursorChannel) {
-    this.mView = mouseCursorView;
+  private windowId : number;
+
+  constructor(windowId : number, mouseCursorChannel: MouseCursorChannel) {
+    this.windowId = windowId;
     this.mouseCursorChannel = mouseCursorChannel;
     this.mouseCursorChannel.setMethodHandler(this);
   }
 
   activateSystemCursor(kind: string): void {
-    this.mView.getWindowId((error, windowId) => {
-      if (windowId < 0) {
-        Log.w(TAG, "set point style failed windowId is invalid");
-        return;
-      }
-      let pointStyle: pointer.PointerStyle = this.resolveSystemCursor(kind);
-      try {
-        pointer.setPointerStyle(windowId, pointStyle, (err: ESObject) => {
-          Log.i(TAG, "set point style success kind : " + kind);
-        })
-      } catch (e) {
-        Log.e(TAG, "set point style failed : " + kind + " " + JSON.stringify(e));
-      }
-    });
+    if (this.windowId < 0) {
+      Log.w(TAG, "set point style failed windowId is invalid");
+      return;
+    }
+    let pointStyle: pointer.PointerStyle = this.resolveSystemCursor(kind);
+    try {
+      pointer.setPointerStyle(this.windowId, pointStyle, (err: ESObject) => {
+        Log.i(TAG, "set point style success kind : " + kind);
+      })
+    } catch (e) {
+      Log.e(TAG, "set point style failed : " + kind + " " + JSON.stringify(e));
+    }
   }
 
   /**
@@ -131,17 +129,3 @@ export default class MouseCursorPlugin implements MouseCursorMethodHandler{
   }
 }
 
-/**
- * Delegate interface for requesting the system to display a pointer icon object.
- *
- * <p>Typically implemented by an component, such as a{@code FlutterView}
- */
-export interface MouseCursorViewDelegate {
-  /**
-   * get window id to set mouse style
-   * <p> component need to implement this interface to get windowId
-   *
-   * @param callback windowId
-   * */
-  getWindowId(callback: AsyncCallback<number>): void;
-}
