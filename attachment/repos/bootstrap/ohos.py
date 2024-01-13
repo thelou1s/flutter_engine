@@ -111,7 +111,7 @@ def findFile(path, search, results):
         cur_path = os.path.join(path, item)
         if os.path.isdir(cur_path):
             if cur_path.endswith(search):
-                results.append(os.path.abspath(cur_path))
+                results.append(cur_path)
             findFile(os.path.join(path, item), search, results)
 
 
@@ -373,7 +373,7 @@ def checkEnvironment():
 
 
 def buildByNameAndType(args):
-    buildNames = args.name if args.branch or args.name else ["config", "compile", "har"]
+    buildNames = args.name if args.branch or args.name else ["config", "compile"]
     buildTypes = args.type
     for buildType in SUPPORT_BUILD_TYPES:
         if not buildType in buildTypes:
