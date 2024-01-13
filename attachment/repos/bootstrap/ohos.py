@@ -111,8 +111,8 @@ def findFile(path, search, results):
         cur_path = os.path.join(path, item)
         if os.path.isdir(cur_path):
             if cur_path.endswith(search):
-                results.append(cur_path)
-            findFile(os.path.join(path, item), search, results)
+                results.append(os.path.abspath(cur_path))
+            findFile(cur_path, search, results)
 
 
 def findNativeInCurrentDir():
