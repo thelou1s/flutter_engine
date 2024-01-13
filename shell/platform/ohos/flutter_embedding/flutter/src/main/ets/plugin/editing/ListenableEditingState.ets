@@ -252,7 +252,7 @@ export class ListenableEditingState {
         this.TextInputChannel.unspecifiedAction(this.client);
         break;
       case inputMethod.EnterKeyType.NONE:
-        this.TextInputChannel.done(this.client);
+        this.TextInputChannel.newline(this.client);
         break;
       case inputMethod.EnterKeyType.GO:
         this.TextInputChannel.go(this.client);
