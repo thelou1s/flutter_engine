@@ -325,6 +325,13 @@ class PlatformMethodCallback implements MethodCallHandler {
           break;
         case "SystemChrome.setApplicationSwitcherDescription":
           Log.d(PlatformMethodCallback.TAG, "setApplicationSwitcherDescription: " + JSON.stringify(args));
+          try {
+            this.platform.platformMessageHandler.setApplicationSwitcherDescription(args);
+            result.success(null);
+          } catch (err) {
+            Log.e(PlatformMethodCallback.TAG, "setApplicationSwitcherDescription err:" + JSON.stringify(err));
+            result.error("error", JSON.stringify(err), null);
+          }
           break;
         case "SystemChrome.setEnabledSystemUIOverlays":
           try {
