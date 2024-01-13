@@ -109,7 +109,7 @@ export default class TextInputChannel {
 
   unspecifiedAction(inputClientId: number): void {
     Log.d(TAG, "Sending 'unspecifiedAction' message.");
-    this.channel.invokeMethod("TextInputClient.performAction", [inputClientId, "TextInputAction.unspecifiedAction"]);
+    this.channel.invokeMethod("TextInputClient.performAction", [inputClientId, "TextInputAction.unspecified"]);
   }
 
   commitContent(inputClientId: number): void {
