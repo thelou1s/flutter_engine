@@ -142,7 +142,7 @@ class PlatformPluginCallback implements PlatformMessageHandler {
     Log.d(PlatformPluginCallback.TAG, "setApplicationSwitcherDescription: " + JSON.stringify(description));
     try {
       let label: string = description?.label;
-      this.uiAbilityContext?.setMissionLabel('test').then(() => {
+      this.uiAbilityContext?.setMissionLabel(label).then(() => {
         Log.d(PlatformPluginCallback.TAG, "Succeeded in seting mission label");
       })
     } catch (err) {
