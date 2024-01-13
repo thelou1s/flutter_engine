@@ -35,6 +35,7 @@ import errorManager from '@ohos.app.ability.errorManager';
 import appRecovery from '@ohos.app.ability.appRecovery';
 import FlutterManager from './FlutterManager';
 import { FlutterView } from '../../view/FlutterView';
+import { AsyncCallback } from '@ohos.base';
 
 const TAG = "FlutterAbility";
 const EVENT_BACK_PRESS = 'EVENT_BACK_PRESS';
@@ -354,6 +355,25 @@ export class FlutterAbility extends UIAbility implements Host {
       .setAlwaysUse24HourFormat(I18n.System.is24HourClock())
       .setPlatformBrightness(config.colorMode != ConfigurationConstant.ColorMode.COLOR_MODE_DARK
         ? PlatformBrightness.LIGHT : PlatformBrightness.DARK);
+  }
+
+  getWindowId(callback: AsyncCallback<number>): void {
+    if (callback === null) {
+      return;
+    }
+    try {
+      window.getLastWindow(this.context, (error, win) => {
+        if (error.code) {
+          callback(error, -1);
+          return;
+        }
+        let windowId = win.getWindowProperties().id;
+        callback(error, windowId);
+      });
+    } catch (err) {
+      Log.e(TAG, "get window id error!");
+      callback(err, -1);
+    }
   }
 
   getFlutterEngine(): FlutterEngine | null {
