@@ -79,7 +79,7 @@ export default class MouseCursorPlugin implements MouseCursorMethodHandler{
       this.systemCursorConstants.set("text", pointer.PointerStyle.TEXT_CURSOR);
       this.systemCursorConstants.set("resizeColum", pointer.PointerStyle.NORTH_SOUTH);
       this.systemCursorConstants.set("resizeDown", pointer.PointerStyle.SOUTH);
-      this.systemCursorConstants.set("resizeUpLeft", pointer.PointerStyle.NORTH_WEST);
+      this.systemCursorConstants.set("resizeDownLeft", pointer.PointerStyle.SOUTH_WEST);
       this.systemCursorConstants.set("resizeDownRight", pointer.PointerStyle.SOUTH_EAST);
       this.systemCursorConstants.set("resizeLeft", pointer.PointerStyle.WEST);
       this.systemCursorConstants.set("resizeLeftRight", pointer.PointerStyle.RESIZE_LEFT_RIGHT);
@@ -89,12 +89,30 @@ export default class MouseCursorPlugin implements MouseCursorMethodHandler{
       this.systemCursorConstants.set("resizeUpDown", pointer.PointerStyle.RESIZE_UP_DOWN);
       this.systemCursorConstants.set("resizeUpLeft", pointer.PointerStyle.NORTH_WEST);
       this.systemCursorConstants.set("resizeUpRight", pointer.PointerStyle.NORTH_EAST);
-      this.systemCursorConstants.set("resizeUpLeftDownRight", pointer.PointerStyle.MOVE);
-      this.systemCursorConstants.set("resizeUpRightDownLeft", pointer.PointerStyle.MOVE);
+      this.systemCursorConstants.set("resizeUpLeftDownRight", pointer.PointerStyle.NORTH_WEST_SOUTH_EAST);
+      this.systemCursorConstants.set("resizeUpRightDownLeft", pointer.PointerStyle.NORTH_EAST_SOUTH_WEST);
       this.systemCursorConstants.set("verticalText", pointer.PointerStyle.TEXT_CURSOR);
       this.systemCursorConstants.set("wait", pointer.PointerStyle.DEFAULT);
       this.systemCursorConstants.set("zoomIn", pointer.PointerStyle.ZOOM_IN);
       this.systemCursorConstants.set("zoomOut", pointer.PointerStyle.ZOOM_OUT);
+      this.systemCursorConstants.set("middleBtnEast", pointer.PointerStyle.MIDDLE_BTN_EAST);
+      this.systemCursorConstants.set("middleBtnWest", pointer.PointerStyle.MIDDLE_BTN_WEST);
+      this.systemCursorConstants.set("middleBtnSouth", pointer.PointerStyle.MIDDLE_BTN_SOUTH);
+      this.systemCursorConstants.set("middleBtnNorth", pointer.PointerStyle.MIDDLE_BTN_NORTH);
+      this.systemCursorConstants.set("middleBtnNorthSouth", pointer.PointerStyle.MIDDLE_BTN_NORTH_SOUTH);
+      this.systemCursorConstants.set("middleBtnNorthEast", pointer.PointerStyle.MIDDLE_BTN_NORTH_EAST);
+      this.systemCursorConstants.set("middleBtnNorthWest", pointer.PointerStyle.MIDDLE_BTN_NORTH_WEST);
+      this.systemCursorConstants.set("middleBtnSouthEast", pointer.PointerStyle.MIDDLE_BTN_SOUTH_EAST);
+      this.systemCursorConstants.set("middleBtnSouthWest", pointer.PointerStyle.MIDDLE_BTN_SOUTH_WEST);
+      this.systemCursorConstants.set("middleBtnNorthSouthWestEast", pointer.PointerStyle.MIDDLE_BTN_NORTH_SOUTH_WEST_EAST);
+      this.systemCursorConstants.set("horizontalTextCursor", pointer.PointerStyle.HORIZONTAL_TEXT_CURSOR);
+      this.systemCursorConstants.set("cursorCross", pointer.PointerStyle.CURSOR_CROSS);
+      this.systemCursorConstants.set("cursorCircle", pointer.PointerStyle.CURSOR_CIRCLE);
+      this.systemCursorConstants.set("loading", pointer.PointerStyle.LOADING);
+      this.systemCursorConstants.set("running", pointer.PointerStyle.RUNNING);
+      this.systemCursorConstants.set("colorSucker", pointer.PointerStyle.COLOR_SUCKER);
+      this.systemCursorConstants.set("screenshotChoose", pointer.PointerStyle.SCREENSHOT_CHOOSE);
+      this.systemCursorConstants.set("screenshotCursor", pointer.PointerStyle.SCREENSHOT_CURSOR);
     }
     let pointStyle:pointer.PointerStyle = this.systemCursorConstants.get(kind);
     if (pointStyle === null) {
