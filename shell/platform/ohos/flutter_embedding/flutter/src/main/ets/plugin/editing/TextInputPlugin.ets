@@ -229,6 +229,7 @@ class TextInputMethodHandlerImpl implements TextInputMethodHandler {
     try {
       this.inputMethodController.on('sendKeyboardStatus', (state) => {
         if(state == KeyboardStatus.HIDE) {
+          this.keyboardStatus = KeyboardStatus.HIDE;
           this.plugin.textInputChannel.onConnectionClosed(this.inputTarget.id);
         }
       })
