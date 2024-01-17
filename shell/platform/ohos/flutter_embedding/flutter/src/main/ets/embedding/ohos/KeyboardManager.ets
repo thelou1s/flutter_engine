@@ -12,10 +12,21 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
+import FlutterEngine from '../engine/FlutterEngine';
+import KeyEventChannel, { FlutterKeyEvent } from '../engine/systemchannels/KeyEventChannel';
 
-{ 
-  "hvigorVersion": "file:../dependencies/hvigor-3.2.1-s.tgz", 
-  "dependencies": { 
-    "@ohos/hvigor-ohos-plugin": "file:../dependencies/hvigor-ohos-plugin-3.2.1-s.tgz", 
-  } 
- }
+export default class KeyboardManager {
+  private keyEventChannel: KeyEventChannel | null = null
+
+  constructor(engine: FlutterEngine) {
+    this.keyEventChannel = new KeyEventChannel(engine.dartExecutor)
+  }
+
+  handleKeyEvent(event: KeyEvent) {
+    this.keyEventChannel?.sendFlutterKeyEvent(new FlutterKeyEvent(event), event.type == KeyType.Up, {
+      onFrameworkResponse: (isEventHandled: boolean): void => {
+
+      }
+    })
+  }
+}

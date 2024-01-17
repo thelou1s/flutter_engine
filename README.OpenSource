@@ -5,7 +5,7 @@
         "License File": "LICENSE",
         "Version Number": "3.7.12",
         "Owner": "aibin@openvalley.net",
-        "Upstream URL": "https://flutter.dev/",
+        "Upstream URL": "https://github.com/flutter/engine/",
         "Description": "The Flutter Engine is a portable runtime for hosting Flutter applications. It implements Flutter's core libraries, including animation and graphics, file and network I/O, accessibility support, plugin architecture, and a Dart runtime and compile toolchain. Most developers will interact with Flutter via the Flutter Framework, which provides a modern, reactive framework, and a rich set of platform, layout and foundation widgets."
     }
 ]

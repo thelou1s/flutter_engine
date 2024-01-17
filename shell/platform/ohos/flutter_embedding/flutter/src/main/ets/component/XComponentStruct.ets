@@ -13,11 +13,23 @@
 * limitations under the License.
 */
 
-import FlutterEngine from '../engine/FlutterEngine';
+import { BuilderParams, DVModelParameters } from '../view/DynamicView/dynamicView';
 
-export default interface FlutterEngineConfigurator {
+@Component
+struct XComponentStruct {
+  private context:ESObject;
+  dvModelParams: DVModelParameters = new DVModelParameters();
 
-  configureFlutterEngine: (flutterEngine: FlutterEngine) => void;
+  build() {
+    XComponent({ id: (this.dvModelParams as Record<string, ESObject>)["xComponentId"], type: 'texture', libraryname: 'flutter'})
+      .onLoad((context) => {
+        this.context = context;
+      })
+      .onDestroy(() => {
+      })
+  }
+}
 
-  cleanUpFlutterEngine: (flutterEngine: FlutterEngine) => void;
+@Builder export function BuildXComponentStruct(buildParams: BuilderParams) {
+  XComponentStruct({dvModelParams: buildParams.params});
 }

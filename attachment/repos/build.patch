@@ -1,0 +1,870 @@
+diff --git a/build/config/BUILD.gn b/build/config/BUILD.gn
+index 4e62965..ea49a53 100644
+--- a/build/config/BUILD.gn
++++ b/build/config/BUILD.gn
+@@ -146,6 +146,8 @@ config("default_libs") {
+       "dl",
+       "m",
+     ]
++  } else if (is_ohos) {
++    libs = [ "dl","hilog_ndk.z" ]
+   } else if (is_linux) {
+     libs = [ "dl" ]
+   }
+diff --git a/build/config/BUILDCONFIG.gn b/build/config/BUILDCONFIG.gn
+index b8d0f47..d789796 100644
+--- a/build/config/BUILDCONFIG.gn
++++ b/build/config/BUILDCONFIG.gn
+@@ -34,6 +34,7 @@
+ # When writing build files, to do something only for the host:
+ #   if (current_toolchain == host_toolchain) { ...
+ 
++
+ if (target_os == "") {
+   target_os = host_os
+ }
+@@ -190,6 +191,7 @@ if (current_os == "win") {
+   is_fuchsia_host = false
+   is_ios = false
+   is_linux = false
++  is_ohos = false
+   is_mac = false
+   is_posix = false
+   is_win = true
+@@ -198,6 +200,7 @@ if (current_os == "win") {
+   is_android = false
+   is_chromeos = false
+   is_fuchsia = false
++  is_ohos = false
+   is_fuchsia_host = false
+   is_ios = false
+   is_linux = false
+@@ -212,6 +215,7 @@ if (current_os == "win") {
+   is_fuchsia_host = false
+   is_ios = false
+   is_linux = false
++  is_ohos = false
+   is_mac = false
+   is_posix = true
+   is_win = false
+@@ -223,6 +227,7 @@ if (current_os == "win") {
+   is_fuchsia_host = false
+   is_ios = false
+   is_linux = true
++  is_ohos = false
+   is_mac = false
+   is_posix = true
+   is_win = false
+@@ -237,6 +242,7 @@ if (current_os == "win") {
+   is_fuchsia_host = false
+   is_ios = false
+   is_linux = false
++  is_ohos = false
+   is_mac = false
+   is_posix = true
+   is_win = false
+@@ -248,6 +254,19 @@ if (current_os == "win") {
+   is_fuchsia_host = false
+   is_ios = true
+   is_linux = false
++  is_ohos = false
++  is_mac = false
++  is_posix = true
++  is_win = false
++  is_wasm = false
++} else if (current_os == "ohos") {
++  is_android = false
++  is_chromeos = false
++  is_fuchsia = false
++  is_fuchsia_host = false
++  is_ios = false
++  is_linux = false
++  is_ohos  = true
+   is_mac = false
+   is_posix = true
+   is_win = false
+@@ -259,6 +278,7 @@ if (current_os == "win") {
+   is_fuchsia_host = false
+   is_ios = false
+   is_linux = true
++  is_ohos = false
+   is_mac = false
+   is_posix = true
+   is_win = false
+@@ -270,6 +290,7 @@ if (current_os == "win") {
+   is_fuchsia_host = false
+   is_ios = false
+   is_linux = false
++  is_ohos = false
+   is_mac = false
+   is_posix = true
+   is_win = false
+@@ -281,6 +302,7 @@ if (current_os == "win") {
+   is_fuchsia_host = false
+   is_ios = false
+   is_linux = false
++  is_ohos = false
+   is_mac = false
+   is_posix = false
+   is_win = false
+@@ -313,7 +335,7 @@ if (!is_clang && using_sanitizer) {
+   is_clang = true
+ }
+ 
+-use_flutter_cxx = is_clang && (is_linux || is_android || is_mac || is_ios)
++use_flutter_cxx = is_clang && (is_linux || is_android || is_mac || is_ios || is_ohos )
+ 
+ if (is_msan && !is_linux) {
+   assert(false, "Memory sanitizer is only available on Linux.")
+@@ -365,7 +387,9 @@ if (is_posix) {
+   ]
+ }
+ 
+-if (is_linux) {
++if(is_ohos || (is_linux && host_os == "mac")){
++  _native_compiler_configs += [ "//build/config/ohos:sdk" ]
++  }else if (is_linux) {
+   _native_compiler_configs += [ "//build/config/linux:sdk" ]
+ } else if (is_mac) {
+   _native_compiler_configs += [ "//build/config/mac:sdk" ]
+@@ -510,8 +534,18 @@ shlib_toolchain = false
+ if (custom_toolchain != "") {
+   assert(custom_sysroot != "")
+   assert(custom_target_triple != "")
+-  host_toolchain = "//build/toolchain/linux:clang_$host_cpu"
+   set_default_toolchain("//build/toolchain/custom")
++  if (host_os == "linux") {
++    if (is_clang) {
++      host_toolchain = "//build/toolchain/linux:clang_$host_cpu"
++    } else {
++      host_toolchain = "//build/toolchain/linux:$host_cpu"
++    }
++  } else if (host_os == "mac") {
++    host_toolchain = "//build/toolchain/mac:clang_$host_cpu"
++  } else {
++    assert(false, "Unknown host for ohos cross compile")
++  }
+ } else if (is_win) {
+   if (is_clang) {
+     host_toolchain = "//build/toolchain/win:clang_$host_cpu"
+@@ -544,6 +578,21 @@ if (custom_toolchain != "") {
+   } else {
+     set_default_toolchain("//build/toolchain/android:$current_cpu")
+   }
++} else if (is_ohos) {
++  if (host_os == "linux") {
++    if (is_clang) {
++      host_toolchain = "//build/toolchain/linux:clang_$host_cpu"
++      set_default_toolchain("//build/toolchain/linux:clang_$current_cpu")
++    } else {
++      host_toolchain = "//build/toolchain/linux:$host_cpu"
++      set_default_toolchain("//build/toolchain/linux:$current_cpu")
++    }
++  } else if (host_os == "mac") {
++    host_toolchain = "//build/toolchain/mac:clang_$host_cpu"
++    set_default_toolchain("//build/toolchain/ohos:clang_$current_cpu")
++  } else {
++    assert(false, "Unknown host for ohos cross compile")
++  }
+ } else if (is_linux) {
+   if (is_clang) {
+     host_toolchain = "//build/toolchain/linux:clang_$host_cpu"
+diff --git a/build/config/compiler/BUILD.gn b/build/config/compiler/BUILD.gn
+index ba20010..24a7d4e 100644
+--- a/build/config/compiler/BUILD.gn
++++ b/build/config/compiler/BUILD.gn
+@@ -191,11 +191,18 @@ config("compiler") {
+     # CPU architecture. We may or may not be doing a cross compile now, so for
+     # simplicity we always explicitly set the architecture.
+     if (current_cpu == "x64") {
+-      cflags += [
+-        "-m64",
+-        "-march=x86-64",
+-      ]
++      if  ( is_ohos ){
++        cflags += [
++          "-m64",
++        ]
++      }else {
++        cflags += [
++          "-m64",
++          "-march=x86-64",
++        ]
++      }
+       ldflags += [ "-m64" ]
++
+     } else if (current_cpu == "x86") {
+       cflags += [ "-m32" ]
+       ldflags += [ "-m32" ]
+@@ -315,7 +322,7 @@ config("compiler") {
+ 
+   # Linux/Android common flags setup.
+   # ---------------------------------
+-  if (is_linux || is_android) {
++  if (is_linux || is_android || is_ohos ) {
+     cflags += [
+       "-fPIC",
+       "-pipe",  # Use pipes for communicating between sub-processes. Faster.
+@@ -334,7 +341,16 @@ config("compiler") {
+ 
+   # Linux-specific compiler flags setup.
+   # ------------------------------------
+-  if (is_linux) {
++  if (is_ohos ) {
++    cflags += [ "-pthread" ]
++    ldflags += [ "-pthread" ]
++
++    if (current_cpu == "arm64") {
++    cflags += [ "--target=aarch64-linux-ohos" ]
++    ldflags += [ "--target=aarch64-linux-ohos" ]
++      cflags += [ "-DBORINGSSL_CLANG_SUPPORTS_DOT_ARCH" ]
++    }
++  }else if (is_linux  ) {
+     cflags += [ "-pthread" ]
+     ldflags += [ "-pthread" ]
+ 
+@@ -521,8 +537,8 @@ config("runtime_library") {
+       ldflags += [ "-nostdlib++" ]
+     }
+     include_dirs = [
+-      "//third_party/libcxx/include",
+       "//third_party/libcxxabi/include",
++      "$custom_toolchain/include/c++/v1",
+     ]
+   }
+ 
+diff --git a/build/config/ohos/BUILD.gn b/build/config/ohos/BUILD.gn
+new file mode 100644
+index 0000000..1d29b40
+--- /dev/null
++++ b/build/config/ohos/BUILD.gn
+@@ -0,0 +1,29 @@
++# Copyright (c) 2013 The Chromium Authors. All rights reserved.
++# Use of this source code is governed by a BSD-style license that can be
++# found in the LICENSE file.
++
++import("//build/config/ohos/pkg_config.gni")
++import("//build/config/features.gni")
++import("//build/config/sysroot.gni")
++import("//build/config/ui.gni")
++
++config("sdk") {
++  if (sysroot != "") {
++    cflags = [ "--sysroot=" + sysroot ]
++    ldflags = [ "--sysroot=" + sysroot ]
++
++    # Need to get some linker flags out of the sysroot.
++    ldflags += [ exec_script("sysroot_ld_path.py",
++                             [
++                               rebase_path("//build/ohos/sysroot_ld_path.sh",
++                                           root_build_dir),
++                               sysroot,
++                             ],
++                             "value") ]
++  }
++}
++
++config("fontconfig") {
++  libs = [  ]
++}
++
+diff --git a/build/config/ohos/pkg-config.py b/build/config/ohos/pkg-config.py
+new file mode 100644
+index 0000000..b4a6aff
+--- /dev/null
++++ b/build/config/ohos/pkg-config.py
+@@ -0,0 +1,249 @@
++#!/usr/bin/env python3
++#
++# Copyright (c) 2013 The Chromium Authors. All rights reserved.
++# Use of this source code is governed by a BSD-style license that can be
++# found in the LICENSE file.
++
++
++
++import json
++import os
++import subprocess
++import sys
++import re
++from optparse import OptionParser
++
++# This script runs pkg-config, optionally filtering out some results, and
++# returns the result.
++#
++# The result will be [ <includes>, <cflags>, <libs>, <lib_dirs>, <ldflags> ]
++# where each member is itself a list of strings.
++#
++# You can filter out matches using "-v <regexp>" where all results from
++# pkgconfig matching the given regular expression will be ignored. You can
++# specify more than one regular expression my specifying "-v" more than once.
++#
++# You can specify a sysroot using "-s <sysroot>" where sysroot is the absolute
++# system path to the sysroot used for compiling. This script will attempt to
++# generate correct paths for the sysroot.
++#
++# When using a sysroot, you must also specify the architecture via
++# "-a <arch>" where arch is either "x86" or "x64".
++#
++# CrOS systemroots place pkgconfig files at <systemroot>/usr/share/pkgconfig
++# and one of <systemroot>/usr/lib/pkgconfig or <systemroot>/usr/lib64/pkgconfig
++# depending on whether the systemroot is for a 32 or 64 bit architecture. They
++# specify the 'lib' or 'lib64' of the pkgconfig path by defining the
++# 'system_libdir' variable in the args.gn file. pkg_config.gni communicates this
++# variable to this script with the "--system_libdir <system_libdir>" flag. If no
++# flag is provided, then pkgconfig files are assumed to come from
++# <systemroot>/usr/lib/pkgconfig.
++#
++# Additionally, you can specify the option --atleast-version. This will skip
++# the normal outputting of a dictionary and instead print true or false,
++# depending on the return value of pkg-config for the given package.
++
++
++def SetConfigPath(options):
++  """Set the PKG_CONFIG_LIBDIR environment variable.
++
++  This takes into account any sysroot and architecture specification from the
++  options on the given command line.
++  """
++
++  sysroot = options.sysroot
++  assert sysroot
++
++  # Compute the library path name based on the architecture.
++  arch = options.arch
++  if sysroot and not arch:
++    print("You must specify an architecture via -a if using a sysroot.")
++    sys.exit(1)
++
++  libdir = sysroot + '/usr/' + options.system_libdir + '/pkgconfig'
++  libdir += ':' + sysroot + '/usr/share/pkgconfig'
++  os.environ['PKG_CONFIG_LIBDIR'] = libdir
++  return libdir
++
++
++def GetPkgConfigPrefixToStrip(options, args):
++  """Returns the prefix from pkg-config where packages are installed.
++
++  This returned prefix is the one that should be stripped from the beginning of
++  directory names to take into account sysroots.
++  """
++  # Some sysroots, like the Chromium OS ones, may generate paths that are not
++  # relative to the sysroot. For example,
++  # /path/to/chroot/build/x86-generic/usr/lib/pkgconfig/pkg.pc may have all
++  # paths relative to /path/to/chroot (i.e. prefix=/build/x86-generic/usr)
++  # instead of relative to /path/to/chroot/build/x86-generic (i.e prefix=/usr).
++  # To support this correctly, it's necessary to extract the prefix to strip
++  # from pkg-config's |prefix| variable.
++  prefix = subprocess.check_output([options.pkg_config,
++      "--variable=prefix"] + args, env=os.environ).decode('utf-8')
++  if prefix[-4] == '/usr':
++    return prefix[4:]
++  return prefix
++
++
++def MatchesAnyRegexp(flag, list_of_regexps):
++  """Returns true if the first argument matches any regular expression in the
++  given list."""
++  for regexp in list_of_regexps:
++    if regexp.search(flag) != None:
++      return True
++  return False
++
++
++def RewritePath(path, strip_prefix, sysroot):
++  """Rewrites a path by stripping the prefix and prepending the sysroot."""
++  if os.path.isabs(path) and not path.startswith(sysroot):
++    if path.startswith(strip_prefix):
++      path = path[len(strip_prefix):]
++    path = path.lstrip('/')
++    return os.path.join(sysroot, path)
++  else:
++    return path
++
++
++def main():
++  # If this is run on non-Linux platforms, just return nothing and indicate
++  # success. This allows us to "kind of emulate" a Linux build from other
++  # platforms.
++  if "linux" not in sys.platform:
++    print("[[],[],[],[],[]]")
++    return 0
++
++  parser = OptionParser()
++  parser.add_option('-d', '--debug', action='store_true')
++  parser.add_option('-p', action='store', dest='pkg_config', type='string',
++                    default='pkg-config')
++  parser.add_option('-v', action='append', dest='strip_out', type='string')
++  parser.add_option('-s', action='store', dest='sysroot', type='string')
++  parser.add_option('-a', action='store', dest='arch', type='string')
++  parser.add_option('--system_libdir', action='store', dest='system_libdir',
++                    type='string', default='lib')
++  parser.add_option('--atleast-version', action='store',
++                    dest='atleast_version', type='string')
++  parser.add_option('--libdir', action='store_true', dest='libdir')
++  parser.add_option('--dridriverdir', action='store_true', dest='dridriverdir')
++  parser.add_option('--version-as-components', action='store_true',
++                    dest='version_as_components')
++  (options, args) = parser.parse_args()
++
++  # Make a list of regular expressions to strip out.
++  strip_out = []
++  if options.strip_out != None:
++    for regexp in options.strip_out:
++      strip_out.append(re.compile(regexp))
++
++  if options.sysroot:
++    libdir = SetConfigPath(options)
++    if options.debug:
++      sys.stderr.write('PKG_CONFIG_LIBDIR=%s\n' % libdir)
++    prefix = GetPkgConfigPrefixToStrip(options, args)
++  else:
++    prefix = ''
++
++  if options.atleast_version:
++    # When asking for the return value, just run pkg-config and print the return
++    # value, no need to do other work.
++    if not subprocess.call([options.pkg_config,
++                            "--atleast-version=" + options.atleast_version] +
++                            args):
++      print("true")
++    else:
++      print("false")
++    return 0
++
++  if options.version_as_components:
++    cmd = [options.pkg_config, "--modversion"] + args
++    try:
++      version_string = subprocess.check_output(cmd).decode('utf-8')
++    except:
++      sys.stderr.write('Error from pkg-config.\n')
++      return 1
++    print(json.dumps(list(map(int, version_string.strip().split(".")))))
++    return 0
++
++
++  if options.libdir:
++    cmd = [options.pkg_config, "--variable=libdir"] + args
++    if options.debug:
++      sys.stderr.write('Running: %s\n' % cmd)
++    try:
++      libdir = subprocess.check_output(cmd).decode('utf-8')
++    except:
++      print("Error from pkg-config.")
++      return 1
++    sys.stdout.write(libdir.strip())
++    return 0
++
++  if options.dridriverdir:
++    cmd = [options.pkg_config, "--variable=dridriverdir"] + args
++    if options.debug:
++      sys.stderr.write('Running: %s\n' % cmd)
++    try:
++      dridriverdir = subprocess.check_output(cmd).decode('utf-8')
++    except:
++      print("Error from pkg-config.")
++      return 1
++    sys.stdout.write(dridriverdir.strip())
++    return
++
++  cmd = [options.pkg_config, "--cflags", "--libs"] + args
++  if options.debug:
++    sys.stderr.write('Running: %s\n' % ' '.join(cmd))
++
++  try:
++    flag_string = subprocess.check_output(cmd).decode('utf-8')
++  except:
++    sys.stderr.write('Could not run pkg-config.\n')
++    return 1
++
++  # For now just split on spaces to get the args out. This will break if
++  # pkgconfig returns quoted things with spaces in them, but that doesn't seem
++  # to happen in practice.
++  all_flags = flag_string.strip().split(' ')
++
++
++  sysroot = options.sysroot
++  if not sysroot:
++    sysroot = ''
++
++  includes = []
++  cflags = []
++  libs = []
++  lib_dirs = []
++
++  for flag in all_flags[:]:
++    if len(flag) == 0 or MatchesAnyRegexp(flag, strip_out):
++      continue;
++
++    if flag[:2] == '-l':
++      libs.append(RewritePath(flag[2:], prefix, sysroot))
++    elif flag[:2] == '-L':
++      lib_dirs.append(RewritePath(flag[2:], prefix, sysroot))
++    elif flag[:2] == '-I':
++      includes.append(RewritePath(flag[2:], prefix, sysroot))
++    elif flag[:3] == '-Wl':
++      # Don't allow libraries to control ld flags.  These should be specified
++      # only in build files.
++      pass
++    elif flag == '-pthread':
++      # Many libs specify "-pthread" which we don't need since we always include
++      # this anyway. Removing it here prevents a bunch of duplicate inclusions
++      # on the command line.
++      pass
++    else:
++      cflags.append(flag)
++
++  # Output a GN array, the first one is the cflags, the second are the libs. The
++  # JSON formatter prints GN compatible lists when everything is a list of
++  # strings.
++  print(json.dumps([includes, cflags, libs, lib_dirs]))
++  return 0
++
++
++if __name__ == '__main__':
++  sys.exit(main())
+diff --git a/build/config/ohos/pkg_config.gni b/build/config/ohos/pkg_config.gni
+new file mode 100644
+index 0000000..f970ac1
+--- /dev/null
++++ b/build/config/ohos/pkg_config.gni
+@@ -0,0 +1,131 @@
++# Copyright (c) 2013 The Chromium Authors. All rights reserved.
++# Use of this source code is governed by a BSD-style license that can be
++# found in the LICENSE file.
++
++import("//build/config/sysroot.gni")
++
++# Defines a config specifying the result of running pkg-config for the given
++# packages. Put the package names you want to query in the "packages" variable
++# inside the template invocation.
++#
++# You can also add defines via the "defines" variable. This can be useful to
++# add this to the config to pass defines that the library expects to get by
++# users of its headers.
++#
++# Example:
++#   pkg_config("mything") {
++#     packages = [ "mything1", "mything2" ]
++#     defines = [ "ENABLE_AWESOME" ]
++#   }
++#
++# You can also use "extra args" to filter out results (see pkg-config.py):
++#   extra_args = [ "-v, "foo" ]
++# To ignore libs and ldflags (only cflags/defines will be set, which is useful
++# when doing manual dynamic linking), set:
++#   ignore_libs = true
++
++declare_args() {
++  # A pkg-config wrapper to call instead of trying to find and call the right
++  # pkg-config directly. Wrappers like this are common in cross-compilation
++  # environments.
++  # Leaving it blank defaults to searching PATH for 'pkg-config' and relying on
++  # the sysroot mechanism to find the right .pc files.
++  pkg_config = ""
++
++  # A optional pkg-config wrapper to use for tools built on the host.
++  host_pkg_config = ""
++
++  # CrOS systemroots place pkgconfig files at <systemroot>/usr/share/pkgconfig
++  # and one of <systemroot>/usr/lib/pkgconfig or <systemroot>/usr/lib64/pkgconfig
++  # depending on whether the systemroot is for a 32 or 64 bit architecture.
++  #
++  # When build under GYP, CrOS board builds specify the 'system_libdir' variable
++  # as part of the GYP_DEFINES provided by the CrOS emerge build or simple
++  # chrome build scheme. This variable permits controlling this for GN builds
++  # in similar fashion by setting the `system_libdir` variable in the build's
++  # args.gn file to 'lib' or 'lib64' as appropriate for the target architecture.
++  system_libdir = "lib"
++}
++
++pkg_config_script = "//build/config/ohos/pkg-config.py"
++
++# Define the args we pass to the pkg-config script for other build files that
++# need to invoke it manually.
++pkg_config_args = []
++
++if (sysroot != "") {
++  # Pass the sysroot if we're using one (it requires the CPU arch also).
++  pkg_config_args += [
++    "-s",
++    rebase_path(sysroot),
++    "-a",
++    current_cpu,
++  ]
++}
++
++if (pkg_config != "") {
++  pkg_config_args += [
++    "-p",
++    pkg_config,
++  ]
++}
++
++# Only use the custom libdir when building with the target sysroot.
++if (target_sysroot != "" && sysroot == target_sysroot) {
++  pkg_config_args += [
++    "--system_libdir",
++    system_libdir,
++  ]
++}
++
++if (host_pkg_config != "") {
++  host_pkg_config_args = [
++    "-p",
++    host_pkg_config,
++  ]
++} else {
++  host_pkg_config_args = pkg_config_args
++}
++
++template("pkg_config") {
++  assert(defined(invoker.packages),
++         "Variable |packages| must be defined to be a list in pkg_config.")
++  config(target_name) {
++    if (host_toolchain == current_toolchain) {
++      args = host_pkg_config_args + invoker.packages
++    } else {
++      args = pkg_config_args + invoker.packages
++    }
++    if (defined(invoker.extra_args)) {
++      args += invoker.extra_args
++    }
++
++    pkgresult = exec_script(pkg_config_script, args, "value")
++    cflags = pkgresult[1]
++
++    foreach(include, pkgresult[0]) {
++      if (sysroot != "") {
++        # We want the system include paths to use -isystem instead of -I to
++        # suppress warnings in those headers.
++        include_relativized = rebase_path(include, root_build_dir)
++        cflags += [ "-isystem$include_relativized" ]
++      } else {
++        cflags += [ "-I$include" ]
++      }
++    }
++
++    if (!defined(invoker.ignore_libs) || !invoker.ignore_libs) {
++      libs = pkgresult[2]
++      lib_dirs = pkgresult[3]
++    }
++
++    forward_variables_from(invoker,
++                           [
++                             "defines",
++                             "visibility",
++                           ])
++  }
++}
++
++OHOS_NDK_ROOT = target_sysroot
++OHOS_NDK_LIB = "$OHOS_NDK_ROOT/usr/aarch64-linux-ohos"
+diff --git a/build/config/ohos/sysroot_ld_path.py b/build/config/ohos/sysroot_ld_path.py
+new file mode 100644
+index 0000000..2cde6e2
+--- /dev/null
++++ b/build/config/ohos/sysroot_ld_path.py
+@@ -0,0 +1,21 @@
++# Copyright (c) 2013 The Chromium Authors. All rights reserved.
++# Use of this source code is governed by a BSD-style license that can be
++# found in the LICENSE file.
++
++# This file takes two arguments, the relative location of the shell script that
++# does the checking, and the name of the sysroot.
++
++# TODO(brettw) the build/linux/sysroot_ld_path.sh script should be rewritten in
++# Python in this file.
++
++import subprocess
++import sys
++
++if len(sys.argv) != 3:
++  print("Need two arguments")
++  sys.exit(1)
++
++result = subprocess.check_output([sys.argv[1], sys.argv[2]],
++                                 universal_newlines=True).strip()
++
++print('"%s"' % result)
+diff --git a/build/config/sysroot.gni b/build/config/sysroot.gni
+index 7987e51..cd7b060 100644
+--- a/build/config/sysroot.gni
++++ b/build/config/sysroot.gni
+@@ -22,8 +22,10 @@ if (current_toolchain == default_toolchain && target_sysroot != "") {
+ } else if (is_android) {
+   import("//build/config/android/config.gni")
+   sysroot = rebase_path("$llvm_android_toolchain_root/sysroot")
++} else if (is_ohos) {
++  sysroot = target_sysroot
+ } else if (is_linux && !is_chromeos) {
+-  if (use_default_linux_sysroot && !is_fuchsia) {
++  if (use_default_linux_sysroot) {
+     if (current_cpu == "x64") {
+       sysroot = rebase_path("//build/linux/debian_sid_amd64-sysroot")
+     } else {
+diff --git a/build/ohos/sysroot_ld_path.sh b/build/ohos/sysroot_ld_path.sh
+new file mode 100755
+index 0000000..4b8bf73
+--- /dev/null
++++ b/build/ohos/sysroot_ld_path.sh
+@@ -0,0 +1,100 @@
++#!/bin/sh
++# Copyright (c) 2013 The Chromium Authors. All rights reserved.
++# Use of this source code is governed by a BSD-style license that can be
++# found in the LICENSE file.
++
++# Reads etc/ld.so.conf and/or etc/ld.so.conf.d/*.conf and returns the
++# appropriate linker flags.
++#
++#  sysroot_ld_path.sh /abspath/to/sysroot
++#
++
++log_error_and_exit() {
++  echo $0: $@
++  exit 1
++}
++
++process_entry() {
++  if [ -z "$1" ] || [ -z "$2" ]; then
++    log_error_and_exit "bad arguments to process_entry()"
++  fi
++  local root="$1"
++  local localpath="$2"
++
++  echo $localpath | grep -qs '^/'
++  if [ $? -ne 0 ]; then
++    log_error_and_exit $localpath does not start with /
++  fi
++  local entry="$root$localpath"
++  echo -L$entry
++  echo -Wl,-rpath-link=$entry
++}
++
++process_ld_so_conf() {
++  if [ -z "$1" ] || [ -z "$2" ]; then
++    log_error_and_exit "bad arguments to process_ld_so_conf()"
++  fi
++  local root="$1"
++  local ld_so_conf="$2"
++
++  # ld.so.conf may include relative include paths. pushd is a bashism.
++  local saved_pwd=$(pwd)
++  cd $(dirname "$ld_so_conf")
++
++  cat "$ld_so_conf" | \
++    while read ENTRY; do
++      echo "$ENTRY" | grep -qs ^include
++      if [ $? -eq 0 ]; then
++        local included_files=$(echo "$ENTRY" | sed 's/^include //')
++        echo "$included_files" | grep -qs ^/
++        if [ $? -eq 0 ]; then
++          if ls $root$included_files >/dev/null 2>&1 ; then
++            for inc_file in $root$included_files; do
++              process_ld_so_conf "$root" "$inc_file"
++            done
++          fi
++        else
++          if ls $(pwd)/$included_files >/dev/null 2>&1 ; then
++            for inc_file in $(pwd)/$included_files; do
++              process_ld_so_conf "$root" "$inc_file"
++            done
++          fi
++        fi
++        continue
++      fi
++
++      echo "$ENTRY" | grep -qs ^/
++      if [ $? -eq 0 ]; then
++        process_entry "$root" "$ENTRY"
++      fi
++    done
++
++  # popd is a bashism
++  cd "$saved_pwd"
++}
++
++# Main
++
++if [ $# -ne 1 ]; then
++  echo Usage $0 /abspath/to/sysroot
++  exit 1
++fi
++
++echo $1 | grep -qs ' '
++if [ $? -eq 0 ]; then
++  log_error_and_exit $1 contains whitespace.
++fi
++
++LD_SO_CONF="$1/etc/ld.so.conf"
++LD_SO_CONF_D="$1/etc/ld.so.conf.d"
++
++if [ -e "$LD_SO_CONF" ]; then
++  process_ld_so_conf "$1" "$LD_SO_CONF" | xargs echo
++elif [ -e "$LD_SO_CONF_D" ]; then
++  find "$LD_SO_CONF_D" -maxdepth 1 -name '*.conf' -print -quit > /dev/null
++  if [ $? -eq 0 ]; then
++    for entry in $LD_SO_CONF_D/*.conf; do
++      process_ld_so_conf "$1" "$entry"
++    done | xargs echo
++  fi
++fi
+diff --git a/build/secondary/third_party/glfw/BUILD.gn b/build/secondary/third_party/glfw/BUILD.gn
+index cad6cbc..c17950b 100644
+--- a/build/secondary/third_party/glfw/BUILD.gn
++++ b/build/secondary/third_party/glfw/BUILD.gn
+@@ -47,6 +47,34 @@ source_set("glfw") {
+     ]
+ 
+     defines = [ "_GLFW_WIN32" ]
++  } else if (is_ohos) {
++    sources += [
++      "$_checkout_dir/src/glx_context.c",
++      "$_checkout_dir/src/glx_context.h",
++      "$_checkout_dir/src/posix_time.c",
++      "$_checkout_dir/src/posix_time.h",
++      "$_checkout_dir/src/posix_thread.c",
++      "$_checkout_dir/src/posix_thread.h",
++      "$_checkout_dir/src/x11_init.c",
++      "$_checkout_dir/src/x11_monitor.c",
++      "$_checkout_dir/src/x11_platform.h",
++      "$_checkout_dir/src/x11_window.c",
++      "$_checkout_dir/src/xkb_unicode.c",
++      "$_checkout_dir/src/xkb_unicode.h",
++    ]
++
++    defines = [
++      "_GLFW_X11",
++      "_GLFW_HAS_XF86VM",
++    ]
++
++    libs = [
++      "X11",
++      "Xcursor",
++      "Xinerama",
++      "Xrandr",
++      "Xxf86vm",
++    ]
+   } else if (is_linux) {
+     sources += [
+       "$_checkout_dir/src/glx_context.c",
+diff --git a/build/toolchain/custom/BUILD.gn b/build/toolchain/custom/BUILD.gn
+index 65b1623..a89742a 100644
+--- a/build/toolchain/custom/BUILD.gn
++++ b/build/toolchain/custom/BUILD.gn
+@@ -12,11 +12,11 @@ toolchain("custom") {
+   # these values in our scope.
+   cc = "${toolchain_bin}/clang"
+   cxx = "${toolchain_bin}/clang++"
+-  ar = "${toolchain_bin}/${custom_target_triple}-ar"
++  ar = "${toolchain_bin}/llvm-ar"
+   ld = "${toolchain_bin}/clang++"
+-  readelf = "${toolchain_bin}/${custom_target_triple}-readelf"
+-  nm = "${toolchain_bin}/${custom_target_triple}-nm"
+-  strip = "${toolchain_bin}/${custom_target_triple}-strip"
++  readelf = "${toolchain_bin}/llvm-readelf"
++  nm = "${toolchain_bin}/llvm-nm"
++  strip = "${toolchain_bin}/llvm-strip"
+ 
+   target_triple_flags = "--target=${custom_target_triple}"
+   sysroot_flags = "--sysroot ${custom_sysroot}"

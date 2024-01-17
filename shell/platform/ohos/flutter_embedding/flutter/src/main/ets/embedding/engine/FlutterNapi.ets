@@ -219,8 +219,8 @@ export default class FlutterNapi {
   }
 
   spawn(entrypointFunctionName: string, pathToEntrypointFunction: string, initialRoute: string, entrypointArgs: Array<string>): FlutterNapi {
-    let shellHolderId: number = flutter.nativeSpawn(this.nativeShellHolderId, entrypointFunctionName, pathToEntrypointFunction, initialRoute, entrypointArgs)
     let flutterNapi = new FlutterNapi()
+    let shellHolderId: number = flutter.nativeSpawn(this.nativeShellHolderId, entrypointFunctionName, pathToEntrypointFunction, initialRoute, entrypointArgs, flutterNapi)
     flutterNapi.nativeShellHolderId = shellHolderId
     return flutterNapi;
   }
@@ -352,6 +352,26 @@ export default class FlutterNapi {
       Log.d(TAG, "systemlanguages "+ index + ":" + systemLanguages[index]);
     }
     flutter.nativeGetSystemLanguages(this.nativeShellHolderId!, systemLanguages);
+  }
+
+  /**
+   * xcomponet绑定flutterEngine
+   * @param xcomponentId
+   */
+  xComponentAttachFlutterEngine(xcomponentId: number) {
+    flutter.nativeXComponentAttachFlutterEngine(xcomponentId, this.nativeShellHolderId!);
+  }
+
+  /**
+   * xcomponet解除绑定flutterEngine
+   * @param xcomponentId
+   */
+  xComponentDetachFlutterEngine(xcomponentId: number) {
+    flutter.nativeXComponentDetachFlutterEngine(xcomponentId, this.nativeShellHolderId!);
+  }
+
+  detachFromNativeAndReleaseResources() {
+    flutter.nativeDestroy(this.nativeShellHolderId!!);
   }
 }
 

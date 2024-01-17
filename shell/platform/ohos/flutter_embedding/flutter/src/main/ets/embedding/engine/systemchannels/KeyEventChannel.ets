@@ -15,15 +15,13 @@
 
 import BasicMessageChannel from '../../../plugin/common/BasicMessageChannel';
 import { BinaryMessenger } from '../../../plugin/common/BinaryMessenger';
-import { Reply } from '../../../plugin/common/BasicMessageChannel';
-import { Action, Key, KeyEvent } from '@ohos.multimodalInput.keyEvent';
 import Log from '../../../util/Log';
 import JSONMessageCodec from '../../../plugin/common/JSONMessageCodec';
 
 export default class KeyEventChannel {
   private static TAG = "KeyEventChannel";
   private static CHANNEL_NAME = "flutter/keyevent";
-  private channel : BasicMessageChannel<Map<String, Object>>;
+  private channel: BasicMessageChannel<Map<String, Object>>;
 
   constructor(binaryMessenger: BinaryMessenger) {
     this.channel = new BasicMessageChannel<Map<String, Object>>(binaryMessenger, KeyEventChannel.CHANNEL_NAME, JSONMessageCodec.INSTANCE);
@@ -33,7 +31,7 @@ export default class KeyEventChannel {
                       isKeyUp: boolean,
                       responseHandler: EventResponseHandler): void {
     this.channel.send(this.encodeKeyEvent(keyEvent, isKeyUp),
-      (message:Map<String, Object>) => {
+      (message: Map<String, Object>) => {
         let isEventHandled = false;
         try {
           if (message != null) {
@@ -47,29 +45,26 @@ export default class KeyEventChannel {
     );
   }
 
-  encodeKeyEvent(keyEvent: FlutterKeyEvent, isKeyUp: boolean): Map<String,Object> {
-    let  message: Map<String, Object> = new Map();
-    message.set("type", isKeyUp ?  "keyup" : "keydown");
+  private encodeKeyEvent(keyEvent: FlutterKeyEvent, isKeyUp: boolean): Map<String, Object> {
+    let message: Map<String, Object> = new Map();
+    message.set("type", isKeyUp ? "keyup" : "keydown");
     message.set("keymap", "ohos");
-    message.set("codePoint", keyEvent.event.unicodeChar);
-    message.set("keyCode", keyEvent.event.key.code);
-    message.set("deviceId", keyEvent.event.key.deviceId);
-    message.set("character", keyEvent.event.key.code.toString());
+    message.set("keyCode", keyEvent.event.keyCode);
+    message.set("deviceId", keyEvent.event.deviceId);
+    message.set("character", keyEvent.event.keyText);
     message.set("repeatCount", 1);
     return message;
   }
-
-
 }
 
-export  interface EventResponseHandler {
-  onFrameworkResponse(isEventHandled: boolean): void;
+export interface EventResponseHandler {
+  onFrameworkResponse: (isEventHandled: boolean) => void;
 }
 
 export class FlutterKeyEvent {
   event: KeyEvent;
 
-  constructor( ohosKeyEvent: KeyEvent) {
+  constructor(ohosKeyEvent: KeyEvent) {
     this.event = ohosKeyEvent;
   }
 }

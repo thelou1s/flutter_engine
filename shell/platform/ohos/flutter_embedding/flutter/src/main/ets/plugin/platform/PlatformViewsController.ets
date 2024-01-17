@@ -35,7 +35,6 @@ import PlatformViewRegistryImpl from './PlatformViewRegistryImpl';
 import DartExecutor from '../../embedding/engine/dart/DartExecutor';
 import { AccessibilityEventsDelegate } from './AccessibilityEventsDelegate';
 import AccessibilityBridge from '../../view/AccessibilityBridge';
-import { RootDvModeManager } from './RootDvModelManager';
 import { FlutterMutatorView } from '../../embedding/engine/mutatorsstack/FlutterMutatorView';
 import common from '@ohos.app.ability.common';
 import Log from '../../util/Log'
@@ -61,7 +60,6 @@ export default class PlatformViewsController implements PlatformViewsAccessibili
   private viewWrappers: Map<number, PlatformViewWrapper>;
   private currentFrameUsedOverlayLayerIds: HashSet<number>;
   private currentFrameUsedPlatformViewIds: HashSet<number>;
-  private rootDvModel: DVModelContainer | null = RootDvModeManager.getRootDvMode();
   private platformViewParent: Map<number, FlutterMutatorView>;
 
   constructor() {
@@ -118,9 +116,11 @@ export default class PlatformViewsController implements PlatformViewsAccessibili
     let viewWrapper: PlatformViewWrapper | null = this.viewWrappers.get(viewId) || null;
     if (viewWrapper != null) {
       let children = viewWrapper.getDvModel().children;
-      let index = RootDvModeManager.getRootDvMode().model.children.indexOf(viewWrapper.getDvModel());
-      children.splice(0, children.length);
-      RootDvModeManager.getRootDvMode().model.children.splice(index, 1);
+      if (this.flutterView) {
+        let index = this.flutterView.getDVModel().children.indexOf(viewWrapper.getDvModel());
+        children.splice(0, children.length);
+        this.flutterView.getDVModel().children.splice(index, 1);
+      }
       this.viewWrappers.delete(viewId);
     }
 
@@ -351,7 +351,7 @@ export default class PlatformViewsController implements PlatformViewsAccessibili
     viewWrapper.setLayoutParams(param);
     viewWrapper.addDvModel(model);
 
-    RootDvModeManager.addDvModel(viewWrapper.getDvModel()!);
+    this.flutterView?.getDVModel().children.push(viewWrapper.getDvModel()!);
     this.viewWrappers.set(request.viewId, viewWrapper);
     Log.i(TAG, "Create platform view success");
 
@@ -378,28 +378,29 @@ export default class PlatformViewsController implements PlatformViewsAccessibili
     this.textureRegistry = null;
   }
 
-  public attachToView() {
+  public attachToView(newFlutterView : FlutterView) {
+    this.flutterView = newFlutterView;
     for (let wrapper of this.viewWrappers.values()) {
-      this.rootDvModel?.model.children.push(wrapper.getDvModel()!);
+      this.flutterView?.getDVModel().children.push(wrapper.getDvModel()!);
     }
     for (let mutator of this.platformViewParent.values()) {
-      this.rootDvModel?.model.children.push(mutator.getDvModel()!);
+      this.flutterView?.getDVModel().children.push(mutator.getDvModel()!);
     }
     for (let platformView of this.platformViews.values()) {
-      platformView.onFlutterViewAttached(this.rootDvModel!.model);
+      platformView.onFlutterViewAttached(this.flutterView?.getDVModel());
     }
   }
 
   public detachFromView(): void {
     for (let index = 0; index < this.viewWrappers.size; index++) {
-      this.rootDvModel?.model.children.pop();
+      this.flutterView?.getDVModel().children.pop();
     }
     for (let index = 0; index < this.platformViewParent.size; index++) {
-      this.rootDvModel?.model.children.pop();
+      this.flutterView?.getDVModel().children.pop();
     }
     this.destroyOverlaySurfaces();
     this.removeOverlaySurfaces();
-    this.rootDvModel = null;
+    this.flutterView = null;
 
     for (let platformView of this.platformViews.values()) {
       platformView.onFlutterViewDetached();

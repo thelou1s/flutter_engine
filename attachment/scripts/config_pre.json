@@ -17,6 +17,12 @@
         "file_path": "../../flutter/attachment/repos/dart.patch1"
     },
     {
+        "name": "dart2",
+        "target": "./src/third_party/dart",
+        "type": "patch",
+        "file_path": "../../flutter/attachment/repos/dart.patch2"
+    },
+    {
         "name": "skia",
         "target": "./src/third_party/skia",
         "type": "patch",
@@ -35,9 +41,21 @@
         "file_path": "../../flutter/attachment/repos/angle.patch"
     },
     {
-        "name": "libcxx",
-        "target": "./src/third_party/libcxx",
+        "name": "build",
+        "target": "./src/build",
         "type": "patch",
-        "file_path": "../../flutter/attachment/repos/libcxx.bin"
+        "file_path": "../flutter/attachment/repos/build.patch"
+    },
+    {
+        "name": "zlib",
+        "target": "./src/third_party/zlib",
+        "type": "patch",
+        "file_path": "../../flutter/attachment/repos/zlib.patch"
+    },
+	{
+        "name": "boringssl",
+        "target": "./src/third_party/boringssl",
+        "type": "patch",
+        "file_path": "../../flutter/attachment/repos/boringssl.patch"
     }
 ]

@@ -56,17 +56,62 @@ export default class FlutterShellArgs {
   static ARG_KEY_OBSERVATORY_PORT = "observatory-port";
   static ARG_OBSERVATORY_PORT = "--observatory-port=";
   static ARG_KEY_DART_FLAGS = "dart-flags";
-  static ARG_DART_FLAGS = "--dart-flags";
+  static ARG_DART_FLAGS = "--dart-flags=";
   static ARG_KEY_MSAA_SAMPLES = "msaa-samples";
-  static ARG_MSAA_SAMPLES = "--msaa-samples";
+  static ARG_MSAA_SAMPLES = "--msaa-samples=";
 
   /**
    * 从意图中解析参数，创建shellArgs
    * @returns
    */
   static fromWant(want: Want): FlutterShellArgs {
-    //tdo 解析want
-    return new FlutterShellArgs();
+    let flutterShellArgs: FlutterShellArgs = new FlutterShellArgs();
+    FlutterShellArgs.checkArg(FlutterShellArgs.ARG_KEY_TRACE_STARTUP, FlutterShellArgs.ARG_TRACE_STARTUP, want, flutterShellArgs);
+    FlutterShellArgs.checkArg(FlutterShellArgs.ARG_KEY_START_PAUSED, FlutterShellArgs.ARG_START_PAUSED, want, flutterShellArgs);
+    FlutterShellArgs.checkArg(FlutterShellArgs.ARG_KEY_DISABLE_SERVICE_AUTH_CODES, FlutterShellArgs.ARG_DISABLE_SERVICE_AUTH_CODES, want, flutterShellArgs);
+    FlutterShellArgs.checkArg(FlutterShellArgs.ARG_KEY_ENDLESS_TRACE_BUFFER, FlutterShellArgs.ARG_ENDLESS_TRACE_BUFFER, want, flutterShellArgs);
+    FlutterShellArgs.checkArg(FlutterShellArgs.ARG_KEY_USE_TEST_FONTS, FlutterShellArgs.ARG_USE_TEST_FONTS, want, flutterShellArgs);
+    FlutterShellArgs.checkArg(FlutterShellArgs.ARG_KEY_ENABLE_DART_PROFILING, FlutterShellArgs.ARG_ENABLE_DART_PROFILING, want, flutterShellArgs);
+    FlutterShellArgs.checkArg(FlutterShellArgs.ARG_KEY_ENABLE_SOFTWARE_RENDERING, FlutterShellArgs.ARG_ENABLE_SOFTWARE_RENDERING, want, flutterShellArgs);
+    FlutterShellArgs.checkArg(FlutterShellArgs.ARG_KEY_SKIA_DETERMINISTIC_RENDERING, FlutterShellArgs.ARG_SKIA_DETERMINISTIC_RENDERING, want, flutterShellArgs);
+    FlutterShellArgs.checkArg(FlutterShellArgs.ARG_KEY_TRACE_SKIA, FlutterShellArgs.ARG_TRACE_SKIA, want, flutterShellArgs);
+    FlutterShellArgs.checkArg(FlutterShellArgs.ARG_KEY_TRACE_SYSTRACE, FlutterShellArgs.ARG_TRACE_SYSTRACE, want, flutterShellArgs);
+    FlutterShellArgs.checkArg(FlutterShellArgs.ARG_KEY_ENABLE_IMPELLER, FlutterShellArgs.ARG_ENABLE_IMPELLER, want, flutterShellArgs);
+    FlutterShellArgs.checkArg(FlutterShellArgs.ARG_KEY_DUMP_SHADER_SKP_ON_SHADER_COMPILATION, FlutterShellArgs.ARG_DUMP_SHADER_SKP_ON_SHADER_COMPILATION, want, flutterShellArgs);
+    FlutterShellArgs.checkArg(FlutterShellArgs.ARG_KEY_CACHE_SKSL, FlutterShellArgs.ARG_CACHE_SKSL, want, flutterShellArgs);
+    FlutterShellArgs.checkArg(FlutterShellArgs.ARG_KEY_PURGE_PERSISTENT_CACHE, FlutterShellArgs.ARG_PURGE_PERSISTENT_CACHE, want, flutterShellArgs);
+    FlutterShellArgs.checkArg(FlutterShellArgs.ARG_KEY_VERBOSE_LOGGING, FlutterShellArgs.ARG_VERBOSE_LOGGING, want, flutterShellArgs);
+
+    let skia_allow_list: Object = want.parameters![FlutterShellArgs.ARG_KEY_TRACE_SKIA_ALLOWLIST];
+    if (skia_allow_list != undefined) {
+      flutterShellArgs.add(FlutterShellArgs.ARG_TRACE_SKIA_ALLOWLIST + (skia_allow_list as string));
+    }
+
+    let observatory_port: Object = want.parameters![FlutterShellArgs.ARG_KEY_OBSERVATORY_PORT];
+    if (observatory_port != undefined && (observatory_port as number > 0)) {
+      flutterShellArgs.add(FlutterShellArgs.ARG_OBSERVATORY_PORT + (observatory_port as number));
+    }
+
+    let msaa: Object = want.parameters![FlutterShellArgs.ARG_KEY_MSAA_SAMPLES];
+    if (msaa != undefined && (msaa as number > 1)) {
+      flutterShellArgs.add(FlutterShellArgs.ARG_MSAA_SAMPLES + (msaa as number));
+    }
+
+    let dart_flags: Object = want.parameters![FlutterShellArgs.ARG_KEY_DART_FLAGS];
+    if (dart_flags != undefined) {
+      flutterShellArgs.add(FlutterShellArgs.ARG_DART_FLAGS + (msaa as string));
+    }
+    return flutterShellArgs;
+  }
+
+  static checkArg(argKey: string, argFlag: string, want: Want, flutterShellArgs: FlutterShellArgs) {
+    if (want.parameters == undefined) {
+      return;
+    }
+    let value: Object = want.parameters![argKey];
+    if (value != undefined && value as Boolean) {
+      flutterShellArgs.add(argFlag);
+    }
   }
 
   //参数

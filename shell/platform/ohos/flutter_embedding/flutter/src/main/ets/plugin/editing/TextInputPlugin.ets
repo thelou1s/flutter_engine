@@ -66,7 +66,7 @@ class TextInputMethodHandlerImpl implements TextInputMethodHandler {
   mEditable: ListenableEditingState;
   private mRestartInputPending: boolean = false;
   private plugin: EditingStateWatcher | ESObject;
-
+  private keyboardStatus: inputMethod.KeyboardStatus = KeyboardStatus.NONE;
   private imcFlag: boolean = false;
 
   constructor(plugin: TextInputPlugin | ESObject) {
@@ -82,11 +82,16 @@ class TextInputMethodHandlerImpl implements TextInputMethodHandler {
   }
 
   show(): void {
+    if(this.keyboardStatus == KeyboardStatus.SHOW){
+      return;
+    }
     this.showTextInput();
+    this.keyboardStatus = KeyboardStatus.SHOW;
   }
 
   hide(): void {
     this.hideTextInput();
+    this.keyboardStatus = KeyboardStatus.HIDE;
   }
 
   requestAutofill(): void {
@@ -149,7 +154,16 @@ class TextInputMethodHandlerImpl implements TextInputMethodHandler {
   }
 
   setTextInputClient(client: number, configuration: Configuration | null): void {
-    this.configuration = configuration;
+    const INPUT_TYPE_NAME = ['NONE', 'TEXT', 'MULTILINE', 'NUMBER', 'PHONE','DATETIME','EMAIL_ADDRESS','URL','VISIBLE_PASSWORD']
+    if(configuration)
+    {
+      this.configuration = configuration;
+      if(configuration.inputType)
+      {
+        this.textConfig.inputAttribute.textInputType =INPUT_TYPE_NAME.indexOf(configuration.inputType.type)
+        this.textConfig.inputAttribute.enterKeyType = configuration.inputAction as ESObject;
+      }
+    }
     if(this.canShowTextInput()) {
       this.inputTarget = new InputTarget(Type.FRAMEWORK_CLIENT, client);
     } else {
@@ -213,6 +227,19 @@ class TextInputMethodHandlerImpl implements TextInputMethodHandler {
     }
 
     try {
+      this.inputMethodController.on('sendKeyboardStatus', (state) => {
+        if(state == KeyboardStatus.HIDE) {
+          this.keyboardStatus = KeyboardStatus.HIDE;
+          this.plugin.textInputChannel.onConnectionClosed(this.inputTarget.id);
+        }
+      })
+    } catch (err) {
+      Log.e(TextInputMethodHandlerImpl.TAG, "Failed to subscribe sendKeyboardStatus:" + JSON.stringify(err));
+      this.cancelListenKeyBoardEvent();
+      return;
+    }
+
+    try {
       this.inputMethodController.on('selectByRange', (range: inputMethod.Range) => {
         this.mEditable.handleSelectByRange(range);
       })
@@ -252,6 +279,13 @@ enum Type {
   VIRTUAL_DISPLAY_PLATFORM_VIEW,
   PHYSICAL_DISPLAY_PLATFORM_VIEW,
 }
+
+enum KeyboardStatus {
+  NONE = 0,
+  HIDE = 1,
+  SHOW = 2,
+}
+
 
 export class InputTarget {
   type: Type;

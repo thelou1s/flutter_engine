@@ -15,52 +15,29 @@
 
 import UIAbility from '@ohos.app.ability.UIAbility';
 import window from '@ohos.window';
-import { FlutterAbilityDelegate, Host } from './FlutterAbilityDelegate';
+import { FlutterAbilityAndEntryDelegate, Host } from './FlutterAbilityAndEntryDelegate';
 import Log from '../../util/Log';
 import FlutterEngine from '../engine/FlutterEngine';
 import FlutterShellArgs from '../engine/FlutterShellArgs';
 import FlutterAbilityLaunchConfigs from './FlutterAbilityLaunchConfigs';
 import common from '@ohos.app.ability.common';
 import Want from '@ohos.app.ability.Want';
-import display from '@ohos.display';
 import { FlutterPlugin } from '../engine/plugins/FlutterPlugin';
-import { AsyncCallback } from '@ohos.base';
 import AbilityConstant from '@ohos.app.ability.AbilityConstant';
 import I18n from '@ohos.i18n'
 import { PlatformBrightness } from '../engine/systemchannels/SettingsChannel';
 import ConfigurationConstant from '@ohos.app.ability.ConfigurationConstant';
-import { DVModelContainer } from '../../view/DynamicView/dynamicView';
-import { RootDvModeManager } from '../../plugin/platform/RootDvModelManager';
 import { Configuration } from '@ohos.app.ability.Configuration';
-import {
-  BuilderParams,
-  DVModel,
-  DVModelChildren,
-  DVModelEvents,
-  DVModelParameters } from '../../view/DynamicView/dynamicView';
-import StringUtils from '../../util/StringUtils';
+
+import List from '@ohos.util.List';
+import ExclusiveAppComponent from './ExclusiveAppComponent';
+import errorManager from '@ohos.app.ability.errorManager';
+import appRecovery from '@ohos.app.ability.appRecovery';
+import FlutterManager from './FlutterManager';
+import { FlutterView } from '../../view/FlutterView';
 
 const TAG = "FlutterAbility";
 const EVENT_BACK_PRESS = 'EVENT_BACK_PRESS';
-
-@Component
-struct XComponentStruct {
-  private context:ESObject;
-  dvModelParams: DVModelParameters = new DVModelParameters();
-
-  build() {
-    XComponent({ id: (this.dvModelParams as Record<string, ESObject>)["xComponentId"], type: 'texture', libraryname: 'flutter'})
-      .onLoad((context) => {
-        this.context = context;
-      })
-      .onDestroy(() => {
-      })
-  }
-}
-
-@Builder function BuildXComponentStruct(buildParams: BuilderParams) {
-  XComponentStruct({dvModelParams: buildParams.params});
-}
 
 /**
  * flutter ohos基础ability，请在让主ability继承自该类。
@@ -69,11 +46,18 @@ struct XComponentStruct {
  * 2、生命周期传递；
  */
 export class FlutterAbility extends UIAbility implements Host {
-  private delegate?: FlutterAbilityDelegate | null;
-  private windowStage?: window.WindowStage;
-  private mainWindow?: window.Window;
-  private viewportMetrics = new ViewportMetrics();
-  private displayInfo?: display.Display;
+  private delegate?: FlutterAbilityAndEntryDelegate | null;
+  private flutterView: FlutterView | null = null;
+  private mainWindow?: window.Window | null;
+  private errorManagerId:number = 0;
+
+  getFlutterView(): FlutterView | null {
+    return this.flutterView;
+  }
+
+  pagePath(): string {
+    return "pages/Index"
+  }
 
   /**
    * onCreate
@@ -84,33 +68,56 @@ export class FlutterAbility extends UIAbility implements Host {
    */
   async onCreate(want: Want, launchParam: AbilityConstant.LaunchParam) {
     Log.i(TAG, "bundleCodeDir=" + this.context.bundleCodeDir);
-    // globalThis.flutterAbility = this
-    this.displayInfo = display.getDefaultDisplaySync();
-    this.viewportMetrics.devicePixelRatio = this.displayInfo?.densityPixels
+    FlutterManager.getInstance().pushUIAbility(this)
 
-    this.delegate = new FlutterAbilityDelegate(this);
+    this.delegate = new FlutterAbilityAndEntryDelegate(this);
     await this?.delegate?.onAttach(this.context);
     Log.i(TAG, 'onAttach end');
     this?.delegate?.platformPlugin?.setUIAbilityContext(this.context);
     this?.delegate?.onRestoreInstanceState(want);
-    this?.delegate?.sendSettings();
 
     if (this.stillAttachedForEvent("onCreate")) {
       this.delegate?.onCreate();
     }
 
+    if (this.stillAttachedForEvent("onWindowStageCreate")) {
+      this?.delegate?.onWindowStageCreate();
+    }
+
     console.log('MyAbility onCreate');
-    // globalThis.applicationContext = this.context.getApplicationContext();
+
     this.context.eventHub.on(EVENT_BACK_PRESS, () => {
       this.delegate?.flutterEngine?.getNavigationChannel()?.popRoute();
     });
+    let observer:errorManager.ErrorObserver = {
+      onUnhandledException(errorMsg) {
+        console.log("onUnhandledException, errorMsg:", errorMsg);
+        appRecovery.saveAppState();
+        appRecovery.restartApp();
+      }
+    }
+    this.errorManagerId = errorManager.on('error', observer);
   }
 
   onDestroy() {
+    FlutterManager.getInstance().popUIAbility(this);
     this.context.eventHub.off(EVENT_BACK_PRESS);
-    if (this.stillAttachedForEvent("onDestroy")) {
-      this?.delegate?.onDestroy();
+    errorManager.off('error', this.errorManagerId);
+
+    if (this.flutterView != null) {
+      this.flutterView.onDestroy()
+      this.flutterView = null;
     }
+
+    if (this.stillAttachedForEvent("onDestroy")) {
+      this?.delegate?.onDetach();
+    }
+
+    this.release()
+  }
+  
+  onSaveState(reason: AbilityConstant.StateType, wantParam: Record<string, Object>): AbilityConstant.OnSaveResult {
+    return this?.delegate?.onSaveState(reason, wantParam) ?? AbilityConstant.OnSaveResult.ALL_REJECT;
   }
 
   /**
@@ -118,9 +125,10 @@ export class FlutterAbility extends UIAbility implements Host {
    * @param windowStage
    */
   async onWindowStageCreate(windowStage: window.WindowStage) {
-    this.windowStage = windowStage
+    FlutterManager.getInstance().pushWindowStage(this, windowStage);
+    this.mainWindow = windowStage.getMainWindowSync();
     try {
-      windowStage?.on('windowStageEvent', (data) => {
+      windowStage.on('windowStageEvent', (data) => {
         let stageEventType: window.WindowStageEventType = data;
         switch (stageEventType) {
           case window.WindowStageEventType.SHOWN: // 切到前台
@@ -141,84 +149,33 @@ export class FlutterAbility extends UIAbility implements Host {
           case window.WindowStageEventType.HIDDEN: // 切到后台
             Log.i(TAG, 'windowStage background.');
             break;
-          default:
-            break;
         }
       });
 
-      this.mainWindow = windowStage?.getMainWindowSync()
-      this.mainWindow?.on('windowSizeChange', (data) => {
-        this.onWindowPropertiesUpdated();
-      });
+      this.flutterView = this.delegate!!.createView(this.context)
+      Log.e(TAG, 'onWindowStageCreate:' +  this.flutterView!!.getId());
+      let storage: LocalStorage = new LocalStorage();
+      storage.setOrCreate("viewId", this.flutterView!!.getId())
+      windowStage.loadContent(this.pagePath(), storage, (err, data) => {
+        if (err.code) {
+          Log.e(TAG, 'Failed to load the content. Cause: %{public}s', JSON.stringify(err) ?? '');
+          return;
+        }
 
-      this.mainWindow?.on('avoidAreaChange', (data) => {
-        this.onWindowPropertiesUpdated();
+        Log.i(TAG, 'Succeeded in loading the content. Data: %{public}s', JSON.stringify(data) ?? '');
       });
-
-      this.mainWindow?.on('keyboardHeightChange', (data) => {
-        this.onWindowPropertiesUpdated();
-      });
-
-      this.loadContent();
       this.mainWindow?.setWindowLayoutFullScreen(true);
     } catch (exception) {
       Log.e(TAG, 'Failed to enable the listener for window stage event changes. Cause:' + JSON.stringify(exception));
     }
   }
 
-  loadContent() {
-    if (this.windowStage != null && this.stillAttachedForEvent("loadContent")) {
-      Log.i(TAG, 'loadContent');
-      let params: DVModelParameters = new DVModelParameters();
-      (params as Record<string, ESObject>)["xComponentId"] =
-        this.delegate?.getFlutterNapi()?.nativeShellHolderId?.toString();
-      let xComponentModel: DVModel =
-        new DVModel("xComponent", params, new DVModelEvents(), new DVModelChildren(), BuildXComponentStruct);
-      RootDvModeManager.addDvModel(xComponentModel);
-
-      this.windowStage?.loadContent('pages/Index', (err, data) => {
-        if (err.code) {
-          Log.e(TAG, 'Failed to load the content. Cause: %{public}s', JSON.stringify(err) ?? '');
-          return;
-        }
-        this.onWindowPropertiesUpdated();
-        Log.i(TAG, 'Succeeded in loading the content. Data: %{public}s', JSON.stringify(data) ?? '');
-      });
-      if (this.stillAttachedForEvent("onWindowStageCreate")) {
-        this?.delegate?.onWindowStageCreate();
-      }
-      this?.delegate?.getFlutterNapi()?.updateRefreshRate(this.displayInfo!.refreshRate)
-      this.onFlutterEngineReady()
-    }
-  }
-
-  onFlutterEngineReady(): void {
-
-  }
-
-  private updateViewportMetrics() {
-    this?.delegate?.getFlutterNapi()?.setViewportMetrics(this.viewportMetrics.devicePixelRatio,
-      this.viewportMetrics.physicalWidth,
-      this.viewportMetrics.physicalHeight,
-      this.viewportMetrics.physicalViewPaddingTop,
-      this.viewportMetrics.physicalViewPaddingRight,
-      this.viewportMetrics.physicalViewPaddingBottom,
-      this.viewportMetrics.physicalViewPaddingLeft,
-      this.viewportMetrics.physicalViewInsetTop,
-      this.viewportMetrics.physicalViewInsetRight,
-      this.viewportMetrics.physicalViewInsetBottom,
-      this.viewportMetrics.physicalViewInsetLeft,
-      this.viewportMetrics.systemGestureInsetTop,
-      this.viewportMetrics.systemGestureInsetRight,
-      this.viewportMetrics.systemGestureInsetBottom,
-      this.viewportMetrics.systemGestureInsetLeft,
-      this.viewportMetrics.physicalTouchSlop,
-      new Array(0),
-      new Array(0),
-      new Array(0))
+  onNewWant(want: Want, launchParams: AbilityConstant.LaunchParam): void {
+    this?.delegate?.onNewWant(want,launchParams)
   }
 
   onWindowStageDestroy() {
+    FlutterManager.getInstance().popWindowStage(this);
     if (this.stillAttachedForEvent("onWindowStageDestroy")) {
       this?.delegate?.onWindowStageDestroy();
     }
@@ -260,7 +217,9 @@ export class FlutterAbility extends UIAbility implements Host {
   }
 
   configureFlutterEngine(flutterEngine: FlutterEngine) {
-
+    let _UIContext = this.mainWindow?.getUIContext();
+    this.delegate?.setUIContext(_UIContext);
+    this.delegate?.sendSettings();
   }
 
   cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
@@ -288,7 +247,7 @@ export class FlutterAbility extends UIAbility implements Host {
     return false;
   }
 
-  shouldAttachEngineToActivity(): boolean {
+  shouldAttachEngineToAbility(): boolean {
     return true;
   }
 
@@ -319,6 +278,10 @@ export class FlutterAbility extends UIAbility implements Host {
   }
 
   shouldDestroyEngineWithHost(): boolean {
+    if ((this.getCachedEngineId() != null && this.getCachedEngineId().length > 0) || this.delegate!!.isFlutterEngineFromHost()) {
+      // Only destroy a cached engine if explicitly requested by app developer.
+      return false;
+    }
     return true;
   }
 
@@ -333,11 +296,20 @@ export class FlutterAbility extends UIAbility implements Host {
     return true;
   }
 
+  getPlugins(): List<FlutterPlugin>{
+    // Subclasses should override this function.
+    return new List()
+  }
+
+  getExclusiveAppComponent(): ExclusiveAppComponent<UIAbility> | null {
+    return this.delegate ? this.delegate : null
+  }
+
   getCachedEngineId(): string {
     return this.launchWant.parameters![FlutterAbilityLaunchConfigs.EXTRA_CACHED_ENGINE_ID] as string
   }
 
-  getCachedEngineGroupId(): string {
+  getCachedEngineGroupId(): string | null {
     return this.launchWant.parameters![FlutterAbilityLaunchConfigs.EXTRA_CACHED_ENGINE_GROUP_ID] as string
   }
 
@@ -369,35 +341,6 @@ export class FlutterAbility extends UIAbility implements Host {
     }
   }
 
-  private onWindowPropertiesUpdated(){
-    if (this.delegate == null || !this.delegate.isAttached) {
-      return;
-    }
-    let systemAvoidArea = this.mainWindow?.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM);
-    let gestureAvoidArea = this.mainWindow?.getWindowAvoidArea(window.AvoidAreaType.TYPE_SYSTEM_GESTURE);
-    let keyboardAvoidArea = this.mainWindow?.getWindowAvoidArea(window.AvoidAreaType.TYPE_KEYBOARD);
-    const properties = this.mainWindow?.getWindowProperties();
-    this.viewportMetrics.physicalWidth = properties!.windowRect.width;
-    this.viewportMetrics.physicalHeight = properties!.windowRect.height;
-
-    this.viewportMetrics.physicalViewPaddingTop = systemAvoidArea!.topRect.height
-    this.viewportMetrics.physicalViewPaddingLeft = systemAvoidArea!.leftRect.width
-    this.viewportMetrics.physicalViewPaddingBottom = systemAvoidArea!.bottomRect.height
-    this.viewportMetrics.physicalViewPaddingRight = systemAvoidArea!.rightRect.width
-
-    this.viewportMetrics.physicalViewInsetTop = keyboardAvoidArea!.topRect.height
-    this.viewportMetrics.physicalViewInsetLeft = keyboardAvoidArea!.leftRect.width
-    this.viewportMetrics.physicalViewInsetBottom = keyboardAvoidArea!.bottomRect.height
-    this.viewportMetrics.physicalViewInsetRight = keyboardAvoidArea!.rightRect.width
-
-    this.viewportMetrics.systemGestureInsetTop = gestureAvoidArea!.topRect.height
-    this.viewportMetrics.systemGestureInsetLeft = gestureAvoidArea!.leftRect.width
-    this.viewportMetrics.systemGestureInsetBottom = gestureAvoidArea!.bottomRect.height
-    this.viewportMetrics.systemGestureInsetRight = gestureAvoidArea!.rightRect.width
-
-    this.updateViewportMetrics()
-  }
-
   onMemoryLevel(level: AbilityConstant.MemoryLevel): void {
     Log.i(TAG, 'onMemoryLevel: ' + level);
     if (level === AbilityConstant.MemoryLevel.MEMORY_LEVEL_CRITICAL) {
@@ -413,41 +356,7 @@ export class FlutterAbility extends UIAbility implements Host {
         ? PlatformBrightness.LIGHT : PlatformBrightness.DARK);
   }
 
-  getWindowId(callback: AsyncCallback<number>): void {
-    if (callback === null) {
-      return;
-    }
-    try {
-      window.getLastWindow(this.context, (error, win) => {
-        if (error.code) {
-          callback(error, -1);
-          return;
-        }
-        let windowId = win.getWindowProperties().id;
-        callback(error, windowId);
-      });
-    } catch (err) {
-      Log.e(TAG, "get window id error!");
-      callback(err, -1);
-    }
+  getFlutterEngine(): FlutterEngine | null {
+    return this.delegate?.flutterEngine || null;
   }
-}
-
-export class ViewportMetrics {
-  devicePixelRatio: number = 1.0;
-  physicalWidth: number = 0;
-  physicalHeight: number = 0;
-  physicalViewPaddingTop: number = 0;
-  physicalViewPaddingRight: number = 0;
-  physicalViewPaddingBottom: number = 0;
-  physicalViewPaddingLeft: number = 0;
-  physicalViewInsetTop: number = 0;
-  physicalViewInsetRight: number = 0;
-  physicalViewInsetBottom: number = 0;
-  physicalViewInsetLeft: number = 0;
-  systemGestureInsetTop: number = 0;
-  systemGestureInsetRight: number = 0;
-  systemGestureInsetBottom: number = 0;
-  systemGestureInsetLeft: number = 0;
-  physicalTouchSlop = -1;
 }

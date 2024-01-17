@@ -19,7 +19,6 @@ Flutter Engine
 
    ```
    sudo apt install python3
-   sudo apt install make
    sudo apt install pkg-config
    sudo apt install ninja-build
    ```
@@ -54,16 +53,28 @@ Flutter Engine
 
 3. 同步代码：在engine目录，执行`gclient sync`；这里会同步engine源码、官方packages仓，还有执行ohos_setup任务；
 
-4. 下载sdk： 在[每日构建](http://ci.openharmony.cn/workbench/cicd/dailybuild/dailylist)下载ohos-sdk-full，在engine根目录下，新建文件夹 ndk/linux/4.0，解压ohos-sdk-full中的native文件夹并放置到ndk/linux/4.0文件夹中；
-(mac环境，请下载mac-sdk-full或者mac-sdk-m1-full，放置目录为ndk/mac/4.0；Windows环境无需下载鸿蒙sdk，请参考《构建基础环境》配置Windows环境)
+4. 下载sdk： 在[每日构建](http://ci.openharmony.cn/workbench/cicd/dailybuild/dailylist)下载ohos-sdk-full，配置以下环境变量:
 
+```sh
+export OHOS_SDK_HOME=<ohos-sdk-full>
+```
 
-5. 开始构建：在engine目录，执行`make`，即可开始构建支持ohos设备的flutter engine。
+5. 开始构建：在engine目录，执行`./ohos`，即可开始构建支持ohos设备的flutter engine。
    
-6. 更新代码：在engine目录，执行`./update_engine.sh`(Linux/Mac平台)或`update_engine.bat`(Windows平台)
+6. 更新代码：在engine目录，执行`./ohos -b master`
+
+## Engine构建产物
+
+  [构建产物](https://docs.qq.com/sheet/DUnljRVBYUWZKZEtF?tab=BB08J2)
 
 ## FAQ
 1. 运行项目工程报Member notfound:'isOhos'的错误：请确保src/third_party/dart目录下应用了所有的dart patch（补丁位于src/flutter/attachment/repos目录，可使用git apply应用patch）应用patch后重新编译engine
+
+2. 提示Permission denied: 执行chmod +x <脚本文件> 添加执行权限
+
+3. 单独编译debug/release/profile模式的engine：`./ohos -t debug|release|profile`
+
+4. 查看帮助：`./ohos -h`
 
 ## embedding层代码构建指导
 
@@ -83,3 +94,5 @@ Flutter Engine
 3. har文件输出路径为：shell/platform/ohos/flutter_embedding/flutter/build
 
 ps:如果你使用的是DevEco Studio的Beta版本，编译工程时遇到“must have required property 'compatibleSdkVersion', location: build-profile.json5:17:11"错误，请参考《DevEco Studio环境配置指导.docx》中的‘6 创建工程和运行Hello World’【配置插件】章节修改 shell/platform/ohos/flutter_embedding/hvigor/hvigor-config.json5文件。
+
+[hvigor本地依赖配置](shell/platform/ohos/flutter_embedding/dependencies/hvigor-dependencies-config.md)

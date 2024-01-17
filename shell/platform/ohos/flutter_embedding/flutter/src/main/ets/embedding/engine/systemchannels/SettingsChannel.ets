@@ -45,45 +45,96 @@ export default class SettingsChannel {
 
 class MessageBuilder {
   private channel: BasicMessageChannel<Object>;
-  private message: Map<String, Object> = new Map();
-
+  private settingsMessage: SettingsMessage = new SettingsMessage();
   constructor(channel: BasicMessageChannel<Object>) {
     this.channel = channel;
   }
 
   setTextScaleFactor(textScaleFactor: Number): MessageBuilder {
-    this.message.set(TEXT_SCALE_FACTOR, textScaleFactor);
+    this.settingsMessage.setTextScaleFactor(textScaleFactor);
     return this;
   }
 
   setNativeSpellCheckServiceDefined(nativeSpellCheckServiceDefined: boolean): MessageBuilder {
-    this.message.set(NATIVE_SPELL_CHECK_SERVICE_DEFINED, nativeSpellCheckServiceDefined);
+    this.settingsMessage.setNativeSpellCheckServiceDefined(nativeSpellCheckServiceDefined);
     return this;
   }
 
   setBrieflyShowPassword(brieflyShowPassword: boolean): MessageBuilder {
-    this.message.set(BRIEFLY_SHOW_PASSWORD, brieflyShowPassword);
+    this.settingsMessage.setBrieflyShowPassword(brieflyShowPassword);
     return this;
   }
 
   setAlwaysUse24HourFormat(alwaysUse24HourFormat: boolean): MessageBuilder {
-    this.message.set(ALWAYS_USE_24_HOUR_FORMAT, alwaysUse24HourFormat);
+    this.settingsMessage.setAlwaysUse24HourFormat(alwaysUse24HourFormat);
     return this;
   }
 
   setPlatformBrightness(platformBrightness: PlatformBrightness): MessageBuilder {
-    this.message.set(PLATFORM_BRIGHTNESS, platformBrightness);
+    this.settingsMessage.setPlatformBrightness(platformBrightness);
     return this;
   }
 
   send(): void {
     Log.i(TAG, "Sending message: \n"
-      + "textScaleFactor: "
-      + this.message.get(TEXT_SCALE_FACTOR)
-      + "alwaysUse24HourFormat: "
-      + this.message.get(ALWAYS_USE_24_HOUR_FORMAT)
-      + "platformBrightness: "
-      + this.message.get(PLATFORM_BRIGHTNESS))
-    this.channel.send(this.message)
+      + TEXT_SCALE_FACTOR + " : "
+      + this.settingsMessage.getTextScaleFactor()
+      + ", " + NATIVE_SPELL_CHECK_SERVICE_DEFINED + " : "
+      + this.settingsMessage.getNativeSpellCheckServiceDefined()
+      + ", " + BRIEFLY_SHOW_PASSWORD + " : "
+      + this.settingsMessage.getBrieflyShowPassword()
+      + ", " + ALWAYS_USE_24_HOUR_FORMAT + " : "
+      + this.settingsMessage.getAlwaysUse24HourFormat()
+      + ", " + PLATFORM_BRIGHTNESS + " : "
+      + this.settingsMessage.getPlatformBrightness());
+    this.channel.send(this.settingsMessage)
+  }
+}
+
+class SettingsMessage {
+  private textScaleFactor: Number = 1.0;
+  private nativeSpellCheckServiceDefined: boolean = false;
+  private brieflyShowPassword: boolean = false;
+  private alwaysUse24HourFormat: boolean = false;
+  private platformBrightness: PlatformBrightness = PlatformBrightness.LIGHT;
+
+  setTextScaleFactor(textScaleFactor: Number): void {
+    this.textScaleFactor = textScaleFactor;
+  }
+
+  setNativeSpellCheckServiceDefined(nativeSpellCheckServiceDefined: boolean): void {
+    this.nativeSpellCheckServiceDefined = nativeSpellCheckServiceDefined;
+  }
+
+  setBrieflyShowPassword(brieflyShowPassword: boolean): void {
+    this.brieflyShowPassword = brieflyShowPassword;
+  }
+
+  setAlwaysUse24HourFormat(alwaysUse24HourFormat: boolean): void {
+    this.alwaysUse24HourFormat = alwaysUse24HourFormat;
+  }
+
+  setPlatformBrightness(platformBrightness: PlatformBrightness): void {
+    this.platformBrightness = platformBrightness;
+  }
+
+  getTextScaleFactor(): Number {
+    return this.textScaleFactor;
+  }
+
+  getNativeSpellCheckServiceDefined(): boolean {
+    return this.nativeSpellCheckServiceDefined;
+  }
+
+  getBrieflyShowPassword(): boolean {
+    return this.brieflyShowPassword;
+  }
+
+  getAlwaysUse24HourFormat(): boolean {
+    return this.alwaysUse24HourFormat;
+  }
+
+  getPlatformBrightness(): PlatformBrightness {
+    return this.platformBrightness;
   }
 }

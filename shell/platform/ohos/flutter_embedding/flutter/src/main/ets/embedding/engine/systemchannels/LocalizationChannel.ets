@@ -67,5 +67,5 @@ export default class LocalizationChannel implements MethodCallHandler{
 }
 
 export interface LocalizationMessageHandler {
-    getStringResource(key: string, local: string);
+    getStringResource(key: string, local: string): void;
 }

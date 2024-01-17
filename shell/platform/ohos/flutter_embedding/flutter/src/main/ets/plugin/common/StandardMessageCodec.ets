@@ -16,6 +16,12 @@
 import { ByteBuffer } from '../../util/ByteBuffer';
 import StringUtils from '../../util/StringUtils';
 import MessageCodec from './MessageCodec';
+import TreeMap from '@ohos.util.TreeMap';
+import HashMap from '@ohos.util.HashMap';
+import LightWeightMap from '@ohos.util.LightWeightMap';
+import PlainArray from '@ohos.util.PlainArray';  
+import List from '@ohos.util.List';
+import LinkedList from '@ohos.util.LinkedList'; 
 
 /**
  * MessageCodec using the Flutter standard binary encoding.
@@ -97,69 +103,78 @@ export default class StandardMessageCodec implements MessageCodec<ESObject> {
 
     writeValue(stream: ByteBuffer, value: ESObject): ESObject {
         if (value == null || value == undefined) {
-            stream.writeInt8(StandardMessageCodec.NULL)
+            stream.writeInt8(StandardMessageCodec.NULL);
         } else if (typeof value === "boolean") {
             stream.writeInt8(value ? StandardMessageCodec.TRUE : StandardMessageCodec.FALSE)
         } else if (typeof value === "number") {
             if (Number.isInteger(value)) { //整型
                 if (-0x7fffffff - 1 <= value && value <= 0x7fffffff) { //int32
-                    stream.writeInt8(StandardMessageCodec.INT32)
-                    stream.writeInt32(value, true)
+                    stream.writeInt8(StandardMessageCodec.INT32);
+                    stream.writeInt32(value, true);
                 } else if(Number.MIN_SAFE_INTEGER <= value && value <= Number.MAX_SAFE_INTEGER) { //int64 number整型取值范围
-                    stream.writeInt8(StandardMessageCodec.INT64)
-                    stream.writeBigInt64(BigInt(value), true)
+                    stream.writeInt8(StandardMessageCodec.INT64);
+                    stream.writeBigInt64(BigInt(value), true);
                 } else { //被判为整型的double型
-                    stream.writeInt8(StandardMessageCodec.FLOAT64)
+                    stream.writeInt8(StandardMessageCodec.FLOAT64);
                     this.writeAlignment(stream, 8);
-                    stream.writeFloat64(value, true)
+                    stream.writeFloat64(value, true);
                 }
             } else { //浮点型
-                stream.writeInt8(StandardMessageCodec.FLOAT64)
+                stream.writeInt8(StandardMessageCodec.FLOAT64);
                 this.writeAlignment(stream, 8);
-                stream.writeFloat64(value, true)
+                stream.writeFloat64(value, true);
             }
         }else if (typeof value === "bigint") {
-            stream.writeInt8(StandardMessageCodec.INT64)
-            stream.writeBigInt64(value, true)
+            stream.writeInt8(StandardMessageCodec.INT64);
+            stream.writeBigInt64(value, true);
         } else if (typeof value === "string") {
-            stream.writeInt8(StandardMessageCodec.STRING)
-            let stringBuff = StringUtils.stringToArrayBuffer(value)
-            this.writeBytes(stream, new Uint8Array(stringBuff))
+            stream.writeInt8(StandardMessageCodec.STRING);
+            let stringBuff = StringUtils.stringToArrayBuffer(value);
+            this.writeBytes(stream, new Uint8Array(stringBuff));
         } else if (value instanceof Uint8Array) {
-            stream.writeInt8(StandardMessageCodec.UINT8_ARRAY)
+            stream.writeInt8(StandardMessageCodec.UINT8_ARRAY);
             this.writeBytes(stream, value)
         } else if (value instanceof Int32Array) {
-            stream.writeInt8(StandardMessageCodec.INT32_ARRAY)
+            stream.writeInt8(StandardMessageCodec.INT32_ARRAY);
             this.writeSize(stream, value.length);
             this.writeAlignment(stream, 4);
-            value.forEach(item => stream.writeInt32(item, true))
+            value.forEach(item => stream.writeInt32(item, true));
         } else if(value instanceof BigInt64Array) {
-            stream.writeInt8(StandardMessageCodec.INT64_ARRAY)
+            stream.writeInt8(StandardMessageCodec.INT64_ARRAY);
             this.writeSize(stream, value.length);
             this.writeAlignment(stream, 8);
-            value.forEach(item => stream.writeBigInt64(item, true))
+            value.forEach(item => stream.writeBigInt64(item, true));
         } else if (value instanceof Float32Array) {
-            stream.writeInt8(StandardMessageCodec.FLOAT32_ARRAY)
+            stream.writeInt8(StandardMessageCodec.FLOAT32_ARRAY);
             this.writeSize(stream, value.length);
             this.writeAlignment(stream, 4);
-            value.forEach(item => stream.writeFloat32(item, true))
+            value.forEach(item => stream.writeFloat32(item, true));
         } else if (value instanceof Float64Array) {
-            stream.writeInt8(StandardMessageCodec.FLOAT64_ARRAY)
+            stream.writeInt8(StandardMessageCodec.FLOAT64_ARRAY);
             this.writeSize(stream, value.length);
             this.writeAlignment(stream, 8);
-            value.forEach(item => stream.writeFloat64(item, true))
+            value.forEach(item => stream.writeFloat64(item, true));
         } else if (value instanceof Array || value instanceof Int8Array || value instanceof Int16Array
-            || value instanceof Uint16Array || value instanceof Uint32Array) {
+            || value instanceof Uint16Array || value instanceof Uint32Array || value instanceof List
+            || value instanceof LinkedList) {
             stream.writeInt8(StandardMessageCodec.LIST)
             this.writeSize(stream, value.length);
-            value.forEach((item: ESObject): void => this.writeValue(stream, item))
+            value.forEach((item: ESObject): void => this.writeValue(stream, item));
         } else if (value instanceof Map) {
-            stream.writeInt8(StandardMessageCodec.MAP)
+            stream.writeInt8(StandardMessageCodec.MAP);
             this.writeSize(stream, value.size);
             value.forEach((value: ESObject, key: ESObject) => {
                 this.writeValue(stream, key);
                 this.writeValue(stream, value);
-            })
+            });
+        } else if(value instanceof HashMap || value instanceof TreeMap || value instanceof LightWeightMap
+            || value instanceof PlainArray) {
+            stream.writeInt8(StandardMessageCodec.MAP);
+            this.writeSize(stream, value.length);
+            value.forEach((value: ESObject, key: ESObject) => {
+                this.writeValue(stream, key);
+                this.writeValue(stream, value);
+            });
         } else if (typeof value == 'object') {
             let map: Map<string, ESObject> = new Map();
             Object.keys(value).forEach(key => {
@@ -170,7 +185,7 @@ export default class StandardMessageCodec implements MessageCodec<ESObject> {
             throw new Error("Unsupported value: " + value);
             stream.writeInt8(StandardMessageCodec.NULL);
         }
-        return stream
+        return stream;
     }
 
     writeAlignment(stream: ByteBuffer, alignment: number) {
@@ -257,8 +272,8 @@ export default class StandardMessageCodec implements MessageCodec<ESObject> {
                 result = buffer.readFloat64(true)
                 break;
             case StandardMessageCodec.STRING: {
-                let bytes = this.readBytes(buffer);
-                result = StringUtils.arrayBufferToString(bytes.buffer);
+                let bytes: Uint8Array = this.readBytes(buffer);
+                result = StringUtils.uint8ArrayToString(bytes);
                 break;
             }
             case StandardMessageCodec.UINT8_ARRAY: {

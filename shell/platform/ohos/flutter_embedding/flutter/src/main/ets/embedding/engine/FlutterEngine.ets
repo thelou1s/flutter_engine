@@ -39,6 +39,10 @@ import AccessibilityChannel from './systemchannels/AccessibilityChannel';
 import LocalizationPlugin from '../../plugin/localization/LocalizationPlugin'
 import SettingsChannel from './systemchannels/SettingsChannel';
 import PlatformViewsController from '../../plugin/platform/PlatformViewsController';
+import { FlutterPlugin } from './plugins/FlutterPlugin';
+import List from '@ohos.util.List';
+import GeneratedPluginRegister from './plugins/util/GeneratedPluginRegister';
+
 
 const TAG = "FlutterEngine";
 
@@ -79,8 +83,7 @@ export default class FlutterEngine implements EngineLifecycleListener{
    * 5、初始化flutterNapi
    * 6、engineLifecycleListeners
    */
-  constructor(context: common.Context, flutterLoader: FlutterLoader | null, flutterNapi: FlutterNapi | null, platformViewsController: PlatformViewsController) {
-    const injector: FlutterInjector = FlutterInjector.getInstance();
+  constructor(context: common.Context, flutterLoader: FlutterLoader | null, flutterNapi: FlutterNapi | null, platformViewsController: PlatformViewsController | null) {    const injector: FlutterInjector = FlutterInjector.getInstance();
 
     if(flutterNapi == null){
       flutterNapi = FlutterInjector.getInstance().getFlutterNapi();
@@ -104,7 +107,7 @@ export default class FlutterEngine implements EngineLifecycleListener{
   }
 
   async init(context: common.Context, dartVmArgs: Array<string> | null, automaticallyRegisterPlugins: boolean,
-             waitForRestorationData: boolean, group: FlutterEngineGroup | null) {
+             waitForRestorationData: boolean, group: FlutterEngineGroup | null, plugins: List<FlutterPlugin> | null) {
     if (!this.flutterNapi.isAttached()) {
       await this.flutterLoader.startInitialization(context)
       this.flutterLoader.ensureInitializationComplete(dartVmArgs);
@@ -132,8 +135,12 @@ export default class FlutterEngine implements EngineLifecycleListener{
       this.attachToNapi();
     }
 
-    this.pluginRegistry = new FlutterEngineConnectionRegistry(context.getApplicationContext(), this, this.flutterLoader, group!);
+    this.pluginRegistry = new FlutterEngineConnectionRegistry(context.getApplicationContext(), this, this.flutterLoader);
     this.localizationPlugin.sendLocaleToFlutter();
+
+    if (automaticallyRegisterPlugins && plugins) {
+      GeneratedPluginRegister.registerGeneratedPlugins(this, plugins);
+    }
   }
 
   private attachToNapi(): void {
@@ -151,7 +158,9 @@ export default class FlutterEngine implements EngineLifecycleListener{
               initialRoute: string,
               dartEntrypointArgs: Array<string>,
               platformViewsController: PlatformViewsController,
-              automaticallyRegisterPlugins: boolean, waitForRestorationData: boolean) {
+              automaticallyRegisterPlugins: boolean,
+              waitForRestorationData: boolean,
+              plugins: List<FlutterPlugin> | null) {
     if (!this.isAttachedToNapi()) {
       throw new Error(
         "Spawn can only be called on a fully constructed FlutterEngine");
@@ -169,7 +178,7 @@ export default class FlutterEngine implements EngineLifecycleListener{
       newFlutterNapi,
       platformViewsController
     );
-    await flutterEngine.init(context, null, automaticallyRegisterPlugins, waitForRestorationData, null)
+    await flutterEngine.init(context, null, automaticallyRegisterPlugins, waitForRestorationData, null, plugins)
     return flutterEngine
   }
 
@@ -247,6 +256,9 @@ export default class FlutterEngine implements EngineLifecycleListener{
     this.flutterNapi.removeEngineLifecycleListener(this);
     this.pluginRegistry?.detachFromAbility();
     this.platformViewsController?.onDetachedFromNapi();
+    this.pluginRegistry?.destroy();
+    this.dartExecutor.onDetachedFromNAPI();
+    this.flutterNapi.detachFromNativeAndReleaseResources();
   }
 
   getRestorationChannel(): RestorationChannel | null {

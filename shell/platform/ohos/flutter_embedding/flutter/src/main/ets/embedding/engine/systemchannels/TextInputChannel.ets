@@ -20,7 +20,6 @@ import TextInputPlugin from '../../../plugin/editing/TextInputPlugin';
 import Log from '../../../util/Log';
 import DartExecutor from '../dart/DartExecutor';
 import inputMethod from '@ohos.inputMethod';
-import { DEFAULT } from '@ohos/hypium';
 
 const TAG = "TextInputChannel";
 
@@ -110,12 +109,16 @@ export default class TextInputChannel {
 
   unspecifiedAction(inputClientId: number): void {
     Log.d(TAG, "Sending 'unspecifiedAction' message.");
-    this.channel.invokeMethod("TextInputClient.performAction", [inputClientId, "TextInputAction.unspecifiedAction"]);
+    this.channel.invokeMethod("TextInputClient.performAction", [inputClientId, "TextInputAction.unspecified"]);
   }
 
   commitContent(inputClientId: number): void {
     Log.d(TAG, "Sending 'commitContent' message.");
     this.channel.invokeMethod("TextInputClient.performAction", [inputClientId, "TextInputAction.commitContent"]);
+  }
+
+  onConnectionClosed(inputClientId: number): void {
+    Log.d(TAG, "Sending 'onConnectionClosed' message.");
   }
 
   performPrivateCommand(inputClientId: number, action: string, data: ESObject) {

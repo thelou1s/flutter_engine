@@ -17,6 +17,7 @@ import MethodCall from '../../../plugin/common/MethodCall';
 import MethodChannel, { MethodCallHandler, MethodResult } from '../../../plugin/common/MethodChannel';
 import StandardMethodCodec from '../../../plugin/common/StandardMethodCodec';
 import Log from '../../../util/Log';
+import StringUtils from '../../../util/StringUtils';
 import DartExecutor from '../dart/DartExecutor';
 
 /**
@@ -38,6 +39,7 @@ import DartExecutor from '../dart/DartExecutor';
  */
 export default class RestorationChannel {
   private static TAG = "RestorationChannel";
+
   private static CHANNEL_NAME = "flutter/restoration";
 
   /**
@@ -55,31 +57,41 @@ export default class RestorationChannel {
    */
   public waitForRestorationData: boolean = false;
 
+  public pendingFrameworkRestorationChannelRequest: MethodResult | null = null;
+
+  public engineHasProvidedData: boolean = false;
+
+  public frameworkHasRequestedData: boolean = false;
+
   // Holds the most current restoration data which may have been provided by the engine
   // via "setRestorationData" or by the framework via the method channel. This is the data the
   // framework should be restored to in case the app is terminated.
   private restorationData: Uint8Array;
+
   private channel: MethodChannel | null = null;
-  private pendingFrameworkRestorationChannelRequest: MethodResult | null = null;
-  private engineHasProvidedData: boolean = false;
-  private frameworkHasRequestedData: boolean = false;
+
   private handler: MethodCallHandler;
 
   constructor(channelOrExecutor: MethodChannel | DartExecutor, waitForRestorationData: boolean) {
     if (channelOrExecutor instanceof MethodChannel) {
       this.channel = channelOrExecutor;
     } else {
-      this.channel = new MethodChannel(channelOrExecutor, RestorationChannel.CHANNEL_NAME, StandardMethodCodec.INSTANCE);
+      this.channel =
+        new MethodChannel(channelOrExecutor, RestorationChannel.CHANNEL_NAME, StandardMethodCodec.INSTANCE);
     }
     this.waitForRestorationData = waitForRestorationData;
     this.restorationData = new Uint8Array(1).fill(0);
-    this.handler = new RestorationChannelMethodCallHandler(this.restorationData);
+    this.handler = new RestorationChannelMethodCallHandler(this);
     this.channel.setMethodCallHandler(this.handler);
   }
 
   /** Obtain the most current restoration data that the framework has provided. */
   getRestorationData(): Uint8Array {
     return this.restorationData;
+  }
+
+  setRestorationDataOnly(data: Uint8Array) {
+    this.restorationData = data;
   }
 
   /** Set the restoration data from which the framework will restore its state. */
@@ -96,17 +108,20 @@ export default class RestorationChannel {
       // framework retrieved the restoration state before it was set via this method.
       // Experimentally, this can also be used to restore a previously used engine to another state,
       // e.g. when the engine is attached to a new activity.
-      this.channel?.invokeMethod("push", RestorationChannelMethodCallHandler.packageData(data), {
-        success: (result: ESObject) :void => {
+      this.channel?.invokeMethod(
+        "push", RestorationChannelMethodCallHandler.packageData(data), {
+        success: (result: ESObject): void => {
           this.restorationData = data;
         },
 
-        error: (errorCode: string, errorMessage: string, errorDetails: ESObject) :void => {
-          Log.e(RestorationChannel.TAG,
-            "Error " + errorCode + " while sending restoration data to framework: " + errorMessage);
+        error: (errorCode: string, errorMessage: string, errorDetails: ESObject): void => {
+          Log.e(
+            RestorationChannel.TAG,
+            "Error " + errorCode + " while sending restoration data to framework: " + errorMessage
+          );
         },
 
-        notImplemented: () :void => {
+        notImplemented: (): void => {
           // do nothing
         }
       })
@@ -128,15 +143,10 @@ export default class RestorationChannel {
 }
 
 class RestorationChannelMethodCallHandler implements MethodCallHandler {
-  public waitForRestorationData: boolean = false;
-  private restorationData: Uint8Array;
-  private engineHasProvidedData: boolean = false;
-  private frameworkHasRequestedData: boolean = false;
-  private channel: MethodChannel | null = null;
-  private pendingFrameworkRestorationChannelRequest: MethodResult | null = null;
+  private channel: RestorationChannel;
 
-  constructor(restorationData: Uint8Array) {
-    this.restorationData = restorationData;
+  constructor(channel: RestorationChannel) {
+    this.channel = channel;
   }
 
   onMethodCall(call: MethodCall, result: MethodResult): void {
@@ -144,20 +154,20 @@ class RestorationChannelMethodCallHandler implements MethodCallHandler {
     const args: ESObject = call.args;
     switch (method) {
       case "put": {
-        this.restorationData = args;
+        this.channel.setRestorationDataOnly(args);
         result.success(null);
         break;
       }
       case "get": {
-        this.frameworkHasRequestedData = true;
-        if (this.engineHasProvidedData || !this.waitForRestorationData) {
-          result.success(RestorationChannelMethodCallHandler.packageData(this.restorationData));
+        this.channel.frameworkHasRequestedData = true;
+        if (this.channel.engineHasProvidedData || !this.channel.waitForRestorationData) {
+          result.success(RestorationChannelMethodCallHandler.packageData(this.channel.getRestorationData()));
           // Do not delete the restoration data on the engine side after sending it to the
           // framework. We may need to hand this data back to the operating system if the
           // framework never modifies the data (and thus doesn't send us any
           // data back).
         } else {
-          this.pendingFrameworkRestorationChannelRequest = result;
+          this.channel.pendingFrameworkRestorationChannelRequest = result;
         }
         break;
       }

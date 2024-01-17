@@ -65,37 +65,33 @@ void OhosTouchProcessor::HandleTouchEvent(
     int64_t shell_holderID,
     OH_NativeXComponent* component,
     OH_NativeXComponent_TouchEvent* touchEvent) {
-  if (touchEvent == nullptr) {
-    LOGE("touchEvent Invalid");
-    return;
-  }
-  auto packet =
-      std::make_unique<flutter::PointerDataPacket>(touchEvent->numPoints);
-  for (size_t index = 0; index < touchEvent->numPoints; ++index) {
+    if (touchEvent == nullptr) {
+        return;
+    }
+    const int numPoints = 1;
+    auto packet = std::make_unique<flutter::PointerDataPacket>(numPoints);
     PointerData pointerData;
     pointerData.Clear();
     pointerData.embedder_id = touchEvent->id;
-    pointerData.time_stamp =
-        touchEvent->touchPoints[index].timeStamp / MSEC_PER_SECOND;
-    pointerData.change =
-        getPointerChangeForAction(touchEvent->touchPoints[index].type);
-    pointerData.physical_y = touchEvent->touchPoints[index].screenY;
-    pointerData.physical_x = touchEvent->touchPoints[index].screenX;
+    pointerData.time_stamp = touchEvent->timeStamp / MSEC_PER_SECOND;
+    pointerData.change = getPointerChangeForAction(touchEvent->type);
+    pointerData.physical_y = touchEvent->y;
+    pointerData.physical_x = touchEvent->x;
     // Delta will be generated in pointer_data_packet_converter.cc.
     pointerData.physical_delta_x = 0.0;
     pointerData.physical_delta_y = 0.0;
-    pointerData.device = touchEvent->touchPoints[index].id;
+    pointerData.device = touchEvent->id;
     // Pointer identifier will be generated in pointer_data_packet_converter.cc.
     pointerData.pointer_identifier = 0;
     // XComponent not support Scroll
     pointerData.signal_kind = PointerData::SignalKind::kNone;
     pointerData.scroll_delta_x = 0.0;
     pointerData.scroll_delta_y = 0.0;
-    pointerData.pressure = touchEvent->touchPoints[index].force;
+    pointerData.pressure = touchEvent->force;
     pointerData.pressure_max = 1.0;
     pointerData.pressure_min = 0.0;
     OH_NativeXComponent_TouchPointToolType toolType;
-    OH_NativeXComponent_GetTouchPointToolType(component, index, &toolType);
+    OH_NativeXComponent_GetTouchPointToolType(component, 0, &toolType);
     pointerData.kind = getPointerDeviceTypeForToolType(toolType);
     if (pointerData.kind == PointerData::DeviceKind::kTouch) {
       if (pointerData.change == PointerData::Change::kDown ||
@@ -103,7 +99,6 @@ void OhosTouchProcessor::HandleTouchEvent(
         pointerData.buttons = kPointerButtonTouchContact;
       }
     } else if (pointerData.kind == PointerData::DeviceKind::kMouse) {
-      // TODO:button获取鼠标EventButton
     }
     pointerData.pan_x = 0.0;
     pointerData.pan_y = 0.0;
@@ -111,29 +106,13 @@ void OhosTouchProcessor::HandleTouchEvent(
     pointerData.pan_delta_x = 0.0;
     pointerData.pan_delta_y = 0.0;
     // The contact area between the fingerpad and the screen
-    pointerData.size = touchEvent->touchPoints[index].size;
+    pointerData.size = touchEvent->size;
     pointerData.scale = 1.0;
     pointerData.rotation = 0.0;
-    LOGD(
-        "Touch Info:dots[%{public}d] id %{public}d x = %{public}f, y = "
-        "%{public}f type %{public}d",
-        static_cast<int>(index), touchEvent->touchPoints[index].id,
-        touchEvent->touchPoints[index].x, touchEvent->touchPoints[index].y,
-        touchEvent->touchPoints[index].type);
-    LOGD("Touch Info : screenx = %{public}f, screeny = %{public}f",
-         touchEvent->touchPoints[index].screenX,
-         touchEvent->touchPoints[index].screenY);
-    LOGD(
-        "vtimeStamp = %{public}ld, isPressed = %{public}d toolType = "
-        "%{public}d",
-        touchEvent->touchPoints[index].timeStamp,
-        touchEvent->touchPoints[index].isPressed, toolType);
-
-    packet->SetPointerData(index, pointerData);
-  }
-  auto ohos_shell_holder = reinterpret_cast<OHOSShellHolder*>(shell_holderID);
-  ohos_shell_holder->GetPlatformView()->DispatchPointerDataPacket(
-      std::move(packet));
+    packet->SetPointerData(0, pointerData);
+    auto ohos_shell_holder = reinterpret_cast<OHOSShellHolder*>(shell_holderID);
+    ohos_shell_holder->GetPlatformView()->DispatchPointerDataPacket(
+        std::move(packet));
 }
 
 }  // namespace flutter

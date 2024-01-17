@@ -252,7 +252,7 @@ export class ListenableEditingState {
         this.TextInputChannel.unspecifiedAction(this.client);
         break;
       case inputMethod.EnterKeyType.NONE:
-        this.TextInputChannel.done(this.client)
+        this.TextInputChannel.newline(this.client);
         break;
       case inputMethod.EnterKeyType.GO:
         this.TextInputChannel.go(this.client);
@@ -267,7 +267,7 @@ export class ListenableEditingState {
         this.TextInputChannel.next(this.client);
         break;
       case inputMethod.EnterKeyType.DONE:
-        this.TextInputChannel.done(this.client)
+        this.TextInputChannel.done(this.client);
         break;
     }
   }
@@ -283,5 +283,5 @@ export class ListenableEditingState {
 export interface EditingStateWatcher {
   // Changing the editing state in a didChangeEditingState callback may cause unexpected
   // behavior.
-  didChangeEditingState(textChanged: boolean, selectionChanged: boolean, composingRegionChanged: boolean);
+  didChangeEditingState(textChanged: boolean, selectionChanged: boolean, composingRegionChanged: boolean): void;
 }

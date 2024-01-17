@@ -43,6 +43,19 @@ def apply_patch(task, log=False):
         print("Apply failed. file path:" + file_path + " Error:" + str(stderr))
     pass
 
+
+def stashChanges(task, log):
+    if task['type'] != 'patch':
+        return
+    target_path = task['target']
+    sub_process_with_timeout.excuteArr([
+        'git', 'add', '-A'
+    ], target_path, log)
+    sub_process_with_timeout.excuteArr([
+        'git', 'stash', 'save', 'Auto stash by ohos_setup.py'
+    ], target_path, log)
+
+
 def apply_check(task, log=False):
     file_path = task['file_path']
     target_path = task['target']
@@ -72,13 +85,16 @@ def doTask(task, log=False):
         pass
 
 
-def parse_config(config_file="{}/scripts/config.json".format(ROOT)):
+def parse_config(config_file="{}/scripts/config.json".format(ROOT), useStash=True):
     log = False
     if (len(sys.argv) > 1): 
       if(sys.argv[1] == '-v'):
         log = True
     with open(config_file) as json_file:
         data = json.load(json_file)
+        if useStash:
+            for task in data:
+                stashChanges(task, log)
         for task in data:
             doTask(task, log)
 

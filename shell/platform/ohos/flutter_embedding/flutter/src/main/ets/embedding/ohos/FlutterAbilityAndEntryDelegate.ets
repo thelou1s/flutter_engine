@@ -32,9 +32,13 @@ import { FlutterPlugin } from '../engine/plugins/FlutterPlugin';
 import FlutterEngineCache from '../engine/FlutterEngineCache';
 import FlutterEngineGroupCache from '../engine/FlutterEngineGroupCache';
 import FlutterEngineGroup, { Options } from '../engine/FlutterEngineGroup';
-import MouseCursorPlugin, { MouseCursorViewDelegate } from '../../plugin/mouse/MouseCursorPlugin';
 import Settings from './Settings';
 import FlutterNapi from '../engine/FlutterNapi';
+import List from '@ohos.util.List';
+import GeneratedPluginRegister from '../engine/plugins/util/GeneratedPluginRegister';
+import { UIContext } from '@ohos.arkui.UIContext';
+import { FlutterView } from '../../view/FlutterView';
+import FlutterManager from './FlutterManager';
 
 const TAG = "FlutterAbilityDelegate";
 const PLUGINS_RESTORATION_BUNDLE_KEY = "plugins";
@@ -45,18 +49,24 @@ const FRAMEWORK_RESTORATION_BUNDLE_KEY = "framework";
  * 1、初始化engine
  * 2、处理ability生命周期回调
  */
-class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
+class FlutterAbilityAndEntryDelegate implements ExclusiveAppComponent<UIAbility> {
   private host?: Host | null;
   flutterEngine?: FlutterEngine | null;
   platformPlugin?: PlatformPlugin;
   private context?: common.Context;
+  private uiContext?: UIContext | undefined;
   private textInputPlugin?: TextInputPlugin;
-  private isFlutterEngineFromHost: boolean = false;
+  private isFlutterEngineFromHostOrCache: boolean = false;
   private engineGroup?: FlutterEngineGroup;
   private settings?: Settings;
+  private isHost:boolean = false;
+  private flutterView?: FlutterView
 
-  constructor(host: Host) {
+  constructor(host?: Host) {
     this.host = host;
+    if (this.host) {
+      this.isHost = true;
+    }
   }
 
   /**
@@ -70,26 +80,31 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
     if (this.flutterEngine == null) {
       await this.setupFlutterEngine();
     }
-    //shouldAttachEngineToActivity
-    if (this.host?.shouldAttachEngineToActivity()) {
+    //shouldAttachEngineToAbility
+    if (this.host?.shouldAttachEngineToAbility()) {
       // Notify any plugins that are currently attached to our FlutterEngine that they
       // are now attached to an Ability.
       Log.d(TAG, "Attaching FlutterEngine to the Ability that owns this delegate.");
       this.flutterEngine?.getAbilityControlSurface()?.attachToAbility(this);
     }
-
     //providePlatformPlugin
 
     //configureFlutterEngine
     this.isAttached = true;
-    Log.d(TAG, "onAttach end start loadcontent")
-    this.host?.loadContent()
+    const plugins = this.host?.getPlugins()
+    if (plugins) {
+      GeneratedPluginRegister.registerGeneratedPlugins(this.flutterEngine!, plugins);
+    }
     if (this.flutterEngine) {
       this.textInputPlugin = new TextInputPlugin(this.flutterEngine.getTextInputChannel()!);
       this.platformPlugin = new PlatformPlugin(this.flutterEngine.getPlatformChannel()!, this.context);
       this.settings = new Settings(this.flutterEngine.getSettingsChannel()!);
       this.flutterEngine.getSystemLanguages();
     }
+    if (this.flutterEngine && this.flutterView) {
+      this.flutterView.attachToFlutterEngine(this.flutterEngine!!);
+    }
+    this.host?.configureFlutterEngine(this.flutterEngine!!);
   }
 
   /**
@@ -99,9 +114,10 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
     let initialRoute = this.host?.getInitialRoute();
     if (initialRoute == null && this.host != null) {
       initialRoute = this.maybeGetInitialRouteFromIntent(this.host.getWant());
-      if (initialRoute == null) {
-        initialRoute = FlutterAbilityLaunchConfigs.DEFAULT_INITIAL_ROUTE;
-      }
+
+    }
+    if (initialRoute == null) {
+      initialRoute = FlutterAbilityLaunchConfigs.DEFAULT_INITIAL_ROUTE;
     }
     const libraryUri = this.host?.getDartEntrypointLibraryUri();
     Log.d(TAG, "Executing Dart entrypoint: " + this.host?.getDartEntrypointFunctionName() + ", library uri: " + libraryUri == null ? "\"\"" : libraryUri + ", and sending initial route: " + initialRoute);
@@ -133,12 +149,32 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
    * @param want
    */
   onRestoreInstanceState(want: Want) {
-    let frameworkState = want.parameters != null
-      ? want.parameters[FRAMEWORK_RESTORATION_BUNDLE_KEY] as Uint8Array
-      : new Uint8Array(1).fill(0);
+    let frameworkState: Uint8Array = this.getRestorationData(want.parameters as Record<string, Object>);
     if (this.host?.shouldRestoreAndSaveState()) {
       this.flutterEngine?.getRestorationChannel()?.setRestorationData(frameworkState);
     }
+  }
+
+  private getRestorationData(wantParam: Record<string, Object>): Uint8Array {
+    let result: Uint8Array = new Uint8Array(1).fill(0);
+    if (wantParam == null) {
+      return result;
+    }
+    if (wantParam[FRAMEWORK_RESTORATION_BUNDLE_KEY] == undefined) {
+      return result
+    }
+    if (typeof wantParam[FRAMEWORK_RESTORATION_BUNDLE_KEY] == 'object') {
+      let data: Record<string, ESObject> = wantParam[FRAMEWORK_RESTORATION_BUNDLE_KEY] as Record<string,
+      ESObject>;
+      let byteArray: Array<number> = new Array;
+      Object.keys(data).forEach(
+        key => {
+          byteArray.push(data[key]);
+        }
+      );
+      result = Uint8Array.from(byteArray);
+    }
+    return result;
   }
 
   /**
@@ -150,7 +186,7 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
     Log.d(TAG, "cachedEngineId=" + cachedEngineId);
     if (cachedEngineId && cachedEngineId.length > 0) {
       this.flutterEngine = FlutterEngineCache.getInstance().get(cachedEngineId);
-      this.isFlutterEngineFromHost = true;
+      this.isFlutterEngineFromHostOrCache = true;
       if (this.flutterEngine == null) {
         throw new Error(
             "The requested cached FlutterEngine did not exist in the FlutterEngineCache: '"
@@ -165,7 +201,7 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
       this.flutterEngine = this.host.provideFlutterEngine(this.context);
     }
     if (this.flutterEngine != null) {
-      this.isFlutterEngineFromHost = true;
+      this.isFlutterEngineFromHostOrCache = true;
       return;
     }
 
@@ -186,7 +222,7 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
         this.flutterEngine = await flutterEngineGroup.createAndRunEngineByOptions(
           this.addEntrypointOptions(new Options(this.context)));
       }
-      this.isFlutterEngineFromHost = false;
+      this.isFlutterEngineFromHostOrCache = false;
       return;
     }
 
@@ -197,9 +233,10 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
         "No preferred FlutterEngine was provided. Creating a new FlutterEngine for this FlutterAbility.");
 
     let group = this.engineGroup;
-    if (group == null && this.context != null && this.host != null) {
+    if (group == null && this.context != null) {
       group = new FlutterEngineGroup();
-      await group.checkLoader(this.context, this.host.getFlutterShellArgs().toArray() ?? []);
+      const flutterShellArgs = this.host? this.host.getFlutterShellArgs(): new FlutterShellArgs();
+      await group.checkLoader(this.context, flutterShellArgs.toArray() ?? []);
       this.engineGroup = group;
     }
     if (this.context) {
@@ -207,7 +244,7 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
         .setAutomaticallyRegisterPlugins(false)
         .setWaitForRestorationData(this.host?.shouldRestoreAndSaveState() || false)));
     }
-    this.isFlutterEngineFromHost = false;
+    this.isFlutterEngineFromHostOrCache = false;
   }
 
   addEntrypointOptions(options: Options): Options {
@@ -222,14 +259,22 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
     let initialRoute = this.host?.getInitialRoute();
     if (initialRoute == null && this.host != null) {
       initialRoute = this.maybeGetInitialRouteFromIntent(this.host.getWant());
-      if (initialRoute == null) {
-        initialRoute = FlutterAbilityLaunchConfigs.DEFAULT_INITIAL_ROUTE;
-      }
+    }
+    if (initialRoute == null) {
+      initialRoute = FlutterAbilityLaunchConfigs.DEFAULT_INITIAL_ROUTE;
     }
     return options
       .setDartEntrypoint(dartEntrypoint)
-      .setInitialRoute(initialRoute ?? '')
+      .setInitialRoute(initialRoute)
       .setDartEntrypointArgs(this.host?.getDartEntrypointArgs() ?? []);
+  }
+
+  createView(context: Context): FlutterView {
+    this.flutterView = FlutterManager.getInstance().createFlutterView(context)
+    if (this.flutterEngine) {
+      this.flutterView.attachToFlutterEngine(this.flutterEngine!!);
+    }
+    return this.flutterView
   }
 
   /**
@@ -238,14 +283,41 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
   release() {
     this.host = null;
     this.flutterEngine = null;
+    this.textInputPlugin = undefined;
+    this.platformPlugin = undefined;
   }
 
   onDetach() {
-    if (this.host?.shouldAttachEngineToActivity()) {
-      // Notify plugins that they are no longer attached to an Activity.
+    if (this.host?.shouldAttachEngineToAbility()) {
+      // Notify plugins that they are no longer attached to an Ability.
       Log.d(TAG, "Detaching FlutterEngine from the Ability");
       this.flutterEngine?.getAbilityControlSurface()?.detachFromAbility();
     }
+    this.flutterView?.detachFromFlutterEngine();
+    this.host?.cleanUpFlutterEngine(this.flutterEngine!!);
+
+    if (this.host?.shouldDispatchAppLifecycleState() && this.flutterEngine != null) {
+      this.flutterEngine?.getLifecycleChannel()?.appIsDetached();
+    }
+
+    if (this.textInputPlugin) {
+      this.textInputPlugin?.detach();
+    }
+
+    if (this.platformPlugin) {
+      this.platformPlugin.destroy();
+    }
+
+    // Destroy our FlutterEngine if we're not set to retain it.
+    if (this.host?.shouldDestroyEngineWithHost()) {
+      this.flutterEngine?.destroy();
+      if (this.host.getCachedEngineId() != null && this.host.getCachedEngineId().length > 0) {
+        FlutterEngineCache.getInstance().remove(this.host.getCachedEngineId());
+      }
+      this.flutterEngine = null;
+    }
+
+    this.isAttached = false;
   }
 
   onLowMemory(): void {
@@ -260,16 +332,8 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
   onCreate() {
     this.ensureAlive();
     if (this.shouldDispatchAppLifecycleState()) {
-      this.flutterEngine?.getLifecycleChannel()?.appIsInactive();
+      this.flutterEngine?.getLifecycleChannel()?.appIsResumed();
     }
-  }
-
-  onDestroy() {
-    this.ensureAlive();
-    if (this.shouldDispatchAppLifecycleState()) {
-      this.flutterEngine?.getLifecycleChannel()?.appIsDetached();
-    }
-    this.textInputPlugin?.detach();
   }
 
   onWindowStageCreate() {
@@ -304,6 +368,7 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
 
   onBackground() {
     if (this.shouldDispatchAppLifecycleState()) {
+      this.flutterEngine?.getLifecycleChannel()?.noWindowsAreFocused();
       this.flutterEngine?.getLifecycleChannel()?.appIsPaused();
     }
   }
@@ -313,6 +378,9 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
    */
 
   shouldDispatchAppLifecycleState(): boolean {
+    if (!this.isHost) {
+      return this.isAttached;
+    }
     if (this.host == null) {
       return false;
     }
@@ -320,7 +388,7 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
   }
 
   ensureAlive() {
-    if (this.host == null) {
+    if (this.isHost && this.host == null) {
       throw new Error("Cannot execute method on a destroyed FlutterAbilityDelegate.");
     }
   }
@@ -332,17 +400,17 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
   detachFromFlutterEngine() {
     if (this.host?.shouldDestroyEngineWithHost()) {
       // The host owns the engine and should never have its engine taken by another exclusive
-      // activity.
+      // ability.
       throw new Error(
         "The internal FlutterEngine created by "
           + this.host
-          + " has been attached to by another activity. To persist a FlutterEngine beyond the "
+          + " has been attached to by another Ability. To persist a FlutterEngine beyond the "
           + "ownership of this ablity, explicitly create a FlutterEngine");
     }
 
     // Default, but customizable, behavior is for the host to call {@link #onDetach}
     // deterministically as to not mix more events during the lifecycle of the next exclusive
-    // activity.
+    // ability.
     this.host?.detachFromFlutterEngine();
   }
 
@@ -350,7 +418,7 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
     const ability = this.host?.getAbility();
     if (ability == null) {
       throw new Error(
-        "FlutterActivityAndFragmentDelegate's getAppComponent should only "
+        "FlutterAbilityAndFragmentDelegate's getAppComponent should only "
           + "be queried after onAttach, when the host's ability should always be non-null");
     }
     return ability;
@@ -366,7 +434,7 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
         this.flutterEngine?.getNavigationChannel()?.pushRouteInformation(initialRoute);
       }
     } else {
-      Log.w(TAG, "onNewIntent() invoked before FlutterFragment was attached to an Activity.");
+      Log.w(TAG, "onNewIntent() invoked before FlutterFragment was attached to an Ability.");
     }
   }
 
@@ -376,7 +444,7 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
     if (this.host?.shouldRestoreAndSaveState()) {
       wantParam[FRAMEWORK_RESTORATION_BUNDLE_KEY] = this.flutterEngine!.getRestorationChannel()!.getRestorationData();
     }
-    if (this.host?.shouldAttachEngineToActivity()) {
+    if (this.host?.shouldAttachEngineToAbility()) {
       const plugins:Record<string, Object> = {}
       const result = this.flutterEngine?.getAbilityControlSurface()?.onSaveState(reason, plugins);
       wantParam[PLUGINS_RESTORATION_BUNDLE_KEY] = plugins;
@@ -394,7 +462,20 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
   }
 
   sendSettings(): void {
-    this.settings?.sendSettings()
+    if (this.uiContext != undefined) {
+      this.settings?.sendSettings(this.uiContext.getMediaQuery());
+    } else {
+      Log.e(TAG, "UIContext is null, cannot send Settings!");
+    }
+
+  }
+
+  setUIContext(uiContext: UIContext | undefined): void {
+    this.uiContext = uiContext;
+  }
+
+  isFlutterEngineFromHost(): boolean {
+    return this.isFlutterEngineFromHostOrCache;
   }
 }
 
@@ -402,21 +483,19 @@ class FlutterAbilityDelegate implements ExclusiveAppComponent<UIAbility> {
 /**
  * FlutterAbility句柄
  */
-interface Host extends FlutterEngineProvider, FlutterEngineConfigurator, PlatformPluginDelegate, MouseCursorViewDelegate {
+interface Host extends FlutterEngineProvider, FlutterEngineConfigurator, PlatformPluginDelegate {
 
   getAbility(): UIAbility;
 
-  loadContent():void;
-
   shouldDispatchAppLifecycleState(): boolean;
 
-  detachFromFlutterEngine();
+  detachFromFlutterEngine(): void;
 
-  shouldAttachEngineToActivity(): boolean;
+  shouldAttachEngineToAbility(): boolean;
 
   getCachedEngineId(): string;
 
-  getCachedEngineGroupId(): string;
+  getCachedEngineGroupId(): string | null;
 
   /**
    * Returns true if the {@link io.flutter.embedding.engine.FlutterEngine} used in this delegate
@@ -452,6 +531,12 @@ interface Host extends FlutterEngineProvider, FlutterEngineConfigurator, Platfor
   getWant(): Want;
 
   shouldRestoreAndSaveState(): boolean;
+
+  /** Return the plugins */
+  getPlugins(): List<FlutterPlugin>;
+
+  /* Return the ExclusiveAppComponent */
+  getExclusiveAppComponent(): ExclusiveAppComponent<UIAbility> | null
 }
 
-export { Host, FlutterAbilityDelegate }
+export { Host, FlutterAbilityAndEntryDelegate }

@@ -86,11 +86,7 @@ export class ByteBuffer {
   }
 
   get buffer(): ArrayBuffer {
-    const dataBuffer = new DataView(new ArrayBuffer(this.mByteOffset));
-    for (let i = 0; i < this.mByteOffset; i++) {
-      dataBuffer.setUint8(i, this.dataView!.getUint8(i));
-    }
-    return dataBuffer.buffer
+    return this.dataView!.buffer.slice(0, this.mByteOffset)
   }
 
   /**
@@ -120,11 +116,12 @@ export class ByteBuffer {
    */
   checkWriteCapacity(slen: number): void {
     if (this.mByteOffset + slen > this.dataView!.byteLength) {
-      let checkBuffer = new DataView(new ArrayBuffer(this.dataView!.byteLength + slen + 512));
-      for (let i = 0; i < this.mByteOffset; i++) {
-        checkBuffer.setUint8(i, this.dataView!.getUint8(i));
-      }
-      this.dataView = checkBuffer;
+      let newBuffer = new ArrayBuffer(this.dataView!.byteLength + slen + 512);
+      let newDataView = new DataView(newBuffer);
+      let oldUint8Array = new Uint8Array(this.dataView!.buffer);
+      let newUint8Array = new Uint8Array(newBuffer);
+      newUint8Array.set(oldUint8Array);
+      this.dataView = newDataView;
     }
   }
 

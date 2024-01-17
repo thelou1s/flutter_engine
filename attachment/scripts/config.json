@@ -41,46 +41,21 @@
         "file_path": "../../flutter/attachment/repos/angle.patch"
     },
     {
-        "name": "libcxx",
-        "target": "./src/third_party/libcxx",
-        "type": "patch",
-        "file_path": "../../flutter/attachment/repos/libcxx.bin"
-    },
-    {
-        "name": "build0",
+        "name": "build",
         "target": "./src/build",
         "type": "patch",
-        "file_path": "../flutter/attachment/repos/build0.bin"
+        "file_path": "../flutter/attachment/repos/build.patch"
     },
-    {
-        "name": "build1",
-        "target": "./src/build",
-        "type": "patch",
-        "file_path": "../flutter/attachment/repos/build1.bin"
-    },
-    {
-        "name": "build2",
-        "target": "./src/build",
-        "type": "patch",
-        "file_path": "../flutter/attachment/repos/build2.bin"
-    },
-    {
-        "name": "build3",
-        "target": "./src/build",
-        "type": "patch",
-        "file_path": "../flutter/attachment/repos/build3.bin"
-    },
-    {
-        "name": "build4",
-        "target": "./src/build",
-        "type": "patch",
-        "file_path": "../flutter/attachment/repos/build4.bin"
-    }
-	,
     {
         "name": "zlib",
         "target": "./src/third_party/zlib",
         "type": "patch",
         "file_path": "../../flutter/attachment/repos/zlib.patch"
+    },
+	{
+        "name": "boringssl",
+        "target": "./src/third_party/boringssl",
+        "type": "patch",
+        "file_path": "../../flutter/attachment/repos/boringssl.patch"
     }
 ]

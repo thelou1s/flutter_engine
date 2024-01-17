@@ -150,11 +150,16 @@ class PlatformViewOHOSNapi {
                              int32_t height);
   static void SurfaceDestroyed(int64_t shell_holder);
   static int64_t GetShellHolder();
+  static napi_value nativeXComponentAttachFlutterEngine(
+      napi_env env,
+      napi_callback_info info);
+  static napi_value nativeXComponentDetachFlutterEngine(
+      napi_env env,
+      napi_callback_info info);
 
  private:
   static napi_env env_;
-  static napi_ref ref_napi_obj_;
-  static int64_t shell_holder_value;
+  napi_ref ref_napi_obj_;
   static std::vector<std::string> system_languages;
   fml::RefPtr<fml::TaskRunner> platform_task_runner_;
 };

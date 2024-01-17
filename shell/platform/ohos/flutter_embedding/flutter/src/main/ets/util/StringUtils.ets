@@ -20,13 +20,21 @@ import util from '@ohos.util'
  */
 export default class StringUtils {
   static stringToArrayBuffer(str: string): ArrayBuffer {
+    if(str.length == 0){
+      return new ArrayBuffer(0);
+    }
     let textEncoder = new util.TextEncoder("utf-8");
     return textEncoder.encodeInto(str).buffer;
   }
 
   static arrayBufferToString(buffer: ArrayBuffer): string {
     let textDecoder = util.TextDecoder.create('utf-8', { ignoreBOM : true })
-    return textDecoder.decode(new Uint8Array(buffer))
+    return textDecoder.decode(new Uint8Array(buffer));
+  }
+
+  static uint8ArrayToString(buffer: Uint8Array): string {
+    let textDecoder = util.TextDecoder.create('utf-8', { ignoreBOM : true })
+    return textDecoder.decodeWithStream(buffer);
   }
 
   static isNotEmpty(str: string): boolean {
