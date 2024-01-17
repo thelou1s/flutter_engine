@@ -91,6 +91,12 @@ export default class Log {
    */
   static e(tag: string, format: string, ...args: ESObject[]) {
     if (Log.isLoggable(HiLog.LogLevel.ERROR)) {
+      args.format((item: ESObject, index: number) => {
+        if (item instanceof Error) {
+          args[index] = item.message + item.stack;
+        }
+        format+="%{public}s";
+      })
       HiLog.error(DOMAIN, TAG, tag + SYMBOL + format, args);
     }
   }
