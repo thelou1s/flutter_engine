@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 // FLUTTER_NOLINT: https://github.com/flutter/flutter/issues/68331
+#pragma clang diagnostic ignored "-Wc++11-narrowing"
 
 #include "impeller/renderer/backend/vulkan/context_vk.h"
 

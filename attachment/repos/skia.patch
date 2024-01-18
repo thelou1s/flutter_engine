@@ -327,59 +327,6 @@ index b43526fe1f..fb34289da7 100644
      ldflags = [
        "-rdynamic",
        "-Wl,-rpath,\$ORIGIN",
-diff --git a/src/core/SkCanvas.cpp b/src/core/SkCanvas.cpp
-index ab23b24edd..c5f714712b 100644
---- a/src/core/SkCanvas.cpp
-+++ b/src/core/SkCanvas.cpp
-@@ -82,6 +82,16 @@ static_assert(std::max(3,4) == 4);
- 
- using Slug = sktext::gpu::Slug;
- 
-+#ifdef  TARGET_OS_OHOS
-+#include <hilog/log.h>
-+#define  SKIA_LOG_INFO     LOG_INFO
-+#define  SKIA_TAG  "XComSkia"
-+//int OH_LOG_Print(int type, HiLog_LogLevel level, unsigned int domain, const char *tag, const char *fmt, ...) ;
-+#define OHOS_LOG_DEBUG(...)   (void) OH_LOG_Print(LOG_APP,SKIA_LOG_INFO,LOG_DOMAIN,SKIA_TAG,__VA_ARGS__)
-+#else
-+#define OHOS_LOG_DEBUG(...)
-+#endif
-+
- ///////////////////////////////////////////////////////////////////////////////////////////////////
- 
- /*
-@@ -2044,7 +2054,7 @@ void SkCanvas::onDrawPaint(const SkPaint& paint) {
- }
- 
- void SkCanvas::internalDrawPaint(const SkPaint& paint) {
--    // drawPaint does not call internalQuickReject() because computing its geometry is not free
-+    // drawPaint does not call exitinternalQuickReject() because computing its geometry is not free
-     // (see getLocalClipBounds(), and the two conditions below are sufficient.
-     if (paint.nothingToDraw() || this->isClipEmpty()) {
-         return;
-@@ -2358,16 +2368,22 @@ void SkCanvas::onDrawImageRect2(const SkImage* image, const SkRect& src, const S
-     SkPaint realPaint = clean_paint_for_drawImage(paint);
-     SkSamplingOptions realSampling = clean_sampling_for_constraint(sampling, constraint);
- 
-+    OHOS_LOG_DEBUG("SkCanvas::onDrawImageRect2 ...enter ");
-     if (this->internalQuickReject(dst, realPaint)) {
-+        OHOS_LOG_DEBUG("SkCanvas::onDrawImageRect2 ...internalQuickReject  rejected");
-         return;
-     }
- 
-+    OHOS_LOG_DEBUG("SkCanvas::onDrawImageRect2 ...aboutToDraw");
-     auto layer = this->aboutToDraw(this, realPaint, &dst, CheckForOverwrite::kYes,
-                                    image->isOpaque() ? kOpaque_ShaderOverrideOpacity
-                                                      : kNotOpaque_ShaderOverrideOpacity);
-+
-     if (layer) {
-+        OHOS_LOG_DEBUG("SkCanvas::onDrawImageRect2 ...topDevice->drawImageRect");
-         this->topDevice()->drawImageRect(image, &src, dst, realSampling, layer->paint(), constraint);
-     }
-+    OHOS_LOG_DEBUG("SkCanvas::onDrawImageRect2 ...exit");
- }
- 
- void SkCanvas::onDrawImageLattice2(const SkImage* image, const Lattice& lattice, const SkRect& dst,
 diff --git a/src/gpu/ganesh/gl/egl/GrGLMakeEGLInterface.cpp b/src/gpu/ganesh/gl/egl/GrGLMakeEGLInterface.cpp
 index 78225b4610..c2105852b1 100644
 --- a/src/gpu/ganesh/gl/egl/GrGLMakeEGLInterface.cpp
