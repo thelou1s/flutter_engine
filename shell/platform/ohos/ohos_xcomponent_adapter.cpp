@@ -268,10 +268,9 @@ void XComponentBase::DetachFlutterEngine() {
   if (window_ != nullptr) {
     PlatformViewOHOSNapi::SurfaceDestroyed(std::stoll(shellholderId_));
   } else {
-    LOGE("OnSurfaceCreated XComponentBase is not attached");
+    LOGE("DetachFlutterEngine XComponentBase is not attached");
   }
   shellholderId_ = "";
-  window_ = nullptr;
   isEngineAttached_ = false;
 }
 
