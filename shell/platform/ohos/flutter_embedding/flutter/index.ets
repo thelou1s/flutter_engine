@@ -13,6 +13,22 @@
 * limitations under the License.
 */
 
-export { FlutterAbility } from './src/main/ets/embedding/ohos/FlutterAbility'
+import FlutterManager from './src/main/ets/embedding/ohos/FlutterManager';
+import { FlutterAbility } from './src/main/ets/embedding/ohos/FlutterAbility'
+import { FlutterPage } from './src/main/ets/embedding/ohos/FlutterPage'
+import { FlutterPlugin } from './src/main/ets/embedding/engine/plugins/FlutterPlugin'
+import { FlutterView } from './src/main/ets/view/FlutterView';
+import FlutterEntry from './src/main/ets/embedding/ohos/FlutterEntry';
+import FlutterEngine from './src/main/ets/embedding/engine/FlutterEngine';
+import PlatformPlugin from './src/main/ets/plugin/PlatformPlugin';
 
-export { FlutterPage } from './src/main/ets/embedding/ohos/FlutterPage'
+export {
+  PlatformPlugin,
+  FlutterPlugin,
+  FlutterView,
+  FlutterEntry,
+  FlutterEngine,
+  FlutterAbility,
+  FlutterManager,
+  FlutterPage
+}
