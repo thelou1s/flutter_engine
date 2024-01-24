@@ -49,7 +49,7 @@ export interface BinaryReply {
      *     outgoing replies must place the reply bytes between position zero and current position.
      *     Reply receivers can read from the buffer directly.
      */
-    reply(reply: ArrayBuffer): void;
+    reply(reply: ArrayBuffer | null): void;
 }
 
 /** Handler for incoming binary messages from Flutter. */
@@ -96,7 +96,7 @@ export interface BinaryMessenger {
      * @param message the message payload, a direct-allocated {@link ByteBuffer} with the message
      *     bytes between position zero and current position, or null.
      */
-    send(channel: String, message: ArrayBuffer): void;
+    send(channel: String, message: ArrayBuffer | null): void;
 
     /**
      * Sends a binary message to the Flutter application, optionally expecting a reply.
@@ -127,7 +127,7 @@ export interface BinaryMessenger {
      *     the handler. Specifying null means execute on the platform thread.
      */
     //setMessageHandler(channel: String, handler: BinaryMessageHandler)
-    setMessageHandler(channel: String, handler: BinaryMessageHandler, taskQueue?: TaskQueue): void;
+    setMessageHandler(channel: String, handler: BinaryMessageHandler | null, taskQueue?: TaskQueue): void;
     // {
     //     if (taskQueue != null) {
     //         throw new Error("setMessageHandler called with nonnull taskQueue is not supported.")

@@ -97,7 +97,6 @@ import { PlatformViewsAccessibilityDelegate } from './src/main/ets/plugin/platfo
 import PlatformViewsController from './src/main/ets/plugin/platform/PlatformViewsController';
 import AccessibilityBridge from './src/main/ets/view/AccessibilityBridge';
 import { FlutterCallbackInformation } from './src/main/ets/view/FlutterCallbackInformation';
-import FlutterNativeView from './src/main/ets/view/FlutterNativeView';
 import FlutterRunArguments from './src/main/ets/view/FlutterRunArguments';
 import { FlutterView } from './src/main/ets/view/FlutterView';
 import { TextureRegistry } from './src/main/ets/view/TextureRegistry';
@@ -186,7 +185,6 @@ export {
   PlatformViewsController,
   AccessibilityBridge,
   FlutterCallbackInformation,
-  FlutterNativeView,
   FlutterRunArguments,
   FlutterView,
   TextureRegistry,
