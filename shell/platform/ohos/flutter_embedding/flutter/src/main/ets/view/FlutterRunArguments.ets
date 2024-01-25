@@ -17,4 +17,10 @@ export default class FlutterRunArguments {
   public bundlePath: string;
   public entrypoint: string;
   public libraryPath: string;
+
+  constructor(bundlePath: string, entrypoint: string, libraryPath: string) {
+    this.bundlePath = bundlePath;
+    this.entrypoint = entrypoint;
+    this.libraryPath = libraryPath;
+  }
 }

@@ -40,7 +40,7 @@ export default class EventChannel {
   private messenger: BinaryMessenger;
   private name: string;
   private codec: MethodCodec;
-  private taskQueue: TaskQueue;
+  private taskQueue: TaskQueue | undefined;
 
   constructor(messenger: BinaryMessenger, name: string, codec?: MethodCodec, taskQueue?: TaskQueue) {
     this.messenger = messenger
@@ -240,22 +240,22 @@ class EventSinkImplementation implements EventSink {
   }
 }
 
-class AtomicReference<T> {
-  private value: T;
+class AtomicReference <T> {
+  private value: T | null;
 
-  constructor(value: T) {
+  constructor(value: T | null) {
     this.value = value
   }
 
-  get(): T {
+  get(): T | null {
     return this.value;
   }
 
-  set(newValue: T): void {
+  set(newValue: T | null): void {
     this.value = newValue;
   }
 
-  getAndSet(newValue: T) {
+  getAndSet(newValue: T | null): T | null {
     const oldValue = this.value;
     this.value = newValue;
     return oldValue;
