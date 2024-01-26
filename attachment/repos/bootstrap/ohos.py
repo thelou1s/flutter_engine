@@ -128,24 +128,27 @@ def getNdkHome():
         OHOS_NDK_HOME = findNativeInCurrentDir()
     if not OHOS_NDK_HOME:
         OHOS_SDK_HOME = os.getenv("OHOS_SDK_HOME")
-        if not OHOS_SDK_HOME:
-            OHOS_SDK_HOME = "%s/openharmony" % os.getenv("HOS_SDK_HOME")
         sdkInt = 0
-        if os.path.exists(OHOS_SDK_HOME):
-            for dir in os.listdir(OHOS_SDK_HOME):
-                try:
-                    tmpInt = int(dir)
-                    sdkInt = max(sdkInt, tmpInt)
-                except:
-                    logging.warning("Parse int error, dir=%s" % dir)
-        if sdkInt == 0:
-            logging.error(
-                "Ohos sdkInt parse failed, please config the correct environment variable."
-                " Such as: 'export OHOS_SDK_HOME=~/ohos/sdk/openharmony'."
-            )
-            exit(20)
-        OHOS_NDK_HOME = os.path.join(OHOS_SDK_HOME, str(sdkInt), "native")
-
+        if ('openharmony' in os.getenv("HOS_SDK_HOME")):
+            print('dddd')
+            OHOS_SDK_HOME = "%s/openharmony" % os.getenv("HOS_SDK_HOME")
+            if os.path.exists(OHOS_SDK_HOME):
+                for dir in os.listdir(OHOS_SDK_HOME):
+                    try:
+                        tmpInt = int(dir)
+                        sdkInt = max(sdkInt, tmpInt)
+                    except:
+                        logging.warning("Parse int error, dir=%s" % dir)
+            if sdkInt == 0:
+                logging.error(
+                    "Ohos sdkInt parse failed, please config the correct environment variable."
+                    " Such as: 'export OHOS_SDK_HOME=~/ohos/sdk/openharmony'."
+                )
+                exit(20)
+            OHOS_NDK_HOME = os.path.join(OHOS_SDK_HOME, str(sdkInt), "native")
+        else:
+            print('go here')
+            OHOS_NDK_HOME = "%s/HarmonyOS-NEXT-DP1/base/native" % os.getenv("HOS_SDK_HOME")
     logging.info("OHOS_NDK_HOME = %s" % OHOS_NDK_HOME)
     if (
         (not os.path.exists(OHOS_NDK_HOME))
@@ -297,11 +300,15 @@ def zipFileDir(
 
 def zipFiles(buildInfo, useZip2=False):
     logging.info("zipFiles buildInfo=%s" % buildInfo)
-    sdkInt = int(getNdkHome()[-9:-7])
+    sdkVer = ''
+    if ('openharmony' in getNdkHome()):
+        sdkVer = getNdkHome()[-9:-7]
+    else:
+        sdkVer = getNdkHome()[-30:-12]
     outputName = getOutput(buildInfo)
     fileIn = os.path.abspath("%s/src/out/%s" % (DIR_ROOT, outputName))
     fileName = "ohos_api%s_%s-%s-%s-%s" % (
-        sdkInt,
+        sdkVer,
         buildInfo.buildType,
         OS_NAME,
         platform.machine(),
