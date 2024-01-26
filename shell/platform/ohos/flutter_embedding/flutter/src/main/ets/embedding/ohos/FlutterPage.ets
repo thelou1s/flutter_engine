@@ -46,7 +46,7 @@ export struct FlutterPage {
 
   build() {
     Stack() {
-      XComponent({ id: this.viewId, type: 'texture', libraryname: 'flutter' })
+      XComponent({ id: this.viewId, type: XComponentType.TEXTURE, libraryname: 'flutter' })
         .focusable(true)
         .onLoad((context) => {
           this.flutterView?.onSurfaceCreated()
