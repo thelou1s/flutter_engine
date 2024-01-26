@@ -21,7 +21,7 @@ struct XComponentStruct {
   dvModelParams: DVModelParameters = new DVModelParameters();
 
   build() {
-    XComponent({ id: (this.dvModelParams as Record<string, ESObject>)["xComponentId"], type: 'texture', libraryname: 'flutter'})
+    XComponent({ id: (this.dvModelParams as Record<string, ESObject>)["xComponentId"], type: XComponentType.TEXTURE, libraryname: 'flutter'})
       .onLoad((context) => {
         this.context = context;
       })
