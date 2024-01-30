@@ -30,7 +30,7 @@ export default class PathUtils {
     return context.cacheDir;
   }
 
-  static getDataDirectory(context: common.Context): string {
+  static getDataDirectory(context: common.Context): string | null {
     const name = "flutter";
     const flutterDir = context.filesDir + "/" + name;
     if (!fs.accessSync(flutterDir)) {

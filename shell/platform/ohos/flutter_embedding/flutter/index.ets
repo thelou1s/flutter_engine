@@ -100,6 +100,13 @@ import { FlutterCallbackInformation } from './src/main/ets/view/FlutterCallbackI
 import FlutterRunArguments from './src/main/ets/view/FlutterRunArguments';
 import { FlutterView } from './src/main/ets/view/FlutterView';
 import { TextureRegistry } from './src/main/ets/view/TextureRegistry';
+import { ByteBuffer } from './src/main/ets/util/ByteBuffer';
+import Log from './src/main/ets/util/Log';
+import MessageChannelUtils from './src/main/ets/util/MessageChannelUtils';
+import PathUtils from './src/main/ets/util/PathUtils';
+import StringUtils from './src/main/ets/util/StringUtils';
+import ToolUtils from './src/main/ets/util/ToolUtils';
+import { TraceSection } from './src/main/ets/util/TraceSection';
 
 export {
   FlutterInjector,
@@ -188,4 +195,11 @@ export {
   FlutterRunArguments,
   FlutterView,
   TextureRegistry,
+  ByteBuffer,
+  Log,
+  MessageChannelUtils,
+  PathUtils,
+  StringUtils,
+  ToolUtils,
+  TraceSection,
 }
