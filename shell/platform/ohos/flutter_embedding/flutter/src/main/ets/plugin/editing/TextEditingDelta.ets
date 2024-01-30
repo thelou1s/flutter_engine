@@ -38,11 +38,11 @@ export class TextEditingDelta {
     this.newSelectionEnd = selectionEnd;
     this.newComposingStart = composingStart;
     this.newComposingEnd = composingEnd;
-    if(replacementDestinationStart === undefined ||
+    if (replacementDestinationStart === undefined ||
       replacementDestinationEnd === undefined ||
       replacementSource === undefined) {
       this.setDeltas(oldEditable, "", -1, -1);
-    } else  {
+    } else {
       this.setDeltas(
         oldEditable,
         replacementSource,
@@ -58,4 +58,30 @@ export class TextEditingDelta {
     this.deltaStart = newStart;
     this.deltaEnd = newExtent;
   }
+
+  toJSON(): TextEditingDeltaJson {
+    let state: TextEditingDeltaJson = {
+      oldText: this.oldText.toString(),
+      deltaText: this.deltaText.toString(),
+      deltaStart: this.deltaStart,
+      deltaEnd: this.deltaEnd,
+      selectionBase: this.newSelectionStart,
+      selectionExtent: this.newSelectionEnd,
+      composingBase: this.newComposingStart,
+      composingExtent: this.newComposingEnd,
+    };
+    return state;
+  }
+}
+
+
+export interface TextEditingDeltaJson {
+  oldText: string;
+  deltaText: string;
+  deltaStart: number;
+  deltaEnd: number;
+  selectionBase: number;
+  selectionExtent: number;
+  composingBase: number;
+  composingExtent: number;
 }

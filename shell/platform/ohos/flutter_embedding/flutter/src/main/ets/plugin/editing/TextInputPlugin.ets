@@ -13,14 +13,17 @@
 * limitations under the License.
 */
 
-import TextInputChannel, { Configuration, TextEditState,
+import TextInputChannel, {
+  Configuration,
+  TextEditState,
   TextInputMethodHandler,
-  TextInputType } from '../../embedding/engine/systemchannels/TextInputChannel';
+  TextInputType
+} from '../../embedding/engine/systemchannels/TextInputChannel';
 import inputMethod from '@ohos.inputMethod';
 import Log from '../../util/Log';
 import { EditingStateWatcher, ListenableEditingState } from './ListenableEditingState';
 
-export default class TextInputPlugin implements EditingStateWatcher{
+export default class TextInputPlugin implements EditingStateWatcher {
   private static TAG = "TextInputPlugin";
   private textInputChannel: TextInputChannel;
   private mTextInputHandler: TextInputMethodHandlerImpl;
@@ -42,19 +45,25 @@ export default class TextInputPlugin implements EditingStateWatcher{
   didChangeEditingState(textChanged: boolean, selectionChanged: boolean, composingRegionChanged: boolean): void {
     let editable = this.mTextInputHandler.mEditable;
     let inputTarget = this.mTextInputHandler.inputTarget;
-    this.textInputChannel.updateEditingState(inputTarget.id, editable.getStringCache(),
-      editable.getSelectionStart(), editable.getSelectionEnd(),
-      editable.getComposingStart(), editable.getComposingEnd())
+    let configuration = this.mTextInputHandler.configuration;
+    if (configuration!= null && configuration.enableDeltaModel) {
+      this.textInputChannel.updateEditingStateWithDeltas(inputTarget.id,editable.extractBatchTextEditingDeltas());
+      editable.clearBatchDeltas();
+    } else {
+      this.textInputChannel.updateEditingState(inputTarget.id, editable.getStringCache(),
+        editable.getSelectionStart(), editable.getSelectionEnd(),
+        editable.getComposingStart(), editable.getComposingEnd())
+    }
+
   }
 
   detach(): void {
     this.mTextInputHandler.inputMethodController.detach((err) => {
-      if(err) {
+      if (err) {
         Log.e(TextInputPlugin.TAG, "Failed to detach: " + JSON.stringify(err));
       }
     })
   }
-
 }
 
 class TextInputMethodHandlerImpl implements TextInputMethodHandler {
@@ -62,7 +71,7 @@ class TextInputMethodHandlerImpl implements TextInputMethodHandler {
   private textConfig: inputMethod.TextConfig;
   inputMethodController: inputMethod.InputMethodController;
   inputTarget: InputTarget;
-  private configuration: Configuration | null = null;
+  public configuration: Configuration | null = null;
   mEditable: ListenableEditingState;
   private mRestartInputPending: boolean = false;
   private plugin: EditingStateWatcher | ESObject;
@@ -74,7 +83,7 @@ class TextInputMethodHandlerImpl implements TextInputMethodHandler {
       inputAttribute: {
         textInputType: 0,
         enterKeyType: 1
-      }};
+      } };
     this.plugin = plugin;
     this.mEditable = new ListenableEditingState(null, 0);
     this.inputMethodController = inputMethod.getController();
@@ -82,7 +91,7 @@ class TextInputMethodHandlerImpl implements TextInputMethodHandler {
   }
 
   show(): void {
-    if(this.keyboardStatus == KeyboardStatus.SHOW){
+    if (this.keyboardStatus == KeyboardStatus.SHOW) {
       return;
     }
     this.showTextInput();
@@ -103,7 +112,7 @@ class TextInputMethodHandlerImpl implements TextInputMethodHandler {
   }
 
   setClient(textInputClientId: number, configuration: Configuration | null): void {
-    Log.d(TextInputMethodHandlerImpl.TAG,"textInputClientId: " + textInputClientId);
+    Log.d(TextInputMethodHandlerImpl.TAG, "textInputClientId: " + textInputClientId);
     this.setTextInputClient(textInputClientId, configuration);
   }
 
@@ -116,7 +125,7 @@ class TextInputMethodHandlerImpl implements TextInputMethodHandler {
   }
 
   setEditingState(editingState: TextEditState): void {
-    Log.d(TextInputMethodHandlerImpl.TAG, "text:" + editingState.text +" selectionStart:" + editingState.selectionStart + " selectionEnd:"
+    Log.d(TextInputMethodHandlerImpl.TAG, "text:" + editingState.text + " selectionStart:" + editingState.selectionStart + " selectionEnd:"
       + editingState.selectionEnd + " composingStart:" + editingState.composingStart + " composingEnd" + editingState.composingEnd);
     this.mEditable.updateTextInputState(editingState);
   }
@@ -127,10 +136,10 @@ class TextInputMethodHandlerImpl implements TextInputMethodHandler {
 
   private async showTextInput(): Promise<void> {
     await this.attach(true);
-    if(this.imcFlag != true) {
+    if (this.imcFlag != true) {
       this.listenKeyBoardEvent();
     }
-    this.inputMethodController.showTextInput().then(()=> {
+    this.inputMethodController.showTextInput().then(() => {
       Log.d(TextInputMethodHandlerImpl.TAG, "Succeeded in showing softKeyboard");
     }).catch((err: ESObject) => {
       Log.e(TextInputMethodHandlerImpl.TAG, "Failed to show softKeyboard:" + JSON.stringify(err));
@@ -145,7 +154,7 @@ class TextInputMethodHandlerImpl implements TextInputMethodHandler {
     })
   }
 
-  async attach(showKeyboard: boolean): Promise<void>  {
+  async attach(showKeyboard: boolean): Promise<void> {
     try {
       await this.inputMethodController.attach(showKeyboard, this.textConfig);
     } catch (err) {
@@ -154,17 +163,15 @@ class TextInputMethodHandlerImpl implements TextInputMethodHandler {
   }
 
   setTextInputClient(client: number, configuration: Configuration | null): void {
-    const INPUT_TYPE_NAME = ['NONE', 'TEXT', 'MULTILINE', 'NUMBER', 'PHONE','DATETIME','EMAIL_ADDRESS','URL','VISIBLE_PASSWORD']
-    if(configuration)
-    {
+    const INPUT_TYPE_NAME = ['NONE', 'TEXT', 'MULTILINE', 'NUMBER', 'PHONE', 'DATETIME', 'EMAIL_ADDRESS', 'URL', 'VISIBLE_PASSWORD']
+    if (configuration) {
       this.configuration = configuration;
-      if(configuration.inputType)
-      {
-        this.textConfig.inputAttribute.textInputType =INPUT_TYPE_NAME.indexOf(configuration.inputType.type)
+      if (configuration.inputType) {
+        this.textConfig.inputAttribute.textInputType = INPUT_TYPE_NAME.indexOf(configuration.inputType.type)
         this.textConfig.inputAttribute.enterKeyType = configuration.inputAction as ESObject;
       }
     }
-    if(this.canShowTextInput()) {
+    if (this.canShowTextInput()) {
       this.inputTarget = new InputTarget(Type.FRAMEWORK_CLIENT, client);
     } else {
       this.inputTarget = new InputTarget(Type.NO_TARGET, client);
@@ -178,7 +185,7 @@ class TextInputMethodHandlerImpl implements TextInputMethodHandler {
   }
 
   canShowTextInput(): boolean {
-    if(this.configuration == null || this.configuration.inputType == null) {
+    if (this.configuration == null || this.configuration.inputType == null) {
       return true;
     }
     return this.configuration.inputType.type != TextInputType.NONE;
@@ -228,7 +235,7 @@ class TextInputMethodHandlerImpl implements TextInputMethodHandler {
 
     try {
       this.inputMethodController.on('sendKeyboardStatus', (state) => {
-        if(state == KeyboardStatus.HIDE) {
+        if (state == KeyboardStatus.HIDE) {
           this.keyboardStatus = KeyboardStatus.HIDE;
           this.plugin.textInputChannel.onConnectionClosed(this.inputTarget.id);
         }
@@ -261,7 +268,7 @@ class TextInputMethodHandlerImpl implements TextInputMethodHandler {
   }
 
   public clearTextInputClient(): void {
-    if(this.inputTarget.type == Type.VIRTUAL_DISPLAY_PLATFORM_VIEW) {
+    if (this.inputTarget.type == Type.VIRTUAL_DISPLAY_PLATFORM_VIEW) {
       return;
     }
     this.mEditable.removeEditingStateListener(this.plugin);
@@ -295,5 +302,4 @@ export class InputTarget {
     this.type = type;
     this.id = id;
   }
-
 }
