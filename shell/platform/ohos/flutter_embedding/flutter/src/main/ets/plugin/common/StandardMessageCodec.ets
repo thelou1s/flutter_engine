@@ -233,7 +233,7 @@ export default class StandardMessageCodec implements MessageCodec<ESObject> {
     }
 
     readValue(buffer: ByteBuffer): ESObject {
-        let type = buffer.readInt8()
+        let type = buffer.readUint8()
         return this.readValueOfType(type, buffer);
     }
 
