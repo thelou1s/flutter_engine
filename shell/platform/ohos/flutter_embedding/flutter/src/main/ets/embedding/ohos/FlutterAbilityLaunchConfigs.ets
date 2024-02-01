@@ -44,3 +44,12 @@ export default class FlutterAbilityLaunchConfigs {
   static DEFAULT_INITIAL_ROUTE = "/";
   static DEFAULT_BACKGROUND_MODE = BackgroundMode.opaque
 }
+
+export interface ParamsConfigs {
+  should_attach_engine_to_ability?: boolean;
+  dart_entrypoint?: string;
+  route?: string;
+  cached_engine_id?: string;
+  dart_entrypoint_args?: Array<string>;
+  cached_engine_group_id?: string | null;
+}

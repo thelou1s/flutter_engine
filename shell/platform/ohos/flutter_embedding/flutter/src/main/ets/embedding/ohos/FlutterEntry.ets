@@ -21,7 +21,7 @@ import ExclusiveAppComponent from './ExclusiveAppComponent';
 import { FlutterPlugin } from '../engine/plugins/FlutterPlugin';
 import List from '@ohos.util.List';
 import { FlutterAbilityAndEntryDelegate, Host } from './FlutterAbilityAndEntryDelegate';
-import FlutterAbilityLaunchConfigs from './FlutterAbilityLaunchConfigs';
+import FlutterAbilityLaunchConfigs, { ParamsConfigs } from './FlutterAbilityLaunchConfigs';
 import Log from '../../util/Log';
 import { FlutterView } from '../../view/FlutterView';
 import FlutterManager from './FlutterManager';
@@ -38,11 +38,11 @@ export default class FlutterEntry implements Host {
   private flutterView: FlutterView | null = null
   private context: Context;
   private windowStage: window.WindowStage | null = null
-  private parameters: ESObject = {};
+  private parameters: ParamsConfigs;
   private engineConfigurator: FlutterEngineConfigurator | null = null
   private hasInit: boolean = false;
-
-  constructor(context: Context, params: ESObject = {}) {
+  
+  constructor(context: Context, params: ParamsConfigs) {
     this.context = context;
     this.uiAbility = FlutterManager.getInstance().getUIAbility(context);
     this.parameters = params;
@@ -143,15 +143,15 @@ export default class FlutterEntry implements Host {
   }
 
   shouldAttachEngineToAbility(): boolean {
-    return this.parameters![FlutterEntry.ARG_SHOULD_ATTACH_ENGINE_TO_ABILITY] as boolean
+    return this.parameters!.should_attach_engine_to_ability as boolean
   }
 
   getCachedEngineId(): string {
-    return this.parameters![FlutterAbilityLaunchConfigs.EXTRA_CACHED_ENGINE_ID] as string
+    return this.parameters!.cached_engine_id as string
   }
 
   getCachedEngineGroupId(): string | null {
-    return this.parameters![FlutterAbilityLaunchConfigs.EXTRA_CACHED_ENGINE_GROUP_ID] as string
+    return this.parameters!.cached_engine_group_id as string
   }
 
   shouldDestroyEngineWithHost(): boolean {
@@ -167,8 +167,8 @@ export default class FlutterEntry implements Host {
   }
 
   getDartEntrypointArgs(): string[] {
-    if (this.parameters![FlutterAbilityLaunchConfigs.EXTRA_DART_ENTRYPOINT_ARGS]) {
-      return this.parameters![FlutterAbilityLaunchConfigs.EXTRA_DART_ENTRYPOINT_ARGS] as Array<string>;
+    if (this.parameters!.dart_entrypoint_args) {
+      return this.parameters!.dart_entrypoint_args as Array<string>;
     }
     return new Array<string>()
   }
@@ -182,15 +182,15 @@ export default class FlutterEntry implements Host {
   }
 
   getDartEntrypointFunctionName(): string {
-    if (this.parameters![FlutterAbilityLaunchConfigs.EXTRA_DART_ENTRYPOINT]) {
-      return this.parameters![FlutterAbilityLaunchConfigs.EXTRA_DART_ENTRYPOINT] as string;
+    if (this.parameters!.dart_entrypoint) {
+      return this.parameters!.dart_entrypoint as string;
     }
     return FlutterAbilityLaunchConfigs.DEFAULT_DART_ENTRYPOINT
   }
 
   getInitialRoute(): string {
-    if (this.parameters![FlutterAbilityLaunchConfigs.EXTRA_INITIAL_ROUTE]) {
-      return this.parameters![FlutterAbilityLaunchConfigs.EXTRA_INITIAL_ROUTE] as string
+    if (this.parameters!.route) {
+      return this.parameters!.route as string
     }
     return "";
   }
@@ -200,8 +200,8 @@ export default class FlutterEntry implements Host {
   }
 
   shouldRestoreAndSaveState(): boolean {
-    if (this.parameters![FlutterAbilityLaunchConfigs.EXTRA_CACHED_ENGINE_ID] != undefined) {
-      return this.parameters![FlutterAbilityLaunchConfigs.EXTRA_CACHED_ENGINE_ID] as boolean;
+    if (this.parameters!.cached_engine_id != undefined) {
+      return true;
     }
     if (this.getCachedEngineId() != null && this.getCachedEngineId().length > 0) {
       // Prevent overwriting the existing state in a cached engine with restoration state.
