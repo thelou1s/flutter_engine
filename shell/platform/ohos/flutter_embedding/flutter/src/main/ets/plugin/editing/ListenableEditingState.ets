@@ -19,10 +19,11 @@ import inputMethod from '@ohos.inputMethod';
 import ArrayList from '@ohos.util.ArrayList';
 import { TextEditingDelta } from './TextEditingDelta';
 import TextInputChannel from '../../embedding/engine/systemchannels/TextInputChannel';
-const TAG =  "ListenableEditingState";
-export class ListenableEditingState {
 
-  private TextInputChannel: TextInputChannel | null = null ;
+const TAG = "ListenableEditingState";
+
+export class ListenableEditingState {
+  private TextInputChannel: TextInputChannel | null = null;
   private client: number = 0
   //Cache used to storage software keyboard input action
   private mStringCache: string;
@@ -56,6 +57,34 @@ export class ListenableEditingState {
     this.mComposingEndCache = -1;
   }
 
+  extractBatchTextEditingDeltas(): ArrayList<TextEditingDelta> {
+    let currentBatchDeltas = new ArrayList<TextEditingDelta>();
+    this.mBatchTextEditingDeltas.forEach((data) => {
+      currentBatchDeltas.add(data);
+    })
+    this.mBatchTextEditingDeltas.clear();
+    return currentBatchDeltas;
+  }
+
+  clearBatchDeltas(): void {
+    this.mBatchTextEditingDeltas.clear();
+  }
+
+  replace(start: number, end: number, tb: String, tbStart: number, tbEnd: number): void {
+    const placeIndex = this.mSelectionStartCache < this.mSelectionEndCache ? this.mSelectionStartCache : this.mSelectionEndCache;
+
+    this.mBatchTextEditingDeltas.add(
+      new TextEditingDelta(
+        this.mStringCache.toString(),
+        placeIndex + tbEnd,
+        placeIndex + tbEnd,
+        this.getComposingStart(),
+        this.getComposingEnd(),
+        start,
+        end + tbStart,
+        tb.toString()
+      ));
+  }
 
   getSelectionStart(): number {
     return this.mSelectionStartCache;
@@ -116,20 +145,26 @@ export class ListenableEditingState {
   }
 
   handleInsertTextEvent(text: string): void {
-    if(this.mStringCache.length == this.mSelectionStartCache) {
+    let start = this.mSelectionStartCache < this.mSelectionEndCache ? this.mSelectionStartCache : this.mSelectionEndCache;
+    let end = this.mSelectionStartCache > this.mSelectionEndCache ? this.mSelectionStartCache : this.mSelectionEndCache;
+    const length = text.length;
+    this.replace(start, end, text, 0, length);
+
+    if (this.mStringCache.length == this.mSelectionStartCache) {
       //Insert text one by one
-      this.mStringCache += text;
+      let tempStr: string = this.mStringCache.substring(0, start) + text + this.mStringCache.substring(end);
+      this.mStringCache = tempStr;
       this.setSelectionStart(this.mStringCache.length);
       this.setSelectionEnd(this.mStringCache.length);
 
-    } else if(this.mStringCache.length > this.mSelectionStartCache) {
+    } else if (this.mStringCache.length > this.mSelectionStartCache) {
       //Insert text in the middle of string
-      let tempStr: string = this.mStringCache.substring(0, this.mSelectionStartCache) + text + this.mStringCache.substring(this.mSelectionStartCache);
+      let tempStr: string = this.mStringCache.substring(0, start) + text + this.mStringCache.substring(end);
       this.mStringCache = tempStr;
-      this.mSelectionStartCache += text.length;
+      this.mSelectionStartCache = start + text.length;
       this.mSelectionEndCache = this.mSelectionStartCache;
     }
-    if(this.mListeners == null) {
+    if (this.mListeners == null) {
       Log.e(TAG, "mListeners is null");
       return;
     }
@@ -139,7 +174,7 @@ export class ListenableEditingState {
   updateTextInputState(state: TextEditState): void {
     this.beginBatchEdit();
     this.setStringCache(state.text);
-    if(state.hasSelection()) {
+    if (state.hasSelection()) {
       this.setSelectionStart(state.selectionStart);
       this.setSelectionEnd(state.selectionEnd);
     } else {
@@ -217,22 +252,30 @@ export class ListenableEditingState {
   }
 
   handleDeleteEvent(leftOrRight: boolean, length: number): void {
-    if(leftOrRight == false) {
+    let start = this.mSelectionStartCache < this.mSelectionEndCache ? this.mSelectionStartCache : this.mSelectionEndCache;
+    let end = this.mSelectionStartCache > this.mSelectionEndCache ? this.mSelectionStartCache : this.mSelectionEndCache;
+
+    if (leftOrRight == false) {
       //delete left
-      if(this.mSelectionStartCache  == 0) {
+      if (start == 0 && end == 0) {
         return;
       }
-      this.mSelectionStartCache -= length;
-      let tempStr: string = this.mStringCache.slice(0, this.mSelectionStartCache) + this.mStringCache.slice(this.mSelectionStartCache + length);
+      const startData = start == end ? start - 1 : start;
+      const tbEnd = start == end ? -1 : 0;
+      this.replace(startData, end, "", 0, tbEnd);
+      this.mSelectionStartCache = startData;
+      let tempStr: string = this.mStringCache.slice(0, startData) + this.mStringCache.slice(end);
       this.mStringCache = tempStr;
       this.mSelectionEndCache = this.mSelectionStartCache;
-    } else if(leftOrRight == true) {
+    } else if (leftOrRight == true) {
       //delete right
-      if(this.mSelectionStartCache == this.mStringCache.length) {
+      if (start == this.mStringCache.length) {
         return;
       }
-      this.mSelectionEndCache += length;
-      let tempStr: string = this.mStringCache.slice(0,this.mSelectionStartCache) + this.mStringCache.slice(this.mSelectionEndCache);
+      const tbStart = start == end ? 1 : 0;
+      this.replace(start, end, "", tbStart, 0);
+      this.mSelectionEndCache = start;
+      let tempStr: string = this.mStringCache.slice(0, start) + (end + 1 >= this.mStringCache.length ? "" : this.mStringCache.slice(end + 1));
       this.mStringCache = tempStr;
       this.mSelectionStartCache = this.mSelectionEndCache;
     }
