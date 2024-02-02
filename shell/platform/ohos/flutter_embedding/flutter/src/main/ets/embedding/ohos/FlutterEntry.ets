@@ -38,11 +38,11 @@ export default class FlutterEntry implements Host {
   private flutterView: FlutterView | null = null
   private context: Context;
   private windowStage: window.WindowStage | null = null
-  private parameters: ESObject = {};
+  private parameters: Record<string, Object> = {};
   private engineConfigurator: FlutterEngineConfigurator | null = null
   private hasInit: boolean = false;
 
-  constructor(context: Context, params: ESObject = {}) {
+  constructor(context: Context, params: Record<string, Object> = {}) {
     this.context = context;
     this.uiAbility = FlutterManager.getInstance().getUIAbility(context);
     this.parameters = params;
