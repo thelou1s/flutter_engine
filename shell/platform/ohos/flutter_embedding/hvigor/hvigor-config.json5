@@ -12,10 +12,9 @@
 * See the License for the specific language governing permissions and
 * limitations under the License.
 */
-
 { 
-  "hvigorVersion": "file:../dependencies/hvigor-3.2.1-s.tgz", 
+  "hvigorVersion": "4.0.2", 
   "dependencies": { 
-    "@ohos/hvigor-ohos-plugin": "file:../dependencies/hvigor-ohos-plugin-3.2.1-s.tgz", 
+    "@ohos/hvigor-ohos-plugin": "4.0.2", 
   } 
- }
+}
