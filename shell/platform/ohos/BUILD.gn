@@ -13,16 +13,19 @@
 
 assert(is_ohos)
 
+import("//build/config/ohos/config.gni")
+import("//build/toolchain/clang.gni")
 import("//flutter/build/zip_bundle.gni")
-import("//flutter/shell/platform/glfw/config.gni")
-import("//flutter/testing/testing.gni")
-import("//build/config/ohos/pkg_config.gni")
+import("//flutter/common/config.gni")
 import("//flutter/shell/gpu/gpu.gni")
+import("//flutter/shell/version/version.gni")
+import("//flutter/testing/testing.gni")
 
 group("ohos") {
   deps = [
     ":flutter",
     #":publish_headers_ohos",
+    ":ohos_har"
   ]
 }
 shell_gpu_configuration("ohos_gpu_configuration") {
@@ -195,10 +198,6 @@ executable("flutter_ohos_unittests") {
 shared_library("flutter") {
   deps = [ ":flutter_ohos_src" ]
 
-  if (flutter_runtime_mode == "profile") {
-    deps += [ "//flutter/shell/vmservice:vmservice_snapshot" ]
-  }
-
   ldflags = ["--rtlib=compiler-rt",
   "-fuse-ld=lld",
   "-static-libstdc++",
@@ -268,3 +267,69 @@ shared_library("flutter") {
 #  ]
 #  files = tmp_files
 #}
+
+declare_args() {
+  embedding_artifact_id = "flutter_embedding_$flutter_runtime_mode"
+  embedding_har_filename = "$embedding_artifact_id.har"
+  embedding_har_path = "$root_out_dir/$embedding_har_filename"
+  engine_artifact_id =
+      string_replace(ohos_app_abi, "-", "_") + "_" + flutter_runtime_mode
+  engine_har_filename = "$engine_artifact_id.har"
+
+  ohos_zip_archive_dir = "ohos-$target_cpu"
+  if (flutter_runtime_mode != "debug") {
+    ohos_zip_archive_dir += "-$flutter_runtime_mode"
+  }
+}
+
+action("ohos_har") {
+  script = "//build/ohos/ohos_create_flutter_har.py"
+
+  if (stripped_symbols) {
+    engine_library = "so.unstripped/libflutter.so"
+  } else {
+    engine_library = "libflutter.so"
+  }
+  #engine_library = "libflutter.so"
+
+  inputs = [
+    # "$root_build_dir/$embedding_har_filename",
+    "$root_build_dir/$engine_library",
+  ]
+
+  outputs = [
+    "$root_build_dir/flutter.har",
+    # "$root_build_dir/$engine_har_filename",
+  ]
+
+  args = [
+    "--embedding_src",
+    "../../flutter/shell/platform/ohos/flutter_embedding",
+    "--build_dir",
+    "./ohos/flutter_embedding",
+    "--build_type",
+    flutter_runtime_mode,
+    "--output",
+    rebase_path("flutter_embedding.har", root_build_dir, root_build_dir),
+    "--native_lib",
+    rebase_path("$engine_library", root_build_dir, root_build_dir),
+    "--ohos_abi",
+    ohos_app_abi,
+  ]
+
+  deps = [
+    ":flutter"
+  ]
+
+  if (flutter_runtime_mode == "profile") {
+    deps += [ "//flutter/shell/vmservice:vmservice_snapshot" ]
+    args += [
+      "--native_lib",
+      rebase_path(
+          "$root_gen_dir/flutter/shell/vmservice/ohos/libs/$ohos_app_abi/libvmservice_snapshot.so",
+          root_build_dir,
+          root_build_dir),
+    ]
+  }
+}
+
