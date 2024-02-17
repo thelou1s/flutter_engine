@@ -717,7 +717,7 @@ index 7987e51..cd7b060 100644
      } else {
 diff --git a/build/ohos/ohos_create_flutter_har.py b/build/ohos/ohos_create_flutter_har.py
 new file mode 100644
-index 0000000..4e052ed
+index 0000000..12fb407
 --- /dev/null
 +++ b/build/ohos/ohos_create_flutter_har.py
 @@ -0,0 +1,141 @@
@@ -816,7 +816,7 @@ index 0000000..4e052ed
 +    runCommand(
 +        ("cd %s && " % dirEmbedding)
 +        + (".%s" % os.sep)
-+        + "hvigorw --mode module -p module=flutter@default -p product=default assembleHar --no-daemon"
++        + "hvigorw clean --mode module -p module=flutter@default -p product=default assembleHar --no-daemon"
 +    )
 +
 +
