@@ -13,6 +13,8 @@
 * limitations under the License.
 */
 
+import BuildProfile from "../../../../../../BuildProfile.ets";
+
 const DEFAULT_AOT_SHARED_LIBRARY_NAME = "libapp.so";
 const DEFAULT_VM_SNAPSHOT_DATA = "vm_snapshot_data";
 const DEFAULT_ISOLATE_SNAPSHOT_DATA = "isolate_snapshot_data";
@@ -49,7 +51,7 @@ export default class FlutterApplicationInfo {
     this.domainNetworkPolicy = domainNetworkPolicy == null ? "" : domainNetworkPolicy;
     this.nativeLibraryDir = nativeLibraryDir;
     this.automaticallyRegisterPlugins = automaticallyRegisterPlugins;
-    this.isDebugMode = false;
-    this.isProfile = false;
+    this.isDebugMode = "debug" == String(BuildProfile.BUILD_MODE_NAME);
+    this.isProfile = "profile" == String(BuildProfile.BUILD_MODE_NAME);
   }
 }

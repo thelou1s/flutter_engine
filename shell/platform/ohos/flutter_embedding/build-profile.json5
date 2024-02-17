@@ -24,6 +24,17 @@
         "compatibleSdkVersion": "4.1.0(11)",
         "runtimeOS": "HarmonyOS",
       }
+    ],
+    "buildModeSet": [
+      {
+        "name": "debug",
+      },
+      {
+        "name": "release"
+      },
+      {
+        "name": "profile"
+      },
     ]
   },
   "modules": [

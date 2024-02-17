@@ -717,10 +717,10 @@ index 7987e51..cd7b060 100644
      } else {
 diff --git a/build/ohos/ohos_create_flutter_har.py b/build/ohos/ohos_create_flutter_har.py
 new file mode 100644
-index 0000000..12fb407
+index 0000000..fc46359
 --- /dev/null
 +++ b/build/ohos/ohos_create_flutter_har.py
-@@ -0,0 +1,141 @@
+@@ -0,0 +1,133 @@
 +#!/usr/bin/env python3
 +#
 +# Copyright (c) 2023 Hunan OpenValley Digital Industry Development Co., Ltd.
@@ -759,6 +759,17 @@ index 0000000..12fb407
 +        "compatibleSdkVersion": "%s",
 +        "runtimeOS": "HarmonyOS",
 +      }
++    ],
++    "buildModeSet": [
++      {
++        "name": "debug",
++      },
++      {
++        "name": "release"
++      },
++      {
++        "name": "profile"
++      },
 +    ]
 +  },
 +  "modules": [
@@ -771,6 +782,7 @@ index 0000000..12fb407
 +"""
 +
 +
++# 更新har的配置文件，指定编译使用的api版本
 +def updateConfig(buildDir, apiInt):
 +    apiStr = "4.1.0(11)" if apiInt == 11 else "4.0.0(10)"
 +    jsonFile = os.path.join(buildDir, "build-profile.json5")
@@ -790,33 +802,13 @@ index 0000000..12fb407
 +        logging.info("runCommand finish, code = %s, command = %s" % (code, command))
 +
 +
-+# 替换文件中的字符串
-+def replaceStr(file, regex, newstr):
-+    with open(file, "r", encoding="utf-8") as f1:
-+        lines = f1.readlines()
-+    with open(file, "w+", encoding="utf-8") as f2:
-+        for line in lines:
-+            a = re.sub(regex, newstr, line)
-+            f2.writelines(a)
-+
-+
-+# 编译har文件
++# 编译har文件，通过hvigorw的命令行参数指定编译类型(debug/release/profile)
 +def buildHar(buildDir, apiInt, buildType):
 +    updateConfig(buildDir, apiInt)
-+    isDebug = "true" if buildType == "debug" else "false"
-+    isProfile = "true" if buildType == "profile" else "false"
-+    dirEmbedding = buildDir
-+    targetFile = os.path.join(
-+        buildDir,
-+        "flutter/src/main/ets/embedding/engine/loader/FlutterApplicationInfo.ets",
-+    )
-+    logging.info("isDebugMode=%s, isProfile=%s" % (isDebug, isProfile))
-+    replaceStr(targetFile, "isDebugMode = .*", "isDebugMode = %s;" % isDebug)
-+    replaceStr(targetFile, "isProfile = .*", "isProfile = %s;" % isProfile)
 +    runCommand(
-+        ("cd %s && " % dirEmbedding)
-+        + (".%s" % os.sep)
-+        + "hvigorw clean --mode module -p module=flutter@default -p product=default assembleHar --no-daemon"
++        "cd %s && .%shvigorw clean --mode module " % (buildDir, os.sep)
++        + "-p module=flutter@default -p product=default -p buildMode=%s " % buildType
++        + "assembleHar --no-daemon"
 +    )
 +
 +
