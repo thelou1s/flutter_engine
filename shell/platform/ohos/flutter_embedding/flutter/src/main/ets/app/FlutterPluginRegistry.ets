@@ -18,8 +18,8 @@ import PlatformViewController from '../plugin/platform/PlatformViewsController'
 
 export default class FlutterPluginRegistry {
   private mPlatformViewsController: PlatformViewController;
-  private mFlutterView: FlutterView | null;
-  private mContext: common.Context | null;
+  private mFlutterView: FlutterView | null = null;
+  private mContext: common.Context | null = null;
 
   constructor() {
     this.mPlatformViewsController = new PlatformViewController();

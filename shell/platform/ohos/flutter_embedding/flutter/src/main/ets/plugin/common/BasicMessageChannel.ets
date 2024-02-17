@@ -136,7 +136,7 @@ class IncomingReplyHandler <T> implements BinaryReply {
     this.codec = codec
   }
 
-  reply(reply: ArrayBuffer) {
+  reply(reply: ArrayBuffer | null) {
     try {
       this.callback(this.codec.decodeMessage(reply));
     } catch (e) {

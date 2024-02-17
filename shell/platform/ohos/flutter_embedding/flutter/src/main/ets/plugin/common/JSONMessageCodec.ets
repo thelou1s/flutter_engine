@@ -44,9 +44,9 @@ export default class JSONMessageCodec implements MessageCodec<Object> {
     return StringCodec.INSTANCE.encodeMessage(JSON.stringify(this.toBaseData(message)));
   }
 
-  decodeMessage(message: ArrayBuffer): ESObject {
+  decodeMessage(message: ArrayBuffer | null): ESObject {
     if (message == null) {
-      return null;
+      return StringUtils.stringToArrayBuffer("");
     }
     try {
       const jsonStr = StringCodec.INSTANCE.decodeMessage(message);

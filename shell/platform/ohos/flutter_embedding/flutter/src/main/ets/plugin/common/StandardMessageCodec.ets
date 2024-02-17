@@ -76,7 +76,7 @@ export default class StandardMessageCodec implements MessageCodec<ESObject> {
         return stream.buffer
     }
 
-    decodeMessage(message: ArrayBuffer): ESObject {
+    decodeMessage(message: ArrayBuffer | null): ESObject {
         if (message == null) {
             return null
         }

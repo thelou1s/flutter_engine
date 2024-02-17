@@ -33,7 +33,7 @@ export default class StringCodec implements MessageCodec<string> {
     return StringUtils.stringToArrayBuffer(message);
   }
 
-  decodeMessage(message: ArrayBuffer): string {
+  decodeMessage(message: ArrayBuffer | null): string {
     if (message == null) {
       return "";
     }

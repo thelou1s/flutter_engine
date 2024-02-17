@@ -165,7 +165,7 @@ export class IncomingResultHandler implements BinaryReply {
     this.codec = codec
   }
 
-  reply(reply: ArrayBuffer): void {
+  reply(reply: ArrayBuffer | null): void {
     try {
       if (reply == null) {
         this.callback.notImplemented();
