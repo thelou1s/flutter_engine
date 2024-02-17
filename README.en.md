@@ -92,5 +92,3 @@ export OHOS_SDK_HOME=<ohos-sdk-full>
 3. The har file output path is: shell/platform/ohos/flutter_embedding/flutter/build
 
 ps: If you are using the Beta version of DevEco Studio and encounter the error "must have required property 'compatibleSdkVersion', location: build-profile.json5:17:11" when compiling the project, please refer to the "DevEco Studio Environment Configuration Guide." docx》Chapter '6 Creating Projects and Running Hello World' [Configuration Plugin] Modify the shell/platform/ohos/flutter_embedding/hvigor/hvigor-config.json5 file.
-
-[hvigor-dependencies-config](shell/platform/ohos/flutter_embedding/dependencies/hvigor-dependencies-config.md)
