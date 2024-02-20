@@ -12,18 +12,10 @@ index 4e62965..ea49a53 100644
      libs = [ "dl" ]
    }
 diff --git a/build/config/BUILDCONFIG.gn b/build/config/BUILDCONFIG.gn
-index b8d0f47..d789796 100644
+index b8d0f47..a3d1ed9 100644
 --- a/build/config/BUILDCONFIG.gn
 +++ b/build/config/BUILDCONFIG.gn
-@@ -34,6 +34,7 @@
- # When writing build files, to do something only for the host:
- #   if (current_toolchain == host_toolchain) { ...
- 
-+
- if (target_os == "") {
-   target_os = host_os
- }
-@@ -190,6 +191,7 @@ if (current_os == "win") {
+@@ -190,6 +190,7 @@ if (current_os == "win") {
    is_fuchsia_host = false
    is_ios = false
    is_linux = false
@@ -31,7 +23,7 @@ index b8d0f47..d789796 100644
    is_mac = false
    is_posix = false
    is_win = true
-@@ -198,6 +200,7 @@ if (current_os == "win") {
+@@ -198,6 +199,7 @@ if (current_os == "win") {
    is_android = false
    is_chromeos = false
    is_fuchsia = false
@@ -39,7 +31,7 @@ index b8d0f47..d789796 100644
    is_fuchsia_host = false
    is_ios = false
    is_linux = false
-@@ -212,6 +215,7 @@ if (current_os == "win") {
+@@ -212,6 +214,7 @@ if (current_os == "win") {
    is_fuchsia_host = false
    is_ios = false
    is_linux = false
@@ -47,7 +39,7 @@ index b8d0f47..d789796 100644
    is_mac = false
    is_posix = true
    is_win = false
-@@ -223,6 +227,7 @@ if (current_os == "win") {
+@@ -223,6 +226,7 @@ if (current_os == "win") {
    is_fuchsia_host = false
    is_ios = false
    is_linux = true
@@ -55,7 +47,7 @@ index b8d0f47..d789796 100644
    is_mac = false
    is_posix = true
    is_win = false
-@@ -237,6 +242,7 @@ if (current_os == "win") {
+@@ -237,6 +241,7 @@ if (current_os == "win") {
    is_fuchsia_host = false
    is_ios = false
    is_linux = false
@@ -63,7 +55,7 @@ index b8d0f47..d789796 100644
    is_mac = false
    is_posix = true
    is_win = false
-@@ -248,6 +254,19 @@ if (current_os == "win") {
+@@ -248,6 +253,19 @@ if (current_os == "win") {
    is_fuchsia_host = false
    is_ios = true
    is_linux = false
@@ -83,7 +75,7 @@ index b8d0f47..d789796 100644
    is_mac = false
    is_posix = true
    is_win = false
-@@ -259,6 +278,7 @@ if (current_os == "win") {
+@@ -259,6 +277,7 @@ if (current_os == "win") {
    is_fuchsia_host = false
    is_ios = false
    is_linux = true
@@ -91,7 +83,7 @@ index b8d0f47..d789796 100644
    is_mac = false
    is_posix = true
    is_win = false
-@@ -270,6 +290,7 @@ if (current_os == "win") {
+@@ -270,6 +289,7 @@ if (current_os == "win") {
    is_fuchsia_host = false
    is_ios = false
    is_linux = false
@@ -99,7 +91,7 @@ index b8d0f47..d789796 100644
    is_mac = false
    is_posix = true
    is_win = false
-@@ -281,6 +302,7 @@ if (current_os == "win") {
+@@ -281,6 +301,7 @@ if (current_os == "win") {
    is_fuchsia_host = false
    is_ios = false
    is_linux = false
@@ -107,7 +99,7 @@ index b8d0f47..d789796 100644
    is_mac = false
    is_posix = false
    is_win = false
-@@ -313,7 +335,7 @@ if (!is_clang && using_sanitizer) {
+@@ -313,7 +334,7 @@ if (!is_clang && using_sanitizer) {
    is_clang = true
  }
  
@@ -116,18 +108,18 @@ index b8d0f47..d789796 100644
  
  if (is_msan && !is_linux) {
    assert(false, "Memory sanitizer is only available on Linux.")
-@@ -365,7 +387,9 @@ if (is_posix) {
+@@ -365,7 +386,9 @@ if (is_posix) {
    ]
  }
  
 -if (is_linux) {
-+if(is_ohos || (is_linux && host_os == "mac")){
++if (is_ohos || (is_linux && host_os == "mac")) {
 +  _native_compiler_configs += [ "//build/config/ohos:sdk" ]
-+  }else if (is_linux) {
++} else if (is_linux) {
    _native_compiler_configs += [ "//build/config/linux:sdk" ]
  } else if (is_mac) {
    _native_compiler_configs += [ "//build/config/mac:sdk" ]
-@@ -510,8 +534,18 @@ shlib_toolchain = false
+@@ -510,8 +533,18 @@ shlib_toolchain = false
  if (custom_toolchain != "") {
    assert(custom_sysroot != "")
    assert(custom_target_triple != "")
@@ -147,22 +139,20 @@ index b8d0f47..d789796 100644
  } else if (is_win) {
    if (is_clang) {
      host_toolchain = "//build/toolchain/win:clang_$host_cpu"
-@@ -544,6 +578,21 @@ if (custom_toolchain != "") {
+@@ -544,6 +577,19 @@ if (custom_toolchain != "") {
    } else {
      set_default_toolchain("//build/toolchain/android:$current_cpu")
    }
 +} else if (is_ohos) {
++  set_default_toolchain("//build/toolchain/custom")
 +  if (host_os == "linux") {
 +    if (is_clang) {
 +      host_toolchain = "//build/toolchain/linux:clang_$host_cpu"
-+      set_default_toolchain("//build/toolchain/linux:clang_$current_cpu")
 +    } else {
 +      host_toolchain = "//build/toolchain/linux:$host_cpu"
-+      set_default_toolchain("//build/toolchain/linux:$current_cpu")
 +    }
 +  } else if (host_os == "mac") {
 +    host_toolchain = "//build/toolchain/mac:clang_$host_cpu"
-+    set_default_toolchain("//build/toolchain/ohos:clang_$current_cpu")
 +  } else {
 +    assert(false, "Unknown host for ohos cross compile")
 +  }
@@ -170,10 +160,10 @@ index b8d0f47..d789796 100644
    if (is_clang) {
      host_toolchain = "//build/toolchain/linux:clang_$host_cpu"
 diff --git a/build/config/compiler/BUILD.gn b/build/config/compiler/BUILD.gn
-index ba20010..24a7d4e 100644
+index ba20010..67371f5 100644
 --- a/build/config/compiler/BUILD.gn
 +++ b/build/config/compiler/BUILD.gn
-@@ -191,11 +191,18 @@ config("compiler") {
+@@ -191,10 +191,16 @@ config("compiler") {
      # CPU architecture. We may or may not be doing a cross compile now, so for
      # simplicity we always explicitly set the architecture.
      if (current_cpu == "x64") {
@@ -181,61 +171,64 @@ index ba20010..24a7d4e 100644
 -        "-m64",
 -        "-march=x86-64",
 -      ]
-+      if  ( is_ohos ){
++      if (is_ohos) {
 +        cflags += [
 +          "-m64",
 +        ]
-+      }else {
++      } else {
 +        cflags += [
 +          "-m64",
 +          "-march=x86-64",
 +        ]
 +      }
        ldflags += [ "-m64" ]
-+
      } else if (current_cpu == "x86") {
        cflags += [ "-m32" ]
-       ldflags += [ "-m32" ]
-@@ -315,7 +322,7 @@ config("compiler") {
+@@ -315,7 +321,7 @@ config("compiler") {
  
    # Linux/Android common flags setup.
    # ---------------------------------
 -  if (is_linux || is_android) {
-+  if (is_linux || is_android || is_ohos ) {
++  if (is_linux || is_android || is_ohos) {
      cflags += [
        "-fPIC",
        "-pipe",  # Use pipes for communicating between sub-processes. Faster.
-@@ -334,7 +341,16 @@ config("compiler") {
+@@ -334,7 +340,16 @@ config("compiler") {
  
    # Linux-specific compiler flags setup.
    # ------------------------------------
 -  if (is_linux) {
-+  if (is_ohos ) {
++  if (is_ohos) {
 +    cflags += [ "-pthread" ]
 +    ldflags += [ "-pthread" ]
 +
 +    if (current_cpu == "arm64") {
-+    cflags += [ "--target=aarch64-linux-ohos" ]
-+    ldflags += [ "--target=aarch64-linux-ohos" ]
++      cflags += [ "--target=aarch64-linux-ohos" ]
++      ldflags += [ "--target=aarch64-linux-ohos" ]
 +      cflags += [ "-DBORINGSSL_CLANG_SUPPORTS_DOT_ARCH" ]
 +    }
-+  }else if (is_linux  ) {
++  } else if (is_linux) {
      cflags += [ "-pthread" ]
      ldflags += [ "-pthread" ]
  
-@@ -521,8 +537,8 @@ config("runtime_library") {
+@@ -521,9 +536,13 @@ config("runtime_library") {
        ldflags += [ "-nostdlib++" ]
      }
      include_dirs = [
 -      "//third_party/libcxx/include",
        "//third_party/libcxxabi/include",
-+      "$custom_toolchain/include/c++/v1",
      ]
++    if (custom_toolchain != "") {
++      include_dirs += [ "$custom_toolchain/include/c++/v1" ]
++    } else {
++      include_dirs += [ "//third_party/libcxx/include" ]
++    }
    }
  
+   # Android standard library setup.
 diff --git a/build/config/ohos/BUILD.gn b/build/config/ohos/BUILD.gn
 new file mode 100644
-index 0000000..1d29b40
+index 0000000..b2675d2
 --- /dev/null
 +++ b/build/config/ohos/BUILD.gn
 @@ -0,0 +1,29 @@
@@ -243,6 +236,7 @@ index 0000000..1d29b40
 +# Use of this source code is governed by a BSD-style license that can be
 +# found in the LICENSE file.
 +
++import("//build/config/ohos/config.gni")
 +import("//build/config/ohos/pkg_config.gni")
 +import("//build/config/features.gni")
 +import("//build/config/sysroot.gni")
@@ -267,7 +261,25 @@ index 0000000..1d29b40
 +config("fontconfig") {
 +  libs = [  ]
 +}
+diff --git a/build/config/ohos/config.gni b/build/config/ohos/config.gni
+new file mode 100644
+index 0000000..0022d70
+--- /dev/null
++++ b/build/config/ohos/config.gni
+@@ -0,0 +1,13 @@
++# Copyright 2014 The Chromium Authors. All rights reserved.
++# Use of this source code is governed by a BSD-style license that can be
++# found in the LICENSE file.
 +
++# This file contains common system config stuff for the Ohos build.
++
++if (is_ohos) {
++  if (current_cpu == "arm64") {
++    ohos_app_abi = "arm64-v8a"
++  } else {
++    assert(false, "Unknown Ohos ABI: " + current_cpu)
++  }
++}
 diff --git a/build/config/ohos/pkg-config.py b/build/config/ohos/pkg-config.py
 new file mode 100644
 index 0000000..b4a6aff
@@ -703,6 +715,145 @@ index 7987e51..cd7b060 100644
      if (current_cpu == "x64") {
        sysroot = rebase_path("//build/linux/debian_sid_amd64-sysroot")
      } else {
+diff --git a/build/ohos/ohos_create_flutter_har.py b/build/ohos/ohos_create_flutter_har.py
+new file mode 100644
+index 0000000..fc46359
+--- /dev/null
++++ b/build/ohos/ohos_create_flutter_har.py
+@@ -0,0 +1,133 @@
++#!/usr/bin/env python3
++#
++# Copyright (c) 2023 Hunan OpenValley Digital Industry Development Co., Ltd.
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++#     http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++
++"""Create a HAR incorporating all the components required to build a Flutter application"""
++
++import argparse
++import logging
++import os
++import re
++import shutil
++import subprocess
++import sys
++
++
++HAR_CONFIG_TEMPLATE = """
++{
++  "app": {
++    "signingConfigs": [],
++    "products": [
++      {
++        "name": "default",
++        "signingConfig": "default",
++        "compileSdkVersion": "%s",
++        "compatibleSdkVersion": "%s",
++        "runtimeOS": "HarmonyOS",
++      }
++    ],
++    "buildModeSet": [
++      {
++        "name": "debug",
++      },
++      {
++        "name": "release"
++      },
++      {
++        "name": "profile"
++      },
++    ]
++  },
++  "modules": [
++    {
++      "name": "flutter",
++      "srcPath": "./flutter"
++    }
++  ]
++}
++"""
++
++
++# 更新har的配置文件，指定编译使用的api版本
++def updateConfig(buildDir, apiInt):
++    apiStr = "4.1.0(11)" if apiInt == 11 else "4.0.0(10)"
++    jsonFile = os.path.join(buildDir, "build-profile.json5")
++    with open(jsonFile, "w", encoding="utf-8") as file:
++        file.write(HAR_CONFIG_TEMPLATE % (apiStr, apiStr))
++
++
++# 执行命令
++def runCommand(command, checkCode=True, timeout=None):
++    logging.info("runCommand start, command = %s" % (command))
++    code = subprocess.Popen(command, shell=True).wait(timeout)
++    if code != 0:
++        logging.error("runCommand error, code = %s, command = %s" % (code, command))
++        if checkCode:
++            exit(code)
++    else:
++        logging.info("runCommand finish, code = %s, command = %s" % (code, command))
++
++
++# 编译har文件，通过hvigorw的命令行参数指定编译类型(debug/release/profile)
++def buildHar(buildDir, apiInt, buildType):
++    updateConfig(buildDir, apiInt)
++    runCommand(
++        "cd %s && .%shvigorw clean --mode module " % (buildDir, os.sep)
++        + "-p module=flutter@default -p product=default -p buildMode=%s " % buildType
++        + "assembleHar --no-daemon"
++    )
++
++
++def main():
++    parser = argparse.ArgumentParser()
++    parser.add_argument("--embedding_src", help="Path of embedding source code.")
++    parser.add_argument("--build_dir", help="Path to build.")
++    parser.add_argument(
++        "--build_type",
++        choices=["debug", "release", "profile"],
++        help="Type to build har.",
++    )
++    parser.add_argument("--output", help="Path to output har.")
++    parser.add_argument("--native_lib", action="append", help="Native code library.")
++    parser.add_argument("--ohos_abi", help="Native code ABI.")
++    parser.add_argument(
++        "--ohos_api_int", type=int, choices=[10, 11], help="Ohos api int."
++    )
++    options = parser.parse_args()
++    # copy source code
++    if os.path.exists(options.build_dir):
++        shutil.rmtree(options.build_dir)
++    shutil.copytree(options.embedding_src, options.build_dir)
++
++    # copy so files
++    for file in options.native_lib:
++        dir_name, full_file_name = os.path.split(file)
++        targetDir = os.path.join(options.build_dir, "flutter/libs", options.ohos_abi)
++        if not os.path.exists(targetDir):
++            os.makedirs(targetDir)
++        shutil.copyfile(
++            file,
++            os.path.join(targetDir, full_file_name),
++        )
++    buildHar(options.build_dir, options.ohos_api_int, options.build_type)
++    shutil.copyfile(
++        os.path.join(
++            options.build_dir, "flutter/build/default/outputs/default/flutter.har"
++        ),
++        options.output,
++    )
++
++
++if __name__ == "__main__":
++    sys.exit(main())
 diff --git a/build/ohos/sysroot_ld_path.sh b/build/ohos/sysroot_ld_path.sh
 new file mode 100755
 index 0000000..4b8bf73

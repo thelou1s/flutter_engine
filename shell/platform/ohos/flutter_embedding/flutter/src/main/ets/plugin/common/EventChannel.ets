@@ -40,13 +40,13 @@ export default class EventChannel {
   private messenger: BinaryMessenger;
   private name: string;
   private codec: MethodCodec;
-  private taskQueue: TaskQueue | undefined;
+  private taskQueue: TaskQueue | null;
 
   constructor(messenger: BinaryMessenger, name: string, codec?: MethodCodec, taskQueue?: TaskQueue) {
     this.messenger = messenger
     this.name = name
     this.codec = codec ? codec : StandardMethodCodec.INSTANCE
-    this.taskQueue = taskQueue
+    this.taskQueue = taskQueue ?? null
   }
 
 
@@ -236,11 +236,11 @@ class EventSinkImplementation implements EventSink {
       return;
     }
     this.hasEnded = true;
-    this.messenger.send(this.name, null);
+    this.messenger.send(this.name, new ArrayBuffer(0));
   }
 }
 
-class AtomicReference <T> {
+class AtomicReference<T> {
   private value: T | null;
 
   constructor(value: T | null) {
@@ -255,7 +255,7 @@ class AtomicReference <T> {
     this.value = newValue;
   }
 
-  getAndSet(newValue: T | null): T | null {
+  getAndSet(newValue: T | null) {
     const oldValue = this.value;
     this.value = newValue;
     return oldValue;

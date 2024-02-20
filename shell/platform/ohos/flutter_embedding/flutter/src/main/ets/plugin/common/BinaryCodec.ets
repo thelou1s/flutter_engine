@@ -37,9 +37,9 @@ export default class BinaryCodec implements MessageCodec<ArrayBuffer> {
     return message
   }
 
-  decodeMessage(message: ArrayBuffer): ArrayBuffer {
+  decodeMessage(message: ArrayBuffer | null): ArrayBuffer {
     if (message == null) {
-      return message;
+      return new ArrayBuffer(0);
     } else if (this.returnsDirectByteBufferFromDecoding) {
       return message;
     } else {

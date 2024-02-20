@@ -8,3 +8,4 @@
 /.clang-format
 /.clang-tidy
 **/.test
+flutter/BuildProfile.ets

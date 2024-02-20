@@ -20,7 +20,7 @@ generated_file("artifacts_entitlement_config") {
   }
 }
 
-if (build_engine_artifacts && !is_android) {
+if (build_engine_artifacts && !is_android && !is_ohos) {
   zip_bundle("artifacts") {
     deps = [
       "//flutter/flutter_frontend_server:frontend_server",
@@ -126,6 +126,12 @@ if (build_engine_artifacts && !is_android) {
         },
       ]
     }
+  }
+}
+
+if (is_ohos) {
+  group("artifacts") {
+    deps = [ "//flutter/shell/platform/ohos:flutter_har_zip" ]
   }
 }
 

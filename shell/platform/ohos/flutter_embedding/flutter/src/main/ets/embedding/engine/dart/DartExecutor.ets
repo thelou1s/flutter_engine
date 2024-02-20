@@ -172,7 +172,7 @@ export default class DartExecutor implements  BinaryMessenger {
     this.getBinaryMessenger().send(channel, message, callback);
   }
 
-  setMessageHandler(channel: String, handler: BinaryMessageHandler, taskQueue?: TaskQueue): void {
+  setMessageHandler(channel: String, handler: BinaryMessageHandler | null, taskQueue?: TaskQueue): void {
     this.getBinaryMessenger().setMessageHandler(channel, handler, taskQueue);
   }
 

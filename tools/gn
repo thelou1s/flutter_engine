@@ -303,6 +303,9 @@ def to_gn_args(args):
   gn_args['is_official_build'] = True  # Disable Skia test utilities.
   gn_args['android_full_debug'
          ] = args.target_os == 'android' and args.unoptimized
+  
+  gn_args['ohos_api_int'] = args.ohos_api_int
+  
   if args.clang is None:
     gn_args['is_clang'] = True
   else:
@@ -762,6 +765,9 @@ def parse_args(args):
       '--ohos-cpu', type=str, choices=['x64', 'x86', 'arm64', 'arm']
   )
   parser.add_argument(
+      '--ohos-api-int', type=int, choices=[10, 11], default=10
+  )
+  parser.add_argument(
       '--fuchsia-cpu', type=str, choices=['x64', 'arm64'], default='x64'
   )
   parser.add_argument(
@@ -1047,10 +1053,10 @@ def main(argv):
   print('XX target_os:%s' % args.target_os)
 
   if  args.target_os == 'ohos':
-     if args.ohos_cpu is not None:
-       args.linux_cpu = args.ohos_cpu
-     elif args.linux_cpu is not None :
-       args.ohos_cpu = args.linux_cpu
+      if args.ohos_cpu is not None:
+        args.linux_cpu = args.ohos_cpu
+      elif args.linux_cpu is not None :
+        args.ohos_cpu = args.linux_cpu
 
   if not args.web:
     if args.ide != '':

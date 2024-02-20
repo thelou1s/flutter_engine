@@ -68,7 +68,7 @@ export class DartMessenger implements BinaryMessenger, PlatformMessageHandler {
   }
 
 
-  setMessageHandler(channel: String, handler: BinaryMessageHandler, taskQueue?: TaskQueue): void {
+  setMessageHandler(channel: String, handler: BinaryMessageHandler | null, taskQueue?: TaskQueue): void {
     if (handler == null) {
       Log.d(TAG, "Removing handler for channel '" + channel + "'");
       this.messageHandlers.delete(channel);
@@ -255,7 +255,7 @@ class Reply implements BinaryReply {
     this.replyId = replyId;
   }
 
-  reply(reply: ArrayBuffer) {
+  reply(reply: ArrayBuffer | null) {
     if (this.done) {
       throw new Error("Reply already submitted");
     }

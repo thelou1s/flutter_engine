@@ -13,17 +13,25 @@
 
 assert(is_ohos)
 
+import("//build/config/ohos/config.gni")
+import("//build/toolchain/clang.gni")
 import("//flutter/build/zip_bundle.gni")
-import("//flutter/shell/platform/glfw/config.gni")
-import("//flutter/testing/testing.gni")
-import("//build/config/ohos/pkg_config.gni")
+import("//flutter/common/config.gni")
 import("//flutter/shell/gpu/gpu.gni")
+import("//flutter/shell/version/version.gni")
+import("//flutter/testing/testing.gni")
 
 group("ohos") {
   deps = [
-    ":flutter",
+    ":flutter_shell_native",
     #":publish_headers_ohos",
+    #":ohos_har",
+    ":flutter_har_zip",
+    ":ohos_symbols",
   ]
+  if (target_cpu != "x86") {
+    deps += [ ":gen_snapshot" ]
+  }
 }
 shell_gpu_configuration("ohos_gpu_configuration") {
   enable_software = true
@@ -192,12 +200,9 @@ executable("flutter_ohos_unittests") {
   ]
 }
 
-shared_library("flutter") {
+shared_library("flutter_shell_native") {
+  output_name = "flutter"
   deps = [ ":flutter_ohos_src" ]
-
-  if (flutter_runtime_mode == "profile") {
-    deps += [ "//flutter/shell/vmservice:vmservice_snapshot" ]
-  }
 
   ldflags = ["--rtlib=compiler-rt",
   "-fuse-ld=lld",
@@ -268,3 +273,232 @@ shared_library("flutter") {
 #  ]
 #  files = tmp_files
 #}
+
+declare_args() {
+  embedding_artifact_id = "flutter_embedding_$flutter_runtime_mode"
+  embedding_har_filename = "$embedding_artifact_id.har"
+  embedding_har_path = "$root_out_dir/$embedding_har_filename"
+  engine_artifact_id =
+      string_replace(ohos_app_abi, "-", "_") + "_" + flutter_runtime_mode
+  engine_har_filename = "$engine_artifact_id.har"
+
+  ohos_zip_archive_dir = "ohos-$target_cpu"
+  if (flutter_runtime_mode != "debug") {
+    ohos_zip_archive_dir += "-$flutter_runtime_mode"
+  }
+  ohos_api_int = 11
+}
+
+action("ohos_har") {
+  script = "//build/ohos/ohos_create_flutter_har.py"
+
+  if (stripped_symbols) {
+    engine_library = "libflutter.so"
+  } else {
+    engine_library = "so.unstripped/libflutter.so"
+  }
+
+  inputs = [
+    # "$root_build_dir/$embedding_har_filename",
+    "$root_build_dir/$engine_library",
+  ]
+
+  outputs = [
+    "$root_build_dir/flutter.har",
+    # "$root_build_dir/$engine_har_filename",
+  ]
+
+  args = [
+    "--embedding_src",
+    "../../flutter/shell/platform/ohos/flutter_embedding",
+    "--build_dir",
+    "./obj/ohos/flutter_embedding",
+    "--build_type",
+    flutter_runtime_mode,
+    "--output",
+    rebase_path("flutter.har", root_build_dir, root_build_dir),
+    "--native_lib",
+    rebase_path("$engine_library", root_build_dir, root_build_dir),
+    "--ohos_abi",
+    ohos_app_abi,
+    "--ohos_api_int",
+    ohos_api_int
+  ]
+
+  deps = [
+    ":flutter_shell_native"
+  ]
+
+  if (flutter_runtime_mode == "profile") {
+    deps += [ "//flutter/shell/vmservice:vmservice_snapshot" ]
+    args += [
+      "--native_lib",
+      rebase_path(
+          "$root_gen_dir/flutter/shell/vmservice/ohos/libs/$ohos_app_abi/libvmservice_snapshot.so",
+          root_build_dir,
+          root_build_dir),
+    ]
+  }
+}
+
+zip_bundle("flutter_har_zip") {
+  output = "$ohos_zip_archive_dir/artifacts.zip"
+  files = [
+    {
+      source = "$root_build_dir/flutter.har"
+      destination = "flutter.har"
+    }
+  ]
+
+  deps = [ ":ohos_har" ]
+}
+
+zip_bundle("ohos_symbols") {
+  output = "$ohos_zip_archive_dir/symbols.zip"
+  files = [
+    {
+      source = "$root_build_dir/so.unstripped/libflutter.so"
+      destination = "libflutter.so"
+    },
+  ]
+
+  deps = [ ":flutter_shell_native" ]
+}
+
+generated_file("ohos_entitlement_config") {
+  outputs = [ "$target_gen_dir/ohos_entitlements.txt" ]
+  contents = [ "gen_snapshot" ]
+  deps = []
+}
+
+if (target_cpu != "x86") {
+  zip_bundle("gen_snapshot") {
+    gen_snapshot_bin = "gen_snapshot"
+    gen_snapshot_out_dir = get_label_info(
+            "//third_party/dart/runtime/bin:gen_snapshot($host_toolchain)",
+            "root_out_dir")
+    gen_snapshot_path = rebase_path("$gen_snapshot_out_dir/$gen_snapshot_bin")
+
+    if (host_os == "linux") {
+      output = "$ohos_zip_archive_dir/linux-x64.zip"
+    } else if (host_os == "mac") {
+      output = "$ohos_zip_archive_dir/darwin-x64.zip"
+    } else if (host_os == "win") {
+      output = "$ohos_zip_archive_dir/windows-x64.zip"
+      gen_snapshot_bin = "gen_snapshot.exe"
+      gen_snapshot_path = rebase_path("$root_out_dir/$gen_snapshot_bin")
+    }
+
+    files = [
+      {
+        source = gen_snapshot_path
+        destination = gen_snapshot_bin
+      },
+    ]
+
+    deps = [ "//third_party/dart/runtime/bin:gen_snapshot($host_toolchain)" ]
+  }
+
+  # TODO(godofredoc): Remove gen_snapshot and rename new_gen_snapshot when v2 migration is complete.
+  # BUG: https://github.com/flutter/flutter/issues/105351
+  zip_bundle("new_gen_snapshot") {
+    gen_snapshot_bin = "gen_snapshot"
+    gen_snapshot_out_dir = get_label_info(
+            "//third_party/dart/runtime/bin:gen_snapshot($host_toolchain)",
+            "root_out_dir")
+    gen_snapshot_path = rebase_path("$gen_snapshot_out_dir/$gen_snapshot_bin")
+
+    if (host_os == "linux") {
+      output = "$ohos_zip_archive_dir/$full_platform_name-$flutter_runtime_mode/linux-x64.zip"
+    } else if (host_os == "mac") {
+      output = "$ohos_zip_archive_dir/$full_platform_name-$flutter_runtime_mode/darwin-x64.zip"
+    } else if (host_os == "win") {
+      output = "$ohos_zip_archive_dir/$full_platform_name-$flutter_runtime_mode/windows-x64.zip"
+      gen_snapshot_bin = "gen_snapshot.exe"
+      gen_snapshot_path = rebase_path("$root_out_dir/$gen_snapshot_bin")
+    }
+
+    files = [
+      {
+        source = gen_snapshot_path
+        destination = gen_snapshot_bin
+      },
+    ]
+
+    deps = [ "//third_party/dart/runtime/bin:gen_snapshot($host_toolchain)" ]
+
+    if (host_os == "mac") {
+      deps += [ ":ohos_entitlement_config" ]
+      files += [
+        {
+          source = "$target_gen_dir/ohos_entitlements.txt"
+          destination = "entitlements.txt"
+        },
+      ]
+    }
+  }
+}
+
+if (target_cpu == "x64" || target_cpu == "arm64") {
+  zip_bundle("analyze_snapshot") {
+    deps =
+        [ "//third_party/dart/runtime/bin:analyze_snapshot($host_toolchain)" ]
+
+    analyze_snapshot_bin = "analyze_snapshot"
+    analyze_snapshot_out_dir =
+        get_label_info(
+            "//third_party/dart/runtime/bin:analyze_snapshot($host_toolchain)",
+            "root_out_dir")
+    analyze_snapshot_path =
+        rebase_path("$analyze_snapshot_out_dir/$analyze_snapshot_bin")
+
+    if (host_os == "linux") {
+      output = "$ohos_zip_archive_dir/analyze-snapshot-linux-x64.zip"
+    } else if (host_os == "mac") {
+      output = "$ohos_zip_archive_dir/analyze-snapshot-darwin-x64.zip"
+    } else if (host_os == "win") {
+      output = "$ohos_zip_archive_dir/analyze-snapshot-windows-x64.zip"
+      analyze_snapshot_bin = "analyze-snapshot.exe"
+      analyze_snapshot_path = rebase_path("$root_out_dir/$analyze_snapshot_bin")
+    }
+
+    files = [
+      {
+        source = analyze_snapshot_path
+        destination = analyze_snapshot_bin
+      },
+    ]
+  }
+
+  # TODO(godofredoc): Remove analyze_snapshot and rename new_analyze_snapshot when v2 migration is complete.
+  # BUG: https://github.com/flutter/flutter/issues/105351
+  zip_bundle("new_analyze_snapshot") {
+    deps =
+        [ "//third_party/dart/runtime/bin:analyze_snapshot($host_toolchain)" ]
+
+    analyze_snapshot_bin = "analyze_snapshot"
+    analyze_snapshot_out_dir =
+        get_label_info(
+            "//third_party/dart/runtime/bin:analyze_snapshot($host_toolchain)",
+            "root_out_dir")
+    analyze_snapshot_path =
+        rebase_path("$analyze_snapshot_out_dir/$analyze_snapshot_bin")
+
+    if (host_os == "linux") {
+      output = "$ohos_zip_archive_dir/$full_platform_name-$flutter_runtime_mode/analyze-snapshot-linux-x64.zip"
+    } else if (host_os == "mac") {
+      output = "$ohos_zip_archive_dir/$full_platform_name-$flutter_runtime_mode/analyze-snapshot-darwin-x64.zip"
+    } else if (host_os == "win") {
+      output = "$ohos_zip_archive_dir/$full_platform_name-$flutter_runtime_mode/analyze-snapshot-windows-x64.zip"
+      analyze_snapshot_bin = "analyze-snapshot.exe"
+      analyze_snapshot_path = rebase_path("$root_out_dir/$analyze_snapshot_bin")
+    }
+
+    files = [
+      {
+        source = analyze_snapshot_path
+        destination = analyze_snapshot_bin
+      },
+    ]
+  }
+}
